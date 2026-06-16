@@ -2349,9 +2349,9 @@
       msg += '*Entregas:*\n';
       if (items.length === 1) {
         msg += '📍 Endereço: ' + items[0].rua + '\n';
-        if (items[0].comp) msg += 'ℹ️ Complemento: ' + items[0].comp + '\n';
-        msg += '🗺️ Bairro: ' + items[0].bairro + '\n';
-        msg += '🗺️ Maps: https://maps.google.com/?q=' + encodeURIComponent(items[0].rua + ' ' + items[0].bairro) + '\n';
+        if (items[0].comp) msg += 'ℹ️ Ref: ' + items[0].comp + '\n';
+        msg += '📍 Bairro: ' + items[0].bairro + '\n';
+        msg += `🗺️ https://maps.google.com/?q=${encodeURIComponent(items[0].rua + ' ' + items[0].bairro + ' Feira de Santana BA')}\n`;
         
         let valorLabel = 'R$ ' + Number(items[0].valor).toFixed(2).replace('.', ',');
         if (items[0].tempo) {
@@ -2361,10 +2361,9 @@
       } else {
         msg += '----------------------------------\n';
         items.forEach((item, idx) => {
-          msg += `📍 *${idx + 1}:* ${item.rua}\n`;
+          msg += `📍 *${idx + 1}:* ${item.rua} — ${item.bairro}\n`;
           if (item.comp) msg += `   ℹ️ Ref: ${item.comp}\n`;
-          msg += `   🗺️ Bairro: ${item.bairro}\n`;
-          msg += `   🗺️ Maps: https://maps.google.com/?q=${encodeURIComponent(item.rua + ' ' + item.bairro)}\n`;
+          msg += `   🗺️ https://maps.google.com/?q=${encodeURIComponent(item.rua + ' ' + item.bairro + ' Feira de Santana BA')}\n`;
           
           let valorLabel = 'R$ ' + Number(item.valor).toFixed(2).replace('.', ',');
           if (item.tempo) {
@@ -2397,12 +2396,12 @@
         };
         try {
           const dataEncoded = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(orderData)))));
-          msg += `\n\n👉 *Aceitar Corrida:* ${window.location.origin}/?aceitar=true&id=${dbId}&data=${dataEncoded}`;
+          msg += `\n\n\u2705 *Aceitar esta corrida:*\n${window.location.origin}/?aceitar=true&id=${dbId}&data=${dataEncoded}`;
         } catch(e) {
-          msg += `\n\n👉 *Aceitar Corrida:* ${window.location.origin}/?aceitar=true&id=${dbId}`;
+          msg += `\n\n\u2705 *Aceitar esta corrida:*\n${window.location.origin}/?aceitar=true&id=${dbId}`;
         }
       } else {
-        msg += `\n\n👉 *Aceitar Corrida:* [Disponível ao copiar/enviar]`;
+        msg += `\n\n\u2705 *Aceitar esta corrida:* [Disponível ao copiar/enviar]`;
       }
 
       return msg.trimEnd();
@@ -2646,7 +2645,7 @@
       msg += `🏢 *${item.coleta_nome}*\n`;
       if (item.coleta_endereco) {
         msg += `📍 ${item.coleta_endereco}\n`;
-        msg += `🗺️ Maps: https://maps.google.com/?q=${encodeURIComponent(item.coleta_nome + ' ' + item.coleta_endereco)}\n`;
+        msg += `🗺️ https://maps.google.com/?q=${encodeURIComponent(item.coleta_nome + ' ' + item.coleta_endereco + ' Feira de Santana BA')}\n`;
       }
       if (item.coleta_complemento) msg += `ℹ️ ${item.coleta_complemento}\n`;
       msg += '\n*Entregas:*\n';
@@ -2654,17 +2653,16 @@
       if (destinos.length === 1) {
         const d = destinos[0];
         msg += `📍 Endereço: ${d.rua}\n`;
-        if (d.comp) msg += `ℹ️ Complemento: ${d.comp}\n`;
-        msg += `🗺️ Bairro: ${d.bairro}\n`;
-        msg += `🗺️ Maps: https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro)}\n`;
+        if (d.comp) msg += `ℹ️ Ref: ${d.comp}\n`;
+        msg += `📍 Bairro: ${d.bairro}\n`;
+        msg += `🗺️ https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro + ' Feira de Santana BA')}\n`;
         msg += `💵 Valor: R$ ${Number(d.valor).toFixed(2).replace('.', ',')}${d.tempo ? ' (Tempo est.: ' + d.tempo + ')' : ''}\n`;
       } else {
         msg += '----------------------------------\n';
         destinos.forEach((d, idx) => {
-          msg += `📍 *${idx+1}:* ${d.rua}\n`;
+          msg += `📍 *${idx+1}:* ${d.rua} — ${d.bairro}\n`;
           if (d.comp) msg += `   ℹ️ Ref: ${d.comp}\n`;
-          msg += `   🗺️ Bairro: ${d.bairro}\n`;
-          msg += `   🗺️ Maps: https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro)}\n`;
+          msg += `   🗺️ https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro + ' Feira de Santana BA')}\n`;
           msg += `   💵 Valor: R$ ${Number(d.valor).toFixed(2).replace('.', ',')}${d.tempo ? ' (Tempo: ' + d.tempo + ')' : ''}\n`;
           msg += '----------------------------------\n';
         });
@@ -2686,9 +2684,9 @@
       };
       try {
         const dataEncoded = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(orderDataHist)))));
-        msg += `\n\n👉 *Aceitar Corrida:* ${window.location.origin}/?aceitar=true&id=${item.id}&data=${dataEncoded}`;
+        msg += `\n\n\u2705 *Aceitar esta corrida:*\n${window.location.origin}/?aceitar=true&id=${item.id}&data=${dataEncoded}`;
       } catch(e) {
-        msg += `\n\n👉 *Aceitar Corrida:* ${window.location.origin}/?aceitar=true&id=${item.id}`;
+        msg += `\n\n\u2705 *Aceitar esta corrida:*\n${window.location.origin}/?aceitar=true&id=${item.id}`;
       }
       return msg.trimEnd();
     }
@@ -2916,14 +2914,17 @@
       enviarDespachoParaMotoboy(item, nome, tel);
     }
     function enviarDespachoParaMotoboy(order, nome, telefone) {
-      const dest = (order.destinos && order.destinos[0]) || {};
+      const destinos = order.destinos || [];
       let msg = `Olá, *${nome}*! 🏍️💨 Você foi escolhido para a corrida!\n\n`;
       msg += `🏢 *Coleta:* ${order.coleta_nome}\n`;
-      if (order.coleta_endereco) msg += `📍 Coleta no Maps: https://maps.google.com/?q=${encodeURIComponent(order.coleta_nome + ' ' + order.coleta_endereco)}\n`;
+      if (order.coleta_endereco) {
+        msg += `📍 ${order.coleta_endereco}\n`;
+        msg += `🗺️ https://maps.google.com/?q=${encodeURIComponent(order.coleta_nome + ' ' + order.coleta_endereco + ' Feira de Santana BA')}\n`;
+      }
       msg += `\n*Entregas:*\n`;
-      (order.destinos || []).forEach((d, idx) => {
-        msg += `📍 ${order.destinos.length > 1 ? `#${idx+1}: ` : ''}${d.rua} — ${d.bairro}\n`;
-        msg += `   🗺️ Maps: https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro)}\n`;
+      destinos.forEach((d, idx) => {
+        msg += `📍 ${destinos.length > 1 ? `#${idx+1}: ` : ''}${d.rua} — ${d.bairro}\n`;
+        msg += `   🗺️ https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro + ' Feira de Santana BA')}\n`;
         msg += `   💵 R$ ${Number(d.valor).toFixed(2).replace('.', ',')}\n`;
       });
       msg += `\n💰 *Total:* R$ ${Number(order.valor_total).toFixed(2).replace('.', ',')}\n`;
@@ -2931,11 +2932,12 @@
       const orderData = { coleta_nome:order.coleta_nome, coleta_endereco:order.coleta_endereco, coleta_complemento:order.coleta_complemento, destinos:order.destinos, valor_total:order.valor_total, retorno:order.retorno, obs:order.obs, created_at:order.created_at, status:'pendente' };
       try {
         const dataEncoded = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(orderData)))));
-        msg += `\n👉 *ACEITAR CORRIDA:*\n${window.location.origin}/?aceitar=true&id=${order.id}&nome=${encodeURIComponent(nome)}&tel=${telefone}&data=${dataEncoded}`;
-      } catch(e) { msg += `\n👉 *ACEITAR CORRIDA:*\n${window.location.origin}/?aceitar=true&id=${order.id}`; }
+        msg += `\n✅ *Aceitar esta corrida:*\n${window.location.origin}/?aceitar=true&id=${order.id}&nome=${encodeURIComponent(nome)}&tel=${telefone}&data=${dataEncoded}`;
+      } catch(e) { msg += `\n✅ *Aceitar esta corrida:*\n${window.location.origin}/?aceitar=true&id=${order.id}`; }
       window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`, '_blank');
       playSound('success');
     }
+
 
     // ─── PENDING ALERT ───────────────────────────────────────────────────────────
     let _pendingAlertTimer = null;
@@ -3629,7 +3631,11 @@
 
     function renderDetalhesCorridaHtml(order) {
       const card = document.getElementById('accept-order-card');
-      const formatData = new Date(order.created_at).toLocaleString('pt-BR');
+      // Protect against missing or invalid data
+      const destinos = order.destinos || [];
+      const createdAt = order.created_at ? new Date(order.created_at) : new Date();
+      const isValidDate = !isNaN(createdAt.getTime());
+      const formatData = isValidDate ? createdAt.toLocaleString('pt-BR') : 'Data não disponível';
       
       let statusBadgeClass = 'badge-pendente';
       let statusLabel = 'Pendente';
@@ -3638,20 +3644,29 @@
       else if (order.status === 'cancelado') { statusBadgeClass = 'badge-cancelado'; statusLabel = 'Cancelada'; }
       
       let destinosHtml = '';
-      order.destinos.forEach((d, idx) => {
+      destinos.forEach((d, idx) => {
+        const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro + ' Feira de Santana BA')}`;
         destinosHtml += `
           <div style="margin-top: 10px; padding-bottom: 10px; border-bottom: 1px dashed var(--border-color);">
-            <div style="font-weight: 700; font-size: 14px;">📍 #${idx + 1}: ${d.rua}</div>
+            <div style="font-weight: 700; font-size: 14px;">📍 ${destinos.length > 1 ? '#' + (idx+1) + ': ' : ''}${d.rua}</div>
             <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
               <b>Bairro:</b> ${d.bairro} ${d.comp ? ' — Ref: ' + d.comp : ''} ${d.tempo ? ' (' + d.tempo + ')' : ''}
             </div>
-            <div style="font-weight: 700; color: var(--primary); margin-top: 6px; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-weight: 700; color: var(--primary); margin-top: 8px; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
               <span>Taxa: R$ ${Number(d.valor).toFixed(2).replace('.', ',')}</span>
-              <a href="https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro)}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--primary); font-weight:700; text-decoration:none; background:var(--primary-glow); padding:4px 8px; border-radius:6px; border:1px solid rgba(16,185,129,0.2);">🗺️ Rota no Maps</a>
+              <a href="${mapsUrl}" target="_blank" style="display:inline-flex; align-items:center; gap:5px; font-size:12px; color:#fff; font-weight:700; text-decoration:none; background:#10b981; padding:6px 12px; border-radius:20px; box-shadow: 0 2px 8px rgba(16,185,129,0.3);">🗺️ Ver rota</a>
             </div>
           </div>
         `;
       });
+      
+      if (destinos.length === 0) {
+        destinosHtml = '<div style="color:var(--text-muted); font-size:13px; padding:10px 0;">Nenhum destino encontrado.</div>';
+      }
+      
+      const coletaMapsUrl = order.coleta_endereco
+        ? `https://maps.google.com/?q=${encodeURIComponent(order.coleta_nome + ' ' + order.coleta_endereco + ' Feira de Santana BA')}`
+        : null;
       
       card.innerHTML = `
         <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
@@ -3661,21 +3676,21 @@
         
         <div style="background: var(--bg-input); padding: 12px; border-radius: 10px; margin-bottom: 16px; border: 1px solid var(--border-color);">
           <div style="font-size: 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">🏢 Ponto de Coleta</div>
-          <div style="font-weight: 800; font-size: 15px; color: var(--primary); margin-top: 4px;">${order.coleta_nome}</div>
-          <div style="font-size: 13px; color: var(--text-main); margin-top: 2px;">${order.coleta_endereco}</div>
+          <div style="font-weight: 800; font-size: 15px; color: var(--primary); margin-top: 4px;">${order.coleta_nome || '—'}</div>
+          <div style="font-size: 13px; color: var(--text-main); margin-top: 2px;">${order.coleta_endereco || ''}</div>
           ${order.coleta_complemento ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">ℹ️ ${order.coleta_complemento}</div>` : ''}
-          ${order.coleta_endereco ? `
-          <div style="margin-top: 8px;">
-            <a href="https://maps.google.com/?q=${encodeURIComponent(order.coleta_nome + ' ' + order.coleta_endereco)}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--primary); font-weight:700; text-decoration:none; background:var(--primary-glow); padding:4px 8px; border-radius:6px; border:1px solid rgba(16,185,129,0.2);">🗺️ Coleta no Maps</a>
+          ${coletaMapsUrl ? `
+          <div style="margin-top: 10px;">
+            <a href="${coletaMapsUrl}" target="_blank" style="display:inline-flex; align-items:center; gap:5px; font-size:12px; color:#fff; font-weight:700; text-decoration:none; background:#10b981; padding:6px 14px; border-radius:20px; box-shadow: 0 2px 8px rgba(16,185,129,0.3);">🗺️ Ver coleta no mapa</a>
           </div>` : ''}
         </div>
         
-        <div style="font-size: 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">🗺️ Destino(s)</div>
+        <div style="font-size: 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">📍 Destino(s)</div>
         ${destinosHtml}
         
         <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center; background: var(--primary-light); padding: 12px; border-radius: 10px; font-weight: 800; font-size: 15px;">
           <span>Valor Total da Corrida:</span>
-          <span style="color: var(--primary); font-size: 18px;">R$ ${Number(order.valor_total).toFixed(2).replace('.', ',')}</span>
+          <span style="color: var(--primary); font-size: 18px;">R$ ${Number(order.valor_total || 0).toFixed(2).replace('.', ',')}</span>
         </div>
         
         <div style="margin-top: 10px; font-size: 13px; color: var(--text-muted);">
@@ -4136,12 +4151,12 @@
       if (destinos.length === 1) {
         const d = destinos[0];
         msg += `📍 Endereço: ${d.rua}\n`;
-        msg += `🗺️ Bairro: ${d.bairro}\n`;
-        msg += `🗺️ Rota no Maps: https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro)}\n`;
+        msg += `📍 Bairro: ${d.bairro}\n`;
+        msg += `🗺️ https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro + ' Feira de Santana BA')}\n`;
       } else {
         destinos.forEach((d, idx) => {
           msg += `📍 *#${idx+1}:* ${d.rua} — ${d.bairro}\n`;
-          msg += `   🗺️ Maps: https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro)}\n`;
+          msg += `   🗺️ https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro + ' Feira de Santana BA')}\n`;
         });
       }
       
@@ -4163,7 +4178,7 @@
       };
       const dataEncoded = encodeURIComponent(btoa(JSON.stringify(orderData)));
       const acceptUrl = `${window.location.origin}/?aceitar=true&id=${order.id}&nome=${encodeURIComponent(nome)}&tel=${telefone}&data=${dataEncoded}`;
-      msg += `\n👉 *CLIQUE NO LINK PARA CONFIRMAR E ACEITAR:* \n${acceptUrl}`;
+      msg += `\n\u2705 *Aceitar esta corrida:*\n${acceptUrl}`;
       
       const waUrl = `https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`;
       window.open(waUrl, '_blank');
