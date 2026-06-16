@@ -1,0 +1,2442 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark-theme">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Moto-Chat: O gerador premium de mensagens de entrega para grupos do WhatsApp. Organize e envie solicitações de motoboys de forma rápida e eficiente.">
+  <title>Moto-Chat • Gerador de Mensagem para WhatsApp</title>
+  
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono for preview -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* ─── DESIGN TOKENS & SYSTEM ────────────────────────────────────────────── */
+    :root {
+      /* Colors - Light Theme */
+      --bg-app: #f4f6f9;
+      --bg-card: #ffffff;
+      --bg-input: #f8fafc;
+      --border-color: #e2e8f0;
+      
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-inverse: #ffffff;
+      
+      --primary: #059669;
+      --primary-hover: #047857;
+      --primary-glow: rgba(5, 150, 105, 0.12);
+      --primary-light: #ecfdf5;
+      
+      --accent: #ef4444;
+      --accent-glow: rgba(239, 68, 68, 0.15);
+      
+      --whatsapp-bg: #e5ddd5;
+      --whatsapp-bubble: #dcf8c6;
+      --whatsapp-text: #303030;
+      
+      /* Shadows */
+      --shadow-sm: 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 10px 15px -3px rgba(0,0,0,0.04), 0 4px 6px -2px rgba(0,0,0,0.02);
+      --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.08), 0 10px 10px -5px rgba(0,0,0,0.04);
+      
+      --transition-fast: 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      --transition-normal: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    html.dark-theme {
+      /* Colors - Dark Theme */
+      --bg-app: #0b111e;
+      --bg-card: #151f32;
+      --bg-input: #1e293b;
+      --border-color: #2e3b4e;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-inverse: #0b111e;
+      
+      --primary: #10b981;
+      --primary-hover: #34d399;
+      --primary-glow: rgba(16, 185, 129, 0.18);
+      --primary-light: #064e3b;
+      
+      --accent: #f87171;
+      --accent-glow: rgba(248, 113, 113, 0.2);
+      
+      --whatsapp-bg: #0b141a;
+      --whatsapp-bubble: #005c4b;
+      --whatsapp-text: #e9edef;
+      
+      --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.2), 0 2px 4px -1px rgba(0,0,0,0.1);
+      --shadow-md: 0 10px 20px -5px rgba(0,0,0,0.3), 0 8px 8px -5px rgba(0,0,0,0.2);
+      --shadow-lg: 0 25px 35px -10px rgba(0,0,0,0.4), 0 15px 15px -10px rgba(0,0,0,0.3);
+    }
+
+    /* ─── BASE STYLES ───────────────────────────────────────────────────────── */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background-color var(--transition-normal), color var(--transition-normal);
+      overflow-x: hidden;
+    }
+
+    /* ─── HEADER & TABS STICKY WRAPPER ───────────────────────────────────────── */
+    .sticky-header-container {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, rgba(2, 44, 34, 0.95) 0%, rgba(6, 78, 59, 0.95) 100%);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      transition: background-color var(--transition-normal);
+    }
+
+    .header {
+      background: transparent;
+      color: white;
+      padding: 16px 24px 8px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .header-branding {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    
+    .header-icon-container {
+      background: rgba(255, 255, 255, 0.12);
+      padding: 10px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+      transition: transform var(--transition-fast);
+    }
+    
+    .header-icon-container:hover {
+      transform: scale(1.1) rotate(-8deg);
+    }
+    
+    .header-icon {
+      width: 28px;
+      height: 28px;
+      fill: #10b981;
+    }
+    
+    .header-title-wrapper h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    
+    .header-title-wrapper p {
+      font-size: 13px;
+      opacity: 0.75;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .theme-toggle-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-fast);
+      color: white;
+    }
+
+    .theme-toggle-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      transform: translateY(-2px);
+    }
+
+    /* ─── TABS ──────────────────────────────────────────────────────────────── */
+    .tabs-container {
+      background: transparent;
+      padding: 0 16px 8px 16px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 12px 8px;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: none;
+      border-bottom: 3px solid transparent;
+      transition: all var(--transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .tab:hover {
+      color: white;
+    }
+    
+    .tab.active {
+      color: #10b981;
+      border-bottom-color: #10b981;
+    }
+
+    /* ─── CONTENT ───────────────────────────────────────────────────────────── */
+    .content {
+      padding: 24px 16px;
+      max-width: 640px;
+      width: 100%;
+      margin: 0 auto;
+      flex: 1;
+    }
+    
+    .section {
+      display: none;
+      animation: fadeIn var(--transition-normal);
+    }
+    
+    .section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── CARDS ─────────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-color);
+      transition: background-color var(--transition-normal), border-color var(--transition-normal);
+    }
+    
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    /* ─── FORM ELEMENTS ─────────────────────────────────────────────────────── */
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field:last-child {
+      margin-bottom: 0;
+    }
+    
+    label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    
+    input, textarea, select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
+      transition: all var(--transition-fast);
+      font-family: inherit;
+      background: var(--bg-input);
+      color: var(--text-main);
+    }
+    
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--primary);
+      background: var(--bg-card);
+      box-shadow: 0 0 0 4px var(--primary-glow);
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* ─── COLETA SALVA ──────────────────────────────────────────────────────── */
+    .coleta-salva {
+      background: var(--primary-light);
+      border: 1.5px dashed var(--primary);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 14px;
+      font-size: 14px;
+      color: var(--text-main);
+      line-height: 1.6;
+      white-space: pre-line;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .coleta-salva::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--primary);
+    }
+    
+    .coleta-salva-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .coleta-salva-nome {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--primary);
+    }
+    
+    .btn-edit-coleta {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 2px 6px;
+    }
+
+    /* ─── BAIRROS GRID ──────────────────────────────────────────────────────── */
+    .bairros-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .bairro-btn {
+      padding: 10px 6px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--bg-input);
+      font-size: 13px;
+      color: var(--text-main);
+      cursor: pointer;
+      text-align: center;
+      transition: all var(--transition-fast);
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .bairro-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+    
+    .bairro-btn.selected {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: var(--text-inverse) !important;
+      font-weight: 700;
+      box-shadow: 0 4px 10px var(--primary-glow);
+    }
+    
+    .bairro-input-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    
+    .bairro-input-row input {
+      flex: 1;
+    }
+    
+    .btn-add-bairro {
+      background: var(--primary);
+      color: var(--text-inverse);
+      border: none;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all var(--transition-fast);
+    }
+
+    .btn-add-bairro:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    /* ─── VALORES RÁPIDOS ───────────────────────────────────────────────────── */
+    .valores-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .valor-btn {
+      padding: 8px 16px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 20px;
+      background: var(--bg-input);
+      font-size: 13px;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      font-weight: 600;
+    }
+    
+    .valor-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+    
+    .valor-btn.selected {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: var(--text-inverse) !important;
+      font-weight: 700;
+      box-shadow: 0 4px 10px var(--primary-glow);
+    }
+
+    /* ─── WHATSAPP CHAT PREVIEW (PREMIUM VIEW) ────────────────────────────────── */
+    .whatsapp-container {
+      background-color: var(--whatsapp-bg);
+      background-image: radial-gradient(rgba(0, 0, 0, 0.08) 15%, transparent 15%),
+                        radial-gradient(rgba(0, 0, 0, 0.08) 15%, transparent 15%);
+      background-size: 20px 20px;
+      background-position: 0 0, 10px 10px;
+      border-radius: 12px;
+      padding: 16px;
+      position: relative;
+      border: 1px solid var(--border-color);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+      min-height: 120px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .whatsapp-chat-bubble {
+      background-color: var(--whatsapp-bubble);
+      color: var(--whatsapp-text);
+      padding: 10px 14px 26px 14px;
+      border-radius: 12px 0 12px 12px;
+      max-width: 90%;
+      font-size: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+      position: relative;
+    }
+
+    /* Bubble tail */
+    .whatsapp-chat-bubble::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -8px;
+      width: 0;
+      height: 0;
+      border-left: 10px solid var(--whatsapp-bubble);
+      border-bottom: 10px solid transparent;
+    }
+
+    .whatsapp-meta {
+      position: absolute;
+      bottom: 4px;
+      right: 8px;
+      font-size: 10px;
+      color: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    html.dark-theme .whatsapp-meta {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .whatsapp-check-icon {
+      width: 14px;
+      height: 14px;
+      fill: #53bdeb;
+    }
+
+    /* ─── RETORNO TOGGLE PREMIUM ────────────────────────────────────────────── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg-input);
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border-color);
+    }
+    
+    .toggle {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+    
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--border-color);
+      border-radius: 26px;
+      cursor: pointer;
+      transition: background-color var(--transition-fast);
+    }
+    
+    .toggle-slider:before {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      left: 3px;
+      top: 3px;
+      background: var(--bg-card);
+      border-radius: 50%;
+      transition: transform var(--transition-fast);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    
+    .toggle input:checked + .toggle-slider {
+      background: var(--primary);
+    }
+    
+    .toggle input:checked + .toggle-slider:before {
+      transform: translateX(22px);
+    }
+    
+    .toggle-label {
+      font-size: 14px;
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    /* ─── BUTTONS ───────────────────────────────────────────────────────────── */
+    .btn {
+      width: 100%;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+    
+    .btn-green {
+      background: #10b981;
+      color: white;
+    }
+    
+    .btn-green:hover {
+      background: #059669;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    
+    .btn-outline {
+      background: var(--bg-card);
+      color: var(--primary);
+      border: 2px solid var(--primary);
+    }
+    
+    .btn-outline:hover {
+      background: var(--primary-light);
+    }
+    
+    .btn-red {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .btn-red:hover {
+      background: #dc2626;
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+    
+    .btn-small {
+      padding: 8px 16px;
+      font-size: 13px;
+      border-radius: 8px;
+      width: auto;
+      height: 38px;
+    }
+    
+    .btn-row {
+      display: flex;
+      gap: 12px;
+    }
+    
+    .btn-row .btn {
+      flex: 1;
+    }
+
+    /* ─── RESUMO GRID ───────────────────────────────────────────────────────── */
+    .resumo-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .resumo-card {
+      background: var(--bg-card);
+      border-radius: 14px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      transition: background-color var(--transition-normal);
+    }
+    
+    .resumo-num {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    
+    .resumo-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .resumo-valor {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    /* ─── HISTÓRICO LIST ─────────────────────────────────────────────────────── */
+    .hist-item {
+      background: var(--bg-card);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      border-left: 5px solid var(--primary);
+      transition: all var(--transition-normal);
+      position: relative;
+    }
+    
+    .hist-item.cancelado {
+      border-left-color: var(--accent);
+    }
+    
+    .hist-item.concluido {
+      border-left-color: #3b82f6;
+    }
+    
+    .hist-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    
+    .hist-bairro {
+      font-weight: 800;
+      font-size: 16px;
+      color: var(--text-main);
+    }
+    
+    .hist-valor {
+      font-weight: 800;
+      color: var(--primary);
+      font-size: 16px;
+    }
+    
+    .hist-info {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .hist-obs {
+      font-size: 13px;
+      color: var(--text-muted);
+      background: var(--bg-input);
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-top: 8px;
+      border-left: 2px solid var(--border-color);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .badge-pendente { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+    .badge-aceito { background: rgba(16, 185, 129, 0.12); color: #059669; }
+    .badge-concluido { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+    .badge-cancelado { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+    
+    .hist-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    
+    .hist-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1.5px solid var(--border-color);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--bg-card);
+      color: var(--text-muted);
+      transition: all var(--transition-fast);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .hist-btn:hover {
+      background: var(--bg-input);
+      border-color: var(--text-muted);
+      color: var(--text-main);
+    }
+    
+    .hist-btn-aceito { border-color: #10b981; color: #10b981; }
+    .hist-btn-aceito:hover { background: rgba(16, 185, 129, 0.08); }
+    .hist-btn-concluido { border-color: #3b82f6; color: #3b82f6; }
+    .hist-btn-concluido:hover { background: rgba(59, 130, 246, 0.08); }
+    .hist-btn-cancelado { border-color: #ef4444; color: #ef4444; }
+    .hist-btn-cancelado:hover { background: rgba(239, 68, 68, 0.08); }
+    .hist-btn-copiar { border-color: var(--primary); color: var(--primary); }
+    .hist-btn-copiar:hover { background: var(--primary-glow); }
+
+    /* ─── CONFIG LISTS ──────────────────────────────────────────────────────── */
+    .config-item-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .config-item-label {
+      flex: 1;
+      font-size: 14px;
+      background: var(--bg-input);
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    .config-btn-remove {
+      background: var(--accent-glow);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: var(--accent);
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: all var(--transition-fast);
+    }
+
+    .config-btn-remove:hover {
+      background: var(--accent);
+      color: var(--text-inverse);
+    }
+
+    /* ─── ROTEIRO DESTINOS LIST ─────────────────────────────────────────────── */
+    .roteiro-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      animation: fadeIn var(--transition-fast);
+    }
+    
+    .roteiro-item-info {
+      flex: 1;
+      margin-right: 8px;
+      line-height: 1.4;
+    }
+    
+    .roteiro-item-address {
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    
+    .roteiro-item-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    
+    .roteiro-item-value {
+      font-weight: 800;
+      color: var(--primary);
+      margin-right: 12px;
+      white-space: nowrap;
+    }
+    
+    .roteiro-item-actions {
+      display: flex;
+      gap: 4px;
+    }
+    
+    .roteiro-action-btn {
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+      transition: all var(--transition-fast);
+    }
+    
+    .roteiro-action-btn:hover {
+      background: var(--border-color);
+      color: var(--text-main);
+    }
+    
+    .roteiro-action-btn.delete {
+      color: var(--accent);
+      background: var(--accent-glow);
+      border-color: rgba(239, 68, 68, 0.1);
+    }
+    
+    .roteiro-action-btn.delete:hover {
+      background: var(--accent);
+      color: var(--text-inverse);
+    }
+
+    /* ─── MODAL GLASSMORPHISM ───────────────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      transition: opacity var(--transition-normal);
+    }
+    
+    .modal-overlay.open {
+      display: flex;
+      opacity: 1;
+    }
+    
+    .modal {
+      background: var(--bg-card);
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-color);
+      transform: scale(0.95);
+      transition: transform var(--transition-normal);
+    }
+
+    .modal-overlay.open .modal {
+      transform: scale(1);
+    }
+    
+    .modal-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    
+    .modal-actions .btn {
+      flex: 1;
+    }
+
+    /* ─── TOAST NOTIFICATION ─────────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translate(-50%, 20px);
+      background: var(--text-main);
+      color: var(--bg-app);
+      padding: 12px 24px;
+      border-radius: 40px;
+      font-size: 14px;
+      font-weight: 700;
+      z-index: 300;
+      opacity: 0;
+      transition: all var(--transition-normal);
+      pointer-events: none;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    /* ─── EMPTY STATE ───────────────────────────────────────────────────────── */
+    .empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-muted);
+    }
+    
+    .empty-icon {
+      font-size: 54px;
+      margin-bottom: 16px;
+      opacity: 0.6;
+    }
+    
+    .empty p {
+      font-size: 14px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER & TABS STICKY WRAPPER -->
+  <div class="sticky-header-container">
+    <!-- HEADER -->
+    <div class="header">
+      <div class="header-branding">
+        <div class="header-icon-container">
+          <!-- Delivery Scooter SVG Icon -->
+          <svg class="header-icon" viewBox="0 0 24 24">
+            <path d="M19 15c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-14 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12.5-6H14V5h-3c-.55 0-1 .45-1 1v3H5c-1.1 0-2 .9-2 2v3h2c0-1.66 1.34-3 3-3s3 1.34 3 3h4c0-1.66 1.34-3 3-3s3 1.34 3 3h2v-5c0-1.1-.9-2-2-2zM12 7h2v2h-2V7z"/>
+          </svg>
+        </div>
+        <div class="header-title-wrapper">
+          <h1>Moto-Chat</h1>
+          <p>Gerador de solicitação rápida para WhatsApp</p>
+        </div>
+      </div>
+      
+      <button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Alternar tema" id="theme-btn">
+        <!-- Sun/Moon icon dynamically rendered in JS -->
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs-container">
+      <div class="tabs">
+        <button class="tab active" onclick="showTab('solicitar')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          Solicitar
+        </button>
+        <button class="tab" onclick="showTab('historico')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          Histórico
+        </button>
+        <button class="tab" onclick="showTab('config')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          Configurações
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+    
+    <!-- SOLICITAR TAB -->
+    <div id="sec-solicitar" class="section active">
+      
+      <!-- PONTO DE COLETA -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          Ponto de Coleta
+        </div>
+        <div class="field" style="margin-bottom: 12px;">
+          <select id="select-coleta" onchange="selecionarColetaAtiva(this.value)"></select>
+        </div>
+        <div id="coleta-view">
+          <div class="coleta-salva" id="coleta-preview-text" style="font-size: 13px;">Carregando ponto de coleta...</div>
+          <button class="btn btn-outline btn-small" onclick="openColetaModal()" style="margin-top: 10px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path></svg>
+            Gerenciar Coletas
+          </button>
+        </div>
+      </div>
+
+      <!-- ROTEIRO DE ENTREGAS -->
+      <div id="roteiro-card" class="card" style="display: none; border-color: var(--primary);">
+        <div class="card-title" style="color: var(--primary);">
+          <svg viewBox="0 0 24 24" style="fill: var(--primary); width: 18px; height: 18px;"><path d="M22.61 18.99L20.5 15.3c-.35-.61-1.09-.9-1.73-.67l-.69.25-1.54-2.67c-.24-.42-.69-.67-1.17-.67H11.5c-.55 0-1 .45-1 1s.45 1 1 1h3.42l1.64 2.85c-.2.27-.27.62-.17.96l.5 1.76c.15.54.65.9 1.19.9.15 0 .31-.03.46-.09l1.66-.6 1.76 3.05c.42.73 1.36.98 2.09.56.73-.42.98-1.36.56-2.09zM4.19 4.79L3.5 3c-.15-.54-.65-.9-1.19-.9-.15 0-.31.03-.46.09-.73.27-1.1.1-.9-.56l.69-2.45c.15-.54-.15-.9-.69-.9h-1.5C.22 0 0 .22 0 .5S.22 1 .5 1h1.03l-.53 1.9c-.31 1.11.45 1.85 1.38 1.85h1.22c.28 0 .5-.22.5-.5z"/></svg>
+          Destinos Adicionados
+        </div>
+        <div id="destinos-list" style="margin-bottom: 12px;"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); padding: 10px 14px; border-radius: 10px; font-weight: 700; font-size: 14px;">
+          <span>Subtotal do Roteiro:</span>
+          <span id="roteiro-subtotal" style="color: var(--primary);">R$ 0,00</span>
+        </div>
+      </div>
+
+      <!-- ENDEREÇO DE ENTREGA -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          Endereço de Entrega
+        </div>
+        <div class="field">
+          <label for="end-rua">Rua / Avenida e Número</label>
+          <input type="text" id="end-rua" placeholder="Ex: Rua Calamar, 1498">
+        </div>
+        <div class="field">
+          <label for="end-comp">Complemento / Referência (opcional)</label>
+          <input type="text" id="end-comp" placeholder="Ex: Condomínio Rio D'ouro casa 35">
+        </div>
+      </div>
+
+      <!-- BAIRRO DE ENTREGA -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+          Bairro de Entrega
+        </div>
+        <div class="bairros-grid" id="bairros-grid"></div>
+        <div class="bairro-input-row">
+          <input type="text" id="bairro-custom" placeholder="Digitar bairro manualmente">
+          <button class="btn-add-bairro" onclick="addBairroRapido()">+ Salvar</button>
+        </div>
+      </div>
+
+      <!-- ÁREA / TAXA DE ENTREGA -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 1.21-1.04 1.93-2.7 1.93-1.96 0-2.74-1.14-2.85-2.6H6.19c.11 2.22 1.69 3.5 3.81 3.91V21h3v-2.15c2-.39 3.5-1.5 3.5-3.57 0-2.84-2.43-3.79-4.7-3.98z"/></svg>
+          Área / Taxa de Entrega
+        </div>
+        <div class="valores-grid" id="areas-grid"></div>
+        <div class="field" style="margin-top:8px">
+          <input type="number" id="valor-custom" placeholder="R$ Valor personalizado" min="0" step="0.50">
+        </div>
+        <div class="field" style="margin-top: 14px;">
+          <button class="btn btn-outline" onclick="adicionarDestinoAoRoteiro()" style="border-style: dashed; color: var(--primary); border-color: var(--primary);">
+            ➕ Adicionar ao Roteiro
+          </button>
+        </div>
+      </div>
+
+      <!-- DETALHES EXTRAS -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M14 17H4v2h10v-2zm6-8H4v2h16V9zM4 15h16v-2H4v2zM4 5v2h16V5H4z"/></svg>
+          Detalhes Extras
+        </div>
+        <div class="field">
+          <div class="toggle-row">
+            <label class="toggle">
+              <input type="checkbox" id="retorno-toggle">
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label">Tem retorno?</span>
+          </div>
+        </div>
+        <div class="field" style="margin-top:16px">
+          <label for="obs">Observações (opcional)</label>
+          <textarea id="obs" placeholder="Ex: Aguardar confirmação do cliente, produto frágil..."></textarea>
+        </div>
+      </div>
+
+      <!-- PRÉVIA ESTILO WHATSAPP -->
+      <div class="card">
+        <div class="card-title" style="color: var(--text-muted)">
+          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
+          Prévia da Mensagem (WhatsApp)
+        </div>
+        <div class="whatsapp-container">
+          <div class="whatsapp-chat-bubble">
+            <span id="preview-msg">Preencha os campos acima para gerar a mensagem...</span>
+            <div class="whatsapp-meta">
+              <span id="preview-time">13:15</span>
+              <svg class="whatsapp-check-icon" viewBox="0 0 24 24">
+                <path d="M18 7l-1.41-1.41-6.34 6.34 3.75 3.75L18 7zm-8.96 4.93L7.79 10.6l-4.24 4.24 7.07 7.07 12.02-12.02-1.42-1.41L12.02 17.6l-2.98-2.67z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTÕES DE AÇÃO -->
+      <div class="btn-row" style="margin-top: 12px; margin-bottom:16px">
+        <button class="btn btn-outline" onclick="copiarMensagem()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          Copiar Mensagem
+        </button>
+        <button class="btn btn-green" onclick="enviarWhatsApp()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+          Enviar no WhatsApp
+        </button>
+      </div>
+
+      <div style="margin-bottom:32px">
+        <button class="btn btn-green" onclick="salvarSolicitacao()" style="background: var(--bg-card); color: var(--primary); border: 2px solid var(--primary); box-shadow: none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          Salvar no Histórico
+        </button>
+      </div>
+
+    </div>
+
+    <!-- HISTÓRICO TAB -->
+    <div id="sec-historico" class="section">
+      <div class="resumo-grid">
+        <div class="resumo-card">
+          <div class="resumo-num" id="res-total">0</div>
+          <div class="resumo-label">Total de Entregas</div>
+        </div>
+        <div class="resumo-card">
+          <div class="resumo-valor" id="res-valor">R$ 0,00</div>
+          <div class="resumo-label">Faturado (Concluídas)</div>
+        </div>
+        <div class="resumo-card">
+          <div class="resumo-num" id="res-pendentes" style="color: #f59e0b">0</div>
+          <div class="resumo-label">Pendentes</div>
+        </div>
+        <div class="resumo-card">
+          <div class="resumo-num" id="res-concluidas" style="color: #3b82f6">0</div>
+          <div class="resumo-label">Concluídas</div>
+        </div>
+      </div>
+
+      <!-- CONTROLES DO HISTÓRICO -->
+      <div class="card" style="padding: 16px; margin-bottom: 16px;">
+        <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
+          <div style="flex: 2; min-width: 180px;">
+            <input type="text" id="hist-search" placeholder="🔍 Buscar por rua ou bairro..." oninput="renderHistorico()">
+          </div>
+          <div style="flex: 1; min-width: 120px;">
+            <select id="hist-filter-status" onchange="renderHistorico()">
+              <option value="todos">Todos os Status</option>
+              <option value="pendente">Pendentes</option>
+              <option value="aceito">Aceitos</option>
+              <option value="concluido">Concluídos</option>
+              <option value="cancelado">Cancelados</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-outline btn-small" onclick="copiarResumoDia()" style="width: 100%; height: auto; padding: 10px; border-style: dashed;">
+          📊 Copiar Resumo Financeiro (Hoje)
+        </button>
+      </div>
+
+      <div id="hist-lista"></div>
+    </div>
+
+    <!-- CONFIG TAB -->
+    <div id="sec-config" class="section">
+      
+      <!-- BAIRROS CONFIG -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+          Bairros Rápidos
+        </div>
+        <p style="font-size:13px; color: var(--text-muted); margin-bottom:12px">Configure os bairros rápidos que aparecem no formulário.</p>
+        <div id="config-bairros-lista"></div>
+        <div class="bairro-input-row" style="margin-top:12px">
+          <input type="text" id="config-novo-bairro" placeholder="Nome do bairro">
+          <button class="btn-add-bairro" onclick="addBairroConfig()">+ Adicionar</button>
+        </div>
+      </div>
+
+      <!-- ÁREAS DE ENTREGA CONFIG -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" style="fill: var(--primary); width: 18px; height: 18px;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          Áreas de Entrega
+        </div>
+        <p style="font-size:13px; color: var(--text-muted); margin-bottom:12px">Cadastre as áreas de entrega, valores e tempos estimados de entrega.</p>
+        <div id="config-areas-lista"></div>
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top:12px">
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="config-nova-area-desc" placeholder="Ex: Até 01 KM" style="flex: 2;">
+            <input type="number" id="config-nova-area-valor" placeholder="Valor R$" min="0" step="0.50" style="flex: 1;">
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="config-nova-area-tempo" placeholder="Tempo (Ex: 80min)" style="flex: 2;">
+            <button class="btn-add-bairro" onclick="addAreaConfig()" style="flex: 1;">+ Adicionar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- NÚMERO DO GRUPO -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+          Número/Grupo WhatsApp
+        </div>
+        <p style="font-size:13px; color: var(--text-muted); margin-bottom:12px">Insira o número (com DDI + DDD) para abrir a conversa diretamente no WhatsApp.</p>
+        <div class="field">
+          <label for="config-numero">Número do WhatsApp (apenas números)</label>
+          <input type="tel" id="config-numero" placeholder="Ex: 5575999990000">
+        </div>
+        <button class="btn btn-green btn-small" onclick="salvarNumero()" style="margin-top: 8px">Salvar Número</button>
+      </div>
+
+      <!-- SOM E PREFERÊNCIAS -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" style="fill: var(--primary); width: 18px; height: 18px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+          Preferências de Áudio
+        </div>
+        <div class="field">
+          <div class="toggle-row">
+            <label class="toggle">
+              <input type="checkbox" id="config-som" onchange="toggleSom(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label">Efeitos Sonoros (Sons na UI)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIMPAR HISTÓRICO -->
+      <div class="card" style="border-color: rgba(239, 68, 68, 0.2)">
+        <div class="card-title" style="color: var(--accent)">
+          <svg viewBox="0 0 24 24" style="fill: var(--accent)"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          Limpeza de Dados
+        </div>
+        <p style="font-size:13px; color: var(--text-muted); margin-bottom:16px">Isso apagará permanentemente todos os registros salvos no histórico local.</p>
+        <button class="btn btn-red" onclick="limparHistorico()">Limpar Todo o Histórico</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- MODAL EDITAR COLETA -->
+  <div class="modal-overlay" id="modal-coleta" onclick="if(event.target === this) closeModal('modal-coleta')">
+    <div class="modal" style="max-width: 520px;">
+      <div class="modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"></path><circle cx="12" cy="9" r="3"></circle></svg>
+        Pontos de Coleta
+      </div>
+      
+      <!-- List View -->
+      <div id="coleta-modal-list-view">
+        <div id="coleta-modal-list" style="margin-bottom: 16px; max-height: 250px; overflow-y: auto;">
+          <!-- Items populated by JS -->
+        </div>
+        <button class="btn btn-outline" onclick="mostrarFormColeta(null)" style="margin-bottom: 16px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
+          + Adicionar Nova Coleta
+        </button>
+        <div class="modal-actions" style="margin-top: 10px;">
+          <button class="btn btn-green" onclick="closeModal('modal-coleta')">Fechar</button>
+        </div>
+      </div>
+
+      <!-- Form View -->
+      <div id="coleta-modal-form-view" style="display: none;">
+        <input type="hidden" id="c-id">
+        <div class="field">
+          <label for="c-nome">Nome do Estabelecimento</label>
+          <input type="text" id="c-nome" placeholder="Ex: Natsumi Sushi Bar">
+        </div>
+        <div class="field">
+          <label for="c-end">Endereço Completo</label>
+          <input type="text" id="c-end" placeholder="Ex: Av Fraga Maia, 5900, Mangabeira">
+        </div>
+        <div class="field">
+          <label for="c-comp">Complemento / Referência (opcional)</label>
+          <textarea id="c-comp" placeholder="Ex: Ao lado da farmácia..." style="min-height:80px"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-outline" onclick="mostrarListColeta()">Voltar</button>
+          <button class="btn btn-green" onclick="salvarColeta()">Salvar Coleta</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ─── JAVASCRIPT STATE & LOGIC ────────────────────────────────────────── -->
+  <script>
+    // ─── STATE & MIGRATION ────────────────────────────────────────────────────────
+    let oldColeta = JSON.parse(localStorage.getItem('mc_coleta') || 'null');
+    let savedColetas = JSON.parse(localStorage.getItem('mc_coletas') || '[]');
+    let activeColetaId = localStorage.getItem('mc_coleta_ativa_id') || '';
+
+    if (oldColeta) {
+      const defaultId = 'coleta_' + Date.now();
+      oldColeta.id = defaultId;
+      savedColetas.push(oldColeta);
+      activeColetaId = defaultId;
+      localStorage.setItem('mc_coletas', JSON.stringify(savedColetas));
+      localStorage.setItem('mc_coleta_ativa_id', defaultId);
+      localStorage.removeItem('mc_coleta'); // clear legacy key
+    }
+
+    if (savedColetas.length === 0) {
+      const defaultId = 'coleta_default';
+      savedColetas.push({
+        id: defaultId,
+        nome: "Natsumi Sushi Bar",
+        end: "Av Fraga Maia, 5900, Mangabeira",
+        comp: "Ao lado da farmácia"
+      });
+      activeColetaId = defaultId;
+      localStorage.setItem('mc_coletas', JSON.stringify(savedColetas));
+      localStorage.setItem('mc_coleta_ativa_id', defaultId);
+    }
+
+    let savedAreas = JSON.parse(localStorage.getItem('mc_areas') || 'null');
+    if (!savedAreas) {
+      savedAreas = [
+        { id: 'area_1', descricao: "Até 01 KM", valor: 11.00, tempo: "80min" },
+        { id: 'area_2', descricao: "Até 02 KM", valor: 12.00, tempo: "80min" },
+        { id: 'area_3', descricao: "Até 03 KM", valor: 13.00, tempo: "80min" },
+        { id: 'area_4', descricao: "Até 04 KM", valor: 14.00, tempo: "80min" },
+        { id: 'area_5', descricao: "Até 05 KM", valor: 15.00, tempo: "90min" },
+        { id: 'area_6', descricao: "Até 06 KM", valor: 16.00, tempo: "90min" },
+        { id: 'area_7', descricao: "Até 07 KM", valor: 17.00, tempo: "90min" },
+        { id: 'area_8', descricao: "Até 08 KM", valor: 18.00, tempo: "100min" },
+        { id: 'area_9', descricao: "Retirar no Local", valor: 0.00, tempo: "60min" }
+      ];
+      localStorage.setItem('mc_areas', JSON.stringify(savedAreas));
+    }
+
+    let state = {
+      coletas: savedColetas,
+      coletaAtivaId: activeColetaId,
+      destinos: [],
+      bairros: JSON.parse(localStorage.getItem('mc_bairros') || '["Conceição","Mangabeira","SIM","Centro","Brasília","Caseb","Tomba","Muchila","Campo Limpo"]'),
+      areas: savedAreas,
+      historico: JSON.parse(localStorage.getItem('mc_historico') || '[]'),
+      numero: localStorage.getItem('mc_numero') || '',
+      bairroSel: '',
+      areaSel: null,
+      theme: localStorage.getItem('mc_theme') || 'dark-theme',
+      soundEnabled: JSON.parse(localStorage.getItem('mc_sound') || 'true')
+    };
+
+    function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+    // ─── AUDIO SYNTHESIZER ────────────────────────────────────────────────────────
+    let audioCtx = null;
+    function playSound(type) {
+      if (!state.soundEnabled) return;
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        const now = audioCtx.currentTime;
+        
+        if (type === 'success') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, now);
+          osc.frequency.setValueAtTime(1200, now + 0.08);
+          gainNode.gain.setValueAtTime(0.08, now);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        } else if (type === 'click') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.exponentialRampToValueAtTime(150, now + 0.05);
+          gainNode.gain.setValueAtTime(0.05, now);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+          osc.start(now);
+          osc.stop(now + 0.06);
+        } else if (type === 'warning') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.linearRampToValueAtTime(100, now + 0.3);
+          gainNode.gain.setValueAtTime(0.06, now);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        } else if (type === 'bell') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, now);
+          osc.frequency.setValueAtTime(659.25, now + 0.05);
+          osc.frequency.setValueAtTime(783.99, now + 0.1);
+          gainNode.gain.setValueAtTime(0.07, now);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+          osc.start(now);
+          osc.stop(now + 0.4);
+        }
+      } catch (e) {
+        console.warn('Erro ao reproduzir som:', e);
+      }
+    }
+
+    // ─── THEME TOGGLE ────────────────────────────────────────────────────────────
+    function initTheme() {
+      document.documentElement.className = state.theme;
+      renderThemeIcon();
+    }
+
+    function toggleTheme() {
+      if (state.theme === 'dark-theme') {
+        state.theme = 'light-theme';
+      } else {
+        state.theme = 'dark-theme';
+      }
+      localStorage.setItem('mc_theme', state.theme);
+      document.documentElement.className = state.theme;
+      renderThemeIcon();
+      playSound('click');
+    }
+
+    function renderThemeIcon() {
+      const btn = document.getElementById('theme-btn');
+      if (state.theme === 'dark-theme') {
+        btn.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        `;
+      } else {
+        btn.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        `;
+      }
+    }
+
+    // ─── TABS ────────────────────────────────────────────────────────────────────
+    function showTab(id) {
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', ['solicitar','historico','config'][i] === id);
+      });
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById('sec-' + id).classList.add('active');
+      playSound('click');
+      if (id === 'historico') renderHistorico();
+      if (id === 'config') renderConfig();
+    }
+
+    // ─── COLETA ──────────────────────────────────────────────────────────────────
+    function renderColeta() {
+      const select = document.getElementById('select-coleta');
+      const el = document.getElementById('coleta-preview-text');
+      
+      select.innerHTML = '';
+      state.coletas.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.nome;
+        opt.selected = c.id === state.coletaAtivaId;
+        select.appendChild(opt);
+      });
+      
+      const c = state.coletas.find(x => x.id === state.coletaAtivaId) || state.coletas[0];
+      if (!c) { 
+        el.textContent = 'Nenhum ponto de coleta cadastrado.\nClique em "Gerenciar Coletas" para cadastrar.'; 
+        return; 
+      }
+      let txt = c.nome;
+      if (c.end) txt += '\n' + c.end;
+      if (c.comp) txt += '\n' + c.comp;
+      el.textContent = txt;
+    }
+
+    function selecionarColetaAtiva(id) {
+      state.coletaAtivaId = id;
+      localStorage.setItem('mc_coleta_ativa_id', id);
+      playSound('click');
+      renderColeta();
+      gerarPreview();
+    }
+
+    function renderColetasModalList() {
+      const listContainer = document.getElementById('coleta-modal-list');
+      if (!listContainer) return;
+      
+      listContainer.innerHTML = '';
+      if (state.coletas.length === 0) {
+        listContainer.innerHTML = '<div style="text-align:center; padding:12px; color:var(--text-muted); font-size:13px;">Nenhuma coleta cadastrada.</div>';
+        return;
+      }
+      
+      state.coletas.forEach(c => {
+        const activeBadge = c.id === state.coletaAtivaId ? ' <span class="badge badge-aceito" style="font-size:9px; padding:2px 6px; margin-left:4px; line-height: 1;">Ativo</span>' : '';
+        const itemRow = document.createElement('div');
+        itemRow.className = 'config-item-row';
+        itemRow.innerHTML = `
+          <div class="config-item-label" style="text-align: left; line-height: 1.3; font-size: 13px;">
+            <div style="font-weight: 700; display:flex; align-items:center;">🏢 ${c.nome}${activeBadge}</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">📍 ${c.end || 'Sem endereço'}</div>
+          </div>
+          <button class="config-btn-remove" onclick="mostrarFormColeta('${c.id}')" style="background: var(--primary-glow); border-color: rgba(16, 185, 129, 0.1); color: var(--primary); margin-right: 4px; padding: 10px 12px;" title="Editar">📝</button>
+          <button class="config-btn-remove" onclick="excluirColeta('${c.id}')" style="padding: 10px 14px;" title="Excluir">✕</button>
+        `;
+        listContainer.appendChild(itemRow);
+      });
+    }
+
+    function openColetaModal() {
+      mostrarListColeta();
+      openModal('modal-coleta');
+    }
+
+    function mostrarFormColeta(id) {
+      const viewList = document.getElementById('coleta-modal-list-view');
+      const viewForm = document.getElementById('coleta-modal-form-view');
+      
+      viewList.style.display = 'none';
+      viewForm.style.display = 'block';
+      
+      if (id) {
+        const c = state.coletas.find(x => x.id === id);
+        if (c) {
+          document.getElementById('c-id').value = c.id;
+          document.getElementById('c-nome').value = c.nome;
+          document.getElementById('c-end').value = c.end;
+          document.getElementById('c-comp').value = c.comp || '';
+        }
+      } else {
+        document.getElementById('c-id').value = '';
+        document.getElementById('c-nome').value = '';
+        document.getElementById('c-end').value = '';
+        document.getElementById('c-comp').value = '';
+      }
+      playSound('click');
+    }
+
+    function mostrarListColeta() {
+      document.getElementById('coleta-modal-list-view').style.display = 'block';
+      document.getElementById('coleta-modal-form-view').style.display = 'none';
+      renderColetasModalList();
+      playSound('click');
+    }
+
+    function salvarColeta() {
+      const id = document.getElementById('c-id').value;
+      const nome = document.getElementById('c-nome').value.trim();
+      const end = document.getElementById('c-end').value.trim();
+      const comp = document.getElementById('c-comp').value.trim();
+      
+      if (!nome) { toast('⚠️ Informe o nome do estabelecimento'); playSound('warning'); return; }
+      
+      if (id) {
+        const idx = state.coletas.findIndex(x => x.id === id);
+        if (idx !== -1) {
+          state.coletas[idx] = { id, nome, end, comp };
+        }
+      } else {
+        const newId = 'coleta_' + Date.now();
+        state.coletas.push({ id: newId, nome, end, comp });
+        if (state.coletas.length === 1) {
+          state.coletaAtivaId = newId;
+          localStorage.setItem('mc_coleta_ativa_id', newId);
+        }
+      }
+      
+      save('mc_coletas', state.coletas);
+      renderColeta();
+      gerarPreview();
+      mostrarListColeta();
+      playSound('success');
+      toast('✅ Ponto de coleta salvo!');
+    }
+
+    function excluirColeta(id) {
+      if (state.coletas.length <= 1) {
+        toast('⚠️ É necessário ter pelo menos 1 ponto de coleta');
+        playSound('warning');
+        return;
+      }
+      if (!confirm('Deseja excluir este ponto de coleta?')) return;
+      
+      state.coletas = state.coletas.filter(x => x.id !== id);
+      save('mc_coletas', state.coletas);
+      
+      if (state.coletaAtivaId === id) {
+        state.coletaAtivaId = state.coletas[0].id;
+        localStorage.setItem('mc_coleta_ativa_id', state.coletaAtivaId);
+      }
+      
+      playSound('warning');
+      toast('✕ Ponto de coleta removido');
+      renderColetasModalList();
+      renderColeta();
+      gerarPreview();
+    }
+
+    // ─── BAIRROS ─────────────────────────────────────────────────────────────────
+    function renderBairros() {
+      const grid = document.getElementById('bairros-grid');
+      grid.innerHTML = '';
+      state.bairros.forEach(b => {
+        const btn = document.createElement('button');
+        btn.className = 'bairro-btn' + (state.bairroSel === b ? ' selected' : '');
+        btn.textContent = b;
+        btn.onclick = () => { 
+          state.bairroSel = b; 
+          document.getElementById('bairro-custom').value = ''; 
+          playSound('click');
+          renderBairros(); 
+          gerarPreview(); 
+        };
+        grid.appendChild(btn);
+      });
+    }
+
+    function addBairroRapido() {
+      const v = document.getElementById('bairro-custom').value.trim();
+      if (!v) return;
+      state.bairroSel = v;
+      if (!state.bairros.includes(v)) { 
+        state.bairros.push(v); 
+        save('mc_bairros', state.bairros); 
+      }
+      document.getElementById('bairro-custom').value = '';
+      playSound('success');
+      renderBairros();
+      gerarPreview();
+    }
+
+    // ─── ÁREAS DE ENTREGA (VALORES) ───────────────────────────────────────────────
+    function renderAreas() {
+      const grid = document.getElementById('areas-grid');
+      grid.innerHTML = '';
+      state.areas.forEach(area => {
+        const btn = document.createElement('button');
+        btn.className = 'valor-btn' + (state.areaSel && state.areaSel.id === area.id ? ' selected' : '');
+        
+        let label = area.descricao;
+        if (area.valor > 0) {
+          label += ` • R$ ${Number(area.valor).toFixed(2).replace('.', ',')}`;
+        } else {
+          label += ` • Grátis`;
+        }
+        
+        btn.textContent = label;
+        btn.onclick = () => { 
+          state.areaSel = area; 
+          document.getElementById('valor-custom').value = ''; 
+          playSound('click');
+          renderAreas(); 
+          gerarPreview(); 
+        };
+        grid.appendChild(btn);
+      });
+    }
+
+    // ─── ROTEIRO MULTI-DESTINO ────────────────────────────────────────────────────
+    function renderRoteiro() {
+      const card = document.getElementById('roteiro-card');
+      const list = document.getElementById('destinos-list');
+      const subtotalEl = document.getElementById('roteiro-subtotal');
+      
+      if (state.destinos.length === 0) {
+        card.style.display = 'none';
+        return;
+      }
+      
+      card.style.display = 'block';
+      list.innerHTML = '';
+      
+      let total = 0;
+      state.destinos.forEach((d, idx) => {
+        total += d.valor;
+        const div = document.createElement('div');
+        div.className = 'roteiro-item';
+        
+        const isFirst = idx === 0;
+        const isLast = idx === state.destinos.length - 1;
+        
+        const areaLabel = d.areaDesc ? ` — <b>Área:</b> ${d.areaDesc}` : '';
+        const tempoLabel = d.tempo ? ` (${d.tempo})` : '';
+        
+        div.innerHTML = `
+          <div class="roteiro-item-info">
+            <div class="roteiro-item-address">📍 #${idx + 1}: ${d.rua}</div>
+            <div class="roteiro-item-meta">${d.comp ? d.comp + ' — ' : ''}<b>Bairro:</b> ${d.bairro}${areaLabel}${tempoLabel}</div>
+          </div>
+          <div class="roteiro-item-value">R$ ${d.valor.toFixed(2).replace('.', ',')}</div>
+          <div class="roteiro-item-actions">
+            <button class="roteiro-action-btn" onclick="reordenarDestino(${idx}, -1)" ${isFirst ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''} title="Subir">▲</button>
+            <button class="roteiro-action-btn" onclick="reordenarDestino(${idx}, 1)" ${isLast ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''} title="Descer">▼</button>
+            <button class="roteiro-action-btn delete" onclick="removerDestino(${idx})" title="Excluir">✕</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+      
+      subtotalEl.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+    }
+
+    function adicionarDestinoAoRoteiro() {
+      const rua = document.getElementById('end-rua').value.trim();
+      const comp = document.getElementById('end-comp').value.trim();
+      const bairro = state.bairroSel || document.getElementById('bairro-custom').value.trim();
+      const valorCustom = document.getElementById('valor-custom').value;
+      const valor = valorCustom ? parseFloat(valorCustom) : (state.areaSel ? state.areaSel.valor : null);
+      
+      if (!rua) { toast('⚠️ Informe o endereço de entrega'); playSound('warning'); return; }
+      if (!bairro) { toast('⚠️ Informe o bairro'); playSound('warning'); return; }
+      if (valor === null || isNaN(valor)) { toast('⚠️ Defina o valor da corrida'); playSound('warning'); return; }
+      
+      const item = {
+        id: 'destino_' + Date.now() + Math.random().toString(36).substr(2, 5),
+        rua,
+        comp,
+        bairro,
+        valor: parseFloat(valor),
+        areaDesc: valorCustom ? 'Personalizado' : (state.areaSel ? state.areaSel.descricao : ''),
+        tempo: valorCustom ? '' : (state.areaSel ? state.areaSel.tempo : '')
+      };
+      
+      state.destinos.push(item);
+      playSound('bell');
+      
+      document.getElementById('end-rua').value = '';
+      document.getElementById('end-comp').value = '';
+      document.getElementById('valor-custom').value = '';
+      document.getElementById('bairro-custom').value = '';
+      state.bairroSel = '';
+      state.areaSel = null;
+      
+      renderBairros();
+      renderAreas();
+      renderRoteiro();
+      gerarPreview();
+      toast('📍 Destino adicionado ao roteiro!');
+    }
+
+    function reordenarDestino(index, direction) {
+      const target = index + direction;
+      if (target < 0 || target >= state.destinos.length) return;
+      
+      const temp = state.destinos[index];
+      state.destinos[index] = state.destinos[target];
+      state.destinos[target] = temp;
+      
+      playSound('click');
+      renderRoteiro();
+      gerarPreview();
+    }
+
+    function removerDestino(index) {
+      state.destinos.splice(index, 1);
+      playSound('warning');
+      renderRoteiro();
+      gerarPreview();
+      toast('✕ Destino removido');
+    }
+
+    // ─── PREVIEW ─────────────────────────────────────────────────────────────────
+    function getMensagem() {
+      const c = state.coletas.find(x => x.id === state.coletaAtivaId) || state.coletas[0];
+      let items = [];
+      let totalVal = 0;
+      
+      if (state.destinos.length > 0) {
+        state.destinos.forEach(d => {
+          items.push({
+            rua: d.rua,
+            comp: d.comp,
+            bairro: d.bairro,
+            valor: d.valor,
+            tempo: d.tempo
+          });
+          totalVal += d.valor;
+        });
+      } else {
+        const rua = document.getElementById('end-rua').value.trim();
+        const comp = document.getElementById('end-comp').value.trim();
+        const bairro = state.bairroSel || document.getElementById('bairro-custom').value.trim();
+        const valorCustom = document.getElementById('valor-custom').value;
+        const valor = valorCustom ? parseFloat(valorCustom) : (state.areaSel ? state.areaSel.valor : null);
+        const tempo = valorCustom ? '' : (state.areaSel ? state.areaSel.tempo : '');
+        
+        if (rua || bairro || valor !== null) {
+          items.push({
+            rua: rua || '[Endereço de entrega]',
+            comp,
+            bairro: bairro || '[Selecione o bairro]',
+            valor: valor || 0,
+            tempo
+          });
+          totalVal = valor || 0;
+        }
+      }
+      
+      const retorno = document.getElementById('retorno-toggle').checked;
+      const obs = document.getElementById('obs').value.trim();
+
+      let msg = '🏍️ *MOTO-CHAT • SOLICITAÇÃO DE CORRIDA* 🏍️\n\n';
+      
+      if (c) {
+        msg += '*Ponto de Coleta:*\n';
+        msg += '🏢 *' + c.nome + '*\n';
+        if (c.end) msg += '📍 ' + c.end + '\n';
+        if (c.comp) msg += 'ℹ️ ' + c.comp + '\n';
+        msg += '\n';
+      } else {
+        msg += '*Ponto de Coleta:* [Cadastre o ponto de coleta]\n\n';
+      }
+      
+      if (items.length === 0) {
+        return 'Preencha os campos acima para gerar a mensagem...';
+      }
+      
+      msg += '*Entregas:*\n';
+      if (items.length === 1) {
+        msg += '📍 Endereço: ' + items[0].rua + '\n';
+        if (items[0].comp) msg += 'ℹ️ Complemento: ' + items[0].comp + '\n';
+        msg += '🗺️ Bairro: ' + items[0].bairro + '\n';
+        
+        let valorLabel = 'R$ ' + Number(items[0].valor).toFixed(2).replace('.', ',');
+        if (items[0].tempo) {
+          valorLabel += ` (Tempo est.: ${items[0].tempo})`;
+        }
+        msg += '💵 Valor: ' + valorLabel + '\n';
+      } else {
+        msg += '----------------------------------\n';
+        items.forEach((item, idx) => {
+          msg += `📍 *${idx + 1}:* ${item.rua}\n`;
+          if (item.comp) msg += `   ℹ️ Ref: ${item.comp}\n`;
+          msg += `   🗺️ Bairro: ${item.bairro}\n`;
+          
+          let valorLabel = 'R$ ' + Number(item.valor).toFixed(2).replace('.', ',');
+          if (item.tempo) {
+            valorLabel += ` (Tempo: ${item.tempo})`;
+          }
+          msg += `   💵 Valor: ${valorLabel}\n`;
+          msg += '----------------------------------\n';
+        });
+      }
+      
+      msg += '\n';
+      if (items.length > 1) {
+        msg += '💰 *Total das corridas:* R$ ' + Number(totalVal).toFixed(2).replace('.', ',') + '\n';
+      }
+      msg += '🔄 *Tem retorno?* ' + (retorno ? 'Sim' : 'Não') + '\n';
+      if (obs) msg += '💬 *Obs:* ' + obs;
+
+      return msg.trimEnd();
+    }
+
+    function updatePreviewTime() {
+      const el = document.getElementById('preview-time');
+      const now = new Date();
+      const hrs = String(now.getHours()).padStart(2, '0');
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      if(el) el.textContent = `${hrs}:${mins}`;
+    }
+
+    function gerarPreview() {
+      document.getElementById('preview-msg').textContent = getMensagem();
+      updatePreviewTime();
+    }
+
+    // ─── AÇÕES ───────────────────────────────────────────────────────────────────
+    function copiarMensagem() {
+      const msg = getMensagem();
+      navigator.clipboard.writeText(msg).then(() => {
+        toast('📋 Mensagem copiada!');
+        playSound('success');
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = msg; 
+        document.body.appendChild(ta); 
+        ta.select(); 
+        document.execCommand('copy'); 
+        ta.remove();
+        toast('📋 Mensagem copiada!');
+        playSound('success');
+      });
+    }
+
+    function enviarWhatsApp() {
+      const msg = getMensagem();
+      const num = state.numero || '';
+      const url = num
+        ? `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
+        : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+      window.open(url, '_blank');
+      playSound('click');
+    }
+
+    function salvarSolicitacao() {
+      let destinosSalvar = [];
+      let totalVal = 0;
+      let resumoBairro = '';
+      let resumoRua = '';
+      
+      if (state.destinos.length > 0) {
+        destinosSalvar = [...state.destinos];
+        totalVal = destinosSalvar.reduce((acc, curr) => acc + curr.valor, 0);
+        
+        const bairrosSet = [...new Set(destinosSalvar.map(d => d.bairro))];
+        resumoBairro = bairrosSet.join(', ');
+        resumoRua = `Rota com ${destinosSalvar.length} entregas`;
+      } else {
+        const rua = document.getElementById('end-rua').value.trim();
+        const comp = document.getElementById('end-comp').value.trim();
+        const bairro = state.bairroSel || document.getElementById('bairro-custom').value.trim();
+        const valorCustom = document.getElementById('valor-custom').value;
+        const valor = valorCustom ? parseFloat(valorCustom) : (state.areaSel ? state.areaSel.valor : null);
+        const tempo = valorCustom ? '' : (state.areaSel ? state.areaSel.tempo : '');
+        
+        if (!bairro || valor === null || isNaN(valor) || !rua) { 
+          toast('⚠️ Preencha endereço, bairro e valor'); 
+          playSound('warning');
+          return; 
+        }
+        
+        destinosSalvar = [{
+          id: 'destino_single',
+          rua,
+          comp,
+          bairro,
+          valor: parseFloat(valor),
+          areaDesc: valorCustom ? 'Personalizado' : (state.areaSel ? state.areaSel.descricao : ''),
+          tempo
+        }];
+        totalVal = parseFloat(valor);
+        resumoBairro = bairro;
+        resumoRua = rua;
+      }
+      
+      const item = {
+        id: Date.now(),
+        data: new Date().toLocaleString('pt-BR'),
+        bairro: resumoBairro,
+        rua: resumoRua,
+        valor: totalVal,
+        retorno: document.getElementById('retorno-toggle').checked,
+        obs: document.getElementById('obs').value.trim(),
+        status: 'pendente',
+        msg: getMensagem(),
+        destinos: destinosSalvar
+      };
+      
+      state.historico.unshift(item);
+      save('mc_historico', state.historico);
+      playSound('success');
+      toast('✅ Salvo no histórico!');
+      
+      state.destinos = [];
+      limparFormEntrega();
+      renderRoteiro();
+    }
+
+    function limparFormEntrega() {
+      document.getElementById('end-rua').value = '';
+      document.getElementById('end-comp').value = '';
+      document.getElementById('obs').value = '';
+      document.getElementById('valor-custom').value = '';
+      document.getElementById('bairro-custom').value = '';
+      state.bairroSel = ''; 
+      state.areaSel = null;
+      document.getElementById('retorno-toggle').checked = false;
+      renderBairros(); 
+      renderAreas(); 
+      gerarPreview();
+    }
+
+    // ─── HISTÓRICO ───────────────────────────────────────────────────────────────
+    function renderHistorico() {
+      const lista = document.getElementById('hist-lista');
+      const query = document.getElementById('hist-search')?.value.toLowerCase() || '';
+      const filterStatus = document.getElementById('hist-filter-status')?.value || 'todos';
+
+      const concluidas = state.historico.filter(h => h.status === 'concluido');
+      const totalVal = concluidas.reduce((a, b) => a + b.valor, 0);
+
+      document.getElementById('res-total').textContent = state.historico.length;
+      document.getElementById('res-valor').textContent = 'R$ ' + totalVal.toFixed(2).replace('.', ',');
+      document.getElementById('res-pendentes').textContent = state.historico.filter(h => h.status === 'pendente').length;
+      document.getElementById('res-concluidas').textContent = concluidas.length;
+
+      let listToShow = state.historico;
+      if (filterStatus !== 'todos') {
+        listToShow = listToShow.filter(h => h.status === filterStatus);
+      }
+      if (query) {
+        listToShow = listToShow.filter(h => 
+          h.rua.toLowerCase().includes(query) || 
+          h.bairro.toLowerCase().includes(query) ||
+          (h.obs && h.obs.toLowerCase().includes(query))
+        );
+      }
+
+      if (!listToShow.length) {
+        lista.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><p>Nenhum registro encontrado.</p></div>';
+        return;
+      }
+
+      lista.innerHTML = '';
+      listToShow.forEach(item => {
+        const badges = { pendente: 'badge-pendente', aceito: 'badge-aceito', concluido: 'badge-concluido', cancelado: 'badge-cancelado' };
+        const labels = { pendente: 'Pendente', aceito: 'Aceito', concluido: 'Concluído', cancelado: 'Cancelado' };
+        
+        const isMulti = item.destinos && item.destinos.length > 1;
+        const icon = isMulti ? '⛓️' : '🗺️';
+        const typeLabel = isMulti ? ` (${item.destinos.length} paradas)` : '';
+        
+        const div = document.createElement('div');
+        div.className = 'hist-item ' + (item.status === 'cancelado' ? 'cancelado' : item.status === 'concluido' ? 'concluido' : '');
+        
+        let destHtml = '';
+        if (isMulti) {
+          destHtml = `<div style="font-size:11.5px; margin-top:6px; color:var(--text-muted); background:var(--bg-app); border:1px solid var(--border-color); border-radius:8px; padding:8px 10px; line-height: 1.4;">`;
+          item.destinos.forEach((d, i) => {
+            const areaLabel = d.areaDesc ? ` (${d.areaDesc})` : '';
+            destHtml += `<div style="margin-bottom: 3px; border-bottom: ${i < item.destinos.length - 1 ? '1px solid var(--border-color)' : 'none'}; padding-bottom: 2px;">📍 <b>#${i+1}:</b> ${d.rua} (${d.bairro})${areaLabel} - R$ ${d.valor.toFixed(2).replace('.', ',')}</div>`;
+          });
+          destHtml += `</div>`;
+        }
+
+        div.innerHTML = `
+          <div class="hist-header">
+            <div class="hist-bairro">${icon} ${item.bairro}${typeLabel}</div>
+            <div class="hist-valor">R$ ${item.valor.toFixed(2).replace('.', ',')}</div>
+          </div>
+          <div class="hist-info">📍 ${item.rua}</div>
+          ${destHtml}
+          <div class="hist-info" style="margin-top: 8px;">🕐 ${item.data} &nbsp;•&nbsp; Retorno: ${item.retorno ? 'Sim' : 'Não'}</div>
+          ${item.obs ? `<div class="hist-obs">💬 ${item.obs}</div>` : ''}
+          <div style="margin-top:8px"><span class="badge ${badges[item.status]}">${labels[item.status]}</span></div>
+          <div class="hist-actions">
+            <button class="hist-btn hist-btn-aceito" onclick="updateStatus(${item.id},'aceito')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Aceito
+            </button>
+            <button class="hist-btn hist-btn-concluido" onclick="updateStatus(${item.id},'concluido')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Concluído
+            </button>
+            <button class="hist-btn hist-btn-cancelado" onclick="updateStatus(${item.id},'cancelado')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Cancelado
+            </button>
+            <button class="hist-btn" onclick="repetirPedido(${item.id})" style="border-color: var(--primary); color: var(--primary);" title="Repetir Pedido no formulário">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> Repetir
+            </button>
+            <button class="hist-btn hist-btn-copiar" onclick="copiarHist(${item.id})">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar Msg
+            </button>
+          </div>
+        `;
+        lista.appendChild(div);
+      });
+    }
+
+    function updateStatus(id, status) {
+      const item = state.historico.find(h => h.id === id);
+      if (item) { 
+        item.status = status; 
+        save('mc_historico', state.historico); 
+        renderHistorico(); 
+        playSound('success');
+        toast('✅ Status atualizado!'); 
+      }
+    }
+
+    function copiarHist(id) {
+      const item = state.historico.find(h => h.id === id);
+      if (!item) return;
+      navigator.clipboard.writeText(item.msg).then(() => {
+        toast('📋 Mensagem copiada!');
+        playSound('success');
+      }).catch(() => {});
+    }
+
+    function repetirPedido(id) {
+      const item = state.historico.find(h => h.id === id);
+      if (!item) return;
+      
+      playSound('bell');
+      
+      document.getElementById('retorno-toggle').checked = item.retorno;
+      document.getElementById('obs').value = item.obs || '';
+      
+      if (item.destinos && item.destinos.length > 1) {
+        state.destinos = item.destinos.map(d => ({
+          ...d,
+          id: 'destino_' + Date.now() + Math.random().toString(36).substr(2, 5)
+        }));
+        document.getElementById('end-rua').value = '';
+        document.getElementById('end-comp').value = '';
+        document.getElementById('valor-custom').value = '';
+        document.getElementById('bairro-custom').value = '';
+        state.bairroSel = '';
+        state.areaSel = null;
+      } else {
+        state.destinos = [];
+        const singleDest = (item.destinos && item.destinos[0]) || item;
+        document.getElementById('end-rua').value = singleDest.rua || '';
+        document.getElementById('end-comp').value = singleDest.comp || '';
+        
+        if (state.bairros.includes(singleDest.bairro)) {
+          state.bairroSel = singleDest.bairro;
+          document.getElementById('bairro-custom').value = '';
+        } else {
+          state.bairroSel = '';
+          document.getElementById('bairro-custom').value = singleDest.bairro || '';
+        }
+        
+        const foundArea = state.areas.find(a => a.descricao === singleDest.areaDesc || (a.valor === singleDest.valor && a.descricao !== 'Personalizado'));
+        if (foundArea) {
+          state.areaSel = foundArea;
+          document.getElementById('valor-custom').value = '';
+        } else {
+          state.areaSel = null;
+          document.getElementById('valor-custom').value = singleDest.valor || '';
+        }
+      }
+      
+      renderBairros();
+      renderAreas();
+      renderRoteiro();
+      gerarPreview();
+      
+      showTab('solicitar');
+      toast('📋 Pedido carregado no formulário!');
+    }
+
+    function copiarResumoDia() {
+      const hoje = new Date().toLocaleDateString('pt-BR');
+      const itensHoje = state.historico.filter(h => h.status === 'concluido' && h.data.startsWith(hoje));
+      
+      if (itensHoje.length === 0) {
+        toast('⚠️ Nenhuma entrega concluída hoje!');
+        playSound('warning');
+        return;
+      }
+      
+      let total = 0;
+      let resumo = `📊 *MOTO-CHAT • RESUMO FINANCEIRO (${hoje})*\n`;
+      resumo += `----------------------------------\n`;
+      itensHoje.forEach((item, idx) => {
+        resumo += `🛵 Corrida #${idx + 1}: ${item.bairro} - R$ ${item.valor.toFixed(2).replace('.', ',')}\n`;
+        total += item.valor;
+      });
+      resumo += `----------------------------------\n`;
+      resumo += `📈 *Total Faturado:* R$ ${total.toFixed(2).replace('.', ',')}\n`;
+      resumo += `📦 *Total de Entregas:* ${itensHoje.length}\n`;
+      
+      navigator.clipboard.writeText(resumo).then(() => {
+        toast('📊 Resumo financeiro copiado!');
+        playSound('success');
+      }).catch(() => {
+        toast('⚠️ Falha ao copiar resumo');
+        playSound('warning');
+      });
+    }
+
+    function limparHistorico() {
+      if (!confirm('Apagar todo o histórico de entregas?')) return;
+      state.historico = []; 
+      save('mc_historico', state.historico); 
+      renderHistorico(); 
+      playSound('warning');
+      toast('🗑️ Histórico apagado!');
+    }
+
+    // ─── CONFIG ──────────────────────────────────────────────────────────────────
+    function renderConfig() {
+      // 1. Render Bairros
+      const bl = document.getElementById('config-bairros-lista');
+      bl.innerHTML = '';
+      state.bairros.forEach((b, i) => {
+        const row = document.createElement('div');
+        row.className = 'config-item-row';
+        row.innerHTML = `
+          <span class="config-item-label">${b}</span>
+          <button class="config-btn-remove" onclick="removeBairro(${i})">✕</button>
+        `;
+        bl.appendChild(row);
+      });
+
+      // 2. Render Áreas de Entrega
+      const al = document.getElementById('config-areas-lista');
+      al.innerHTML = '';
+      state.areas.forEach((area, i) => {
+        const row = document.createElement('div');
+        row.className = 'config-item-row';
+        
+        let valorText = area.valor > 0 ? `R$ ${Number(area.valor).toFixed(2).replace('.', ',')}` : 'Grátis';
+        let tempoText = area.tempo ? ` (${area.tempo})` : '';
+        
+        row.innerHTML = `
+          <span class="config-item-label">${area.descricao} • ${valorText}${tempoText}</span>
+          <button class="config-btn-remove" onclick="removeAreaConfig(${i})">✕</button>
+        `;
+        al.appendChild(row);
+      });
+
+      document.getElementById('config-numero').value = state.numero;
+      document.getElementById('config-som').checked = state.soundEnabled;
+    }
+
+    function addBairroConfig() {
+      const v = document.getElementById('config-novo-bairro').value.trim();
+      if (!v || state.bairros.includes(v)) return;
+      state.bairros.push(v); 
+      save('mc_bairros', state.bairros);
+      document.getElementById('config-novo-bairro').value = '';
+      renderConfig(); 
+      renderBairros(); 
+      toast('✅ Bairro adicionado!');
+      playSound('success');
+    }
+
+    function removeBairro(i) {
+      state.bairros.splice(i, 1); 
+      save('mc_bairros', state.bairros);
+      renderConfig(); 
+      renderBairros();
+      toast('✕ Bairro removido');
+      playSound('warning');
+    }
+
+    function addAreaConfig() {
+      const desc = document.getElementById('config-nova-area-desc').value.trim();
+      const val = parseFloat(document.getElementById('config-nova-area-valor').value);
+      const tempo = document.getElementById('config-nova-area-tempo').value.trim();
+      
+      if (!desc) {
+        toast('⚠️ Informe a descrição da área');
+        playSound('warning');
+        return;
+      }
+      if (isNaN(val) || val < 0) {
+        toast('⚠️ Informe um valor válido');
+        playSound('warning');
+        return;
+      }
+      
+      const newArea = {
+        id: 'area_' + Date.now(),
+        descricao: desc,
+        valor: val,
+        tempo: tempo
+      };
+      
+      state.areas.push(newArea);
+      save('mc_areas', state.areas);
+      
+      document.getElementById('config-nova-area-desc').value = '';
+      document.getElementById('config-nova-area-valor').value = '';
+      document.getElementById('config-nova-area-tempo').value = '';
+      
+      renderConfig();
+      renderAreas();
+      toast('✅ Área de entrega adicionada!');
+      playSound('success');
+    }
+
+    function removeAreaConfig(i) {
+      if (state.areas.length <= 1) {
+        toast('⚠️ É necessário ter pelo menos 1 área de entrega');
+        playSound('warning');
+        return;
+      }
+      state.areas.splice(i, 1);
+      save('mc_areas', state.areas);
+      renderConfig();
+      renderAreas();
+      toast('✕ Área removida');
+      playSound('warning');
+    }
+
+    function toggleSom(checked) {
+      state.soundEnabled = checked;
+      localStorage.setItem('mc_sound', JSON.stringify(checked));
+      playSound('success');
+    }
+
+    function salvarNumero() {
+      const n = document.getElementById('config-numero').value.replace(/\D/g, '');
+      state.numero = n; 
+      localStorage.setItem('mc_numero', n);
+      toast('✅ Número do WhatsApp salvo!');
+    }
+
+    // ─── UTILS ───────────────────────────────────────────────────────────────────
+    function openModal(id) { 
+      const overlay = document.getElementById(id);
+      overlay.style.display = 'flex';
+      // Trigger reflow for transition
+      overlay.offsetHeight;
+      overlay.classList.add('open');
+    }
+    
+    function closeModal(id) { 
+      const overlay = document.getElementById(id);
+      overlay.classList.remove('open');
+      setTimeout(() => {
+        if (!overlay.classList.contains('open')) {
+          overlay.style.display = 'none';
+        }
+      }, 250); // Match transition duration
+    }
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg; 
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    // ─── EVENT LISTENERS LIVE ────────────────────────────────────────────────────
+    ['end-rua', 'end-comp', 'obs', 'valor-custom', 'bairro-custom'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', gerarPreview);
+    });
+    document.getElementById('retorno-toggle').addEventListener('change', gerarPreview);
+
+    // ─── INIT ────────────────────────────────────────────────────────────────────
+    initTheme();
+    renderColeta();
+    renderBairros();
+    renderAreas();
+    gerarPreview();
+  </script>
+</body>
+</html>
