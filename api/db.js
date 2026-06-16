@@ -13,7 +13,11 @@ if (process.env.DATABASE_URL) {
   });
 } else {
   // Local Development Mock Database
-  const mockDbPath = path.join(__dirname, '..', 'mock-db.json');
+  const isVercel = process.env.VERCEL || process.env.NOW_BUILDER;
+  const mockDbPath = isVercel
+    ? path.join('/tmp', 'mock-db.json')
+    : path.join(__dirname, '..', 'mock-db.json');
+    
   if (!fs.existsSync(mockDbPath)) {
     fs.writeFileSync(mockDbPath, JSON.stringify([], null, 2));
   }

@@ -1,5 +1,14 @@
 const pool = require('./db');
 
+function handleError(res, error, prefix) {
+  console.error(`${prefix} error:`, error);
+  let errMsg = error.message || String(error);
+  if (errMsg.includes('relation "entregas" does not exist')) {
+    errMsg = 'A tabela "entregas" nao existe no banco de dados. Acesse o endpoint /api/setup-db no seu navegador para configurar as tabelas automaticamente.';
+  }
+  res.status(500).json({ error: errMsg });
+}
+
 module.exports = async (req, res) => {
   const method = req.method;
   
@@ -35,8 +44,7 @@ module.exports = async (req, res) => {
       const { rows } = await pool.query(queryText, queryParams);
       res.status(200).json(rows);
     } catch (error) {
-      console.error('GET orders error:', error);
-      res.status(500).json({ error: error.message });
+      handleError(res, error, 'GET orders');
     }
     
   } else if (method === 'POST') {
@@ -65,8 +73,7 @@ module.exports = async (req, res) => {
       
       res.status(201).json(rows[0]);
     } catch (error) {
-      console.error('POST orders error:', error);
-      res.status(500).json({ error: error.message });
+      handleError(res, error, 'POST orders');
     }
     
   } else if (method === 'PUT') {
@@ -94,8 +101,7 @@ module.exports = async (req, res) => {
       
       res.status(200).json(rows[0]);
     } catch (error) {
-      console.error('PUT orders error:', error);
-      res.status(500).json({ error: error.message });
+      handleError(res, error, 'PUT orders');
     }
     
   } else {

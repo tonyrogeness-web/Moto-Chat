@@ -212,6 +212,23 @@
       border-bottom-color: #10b981;
     }
 
+    @keyframes tabPulse {
+      0% { background-color: transparent; }
+      50% { background-color: rgba(16, 185, 129, 0.2); color: #10b981; }
+      100% { background-color: transparent; }
+    }
+    
+    .tab-pulse {
+      animation: tabPulse 1s ease-in-out 3; /* pulse 3 times */
+      border-radius: 8px;
+    }
+
+    @keyframes livePulse {
+      0% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.2); }
+      100% { opacity: 0.4; transform: scale(0.9); }
+    }
+
     /* ─── CONTENT ───────────────────────────────────────────────────────────── */
     .content {
       padding: 24px 16px;
@@ -1056,7 +1073,7 @@
         </button>
         <button class="tab" onclick="showTab('historico')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-          Histórico
+          Histórico <span style="font-size: 9px; background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 2px 6px; border-radius: 10px; margin-left: 4px; font-weight: 800; display: inline-flex; align-items: center; gap: 3px; border: 1px solid rgba(239, 68, 68, 0.3);"><span style="width: 5px; height: 5px; background: #ef4444; border-radius: 50%; display: inline-block; animation: livePulse 1.5s infinite;"></span>AO VIVO</span>
         </button>
         <button class="tab" onclick="showTab('config')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
@@ -2221,9 +2238,51 @@
     }
 
     // ─── HISTÓRICO ───────────────────────────────────────────────────────────────
+    // Helper: get first destination info from order object
+    function getDestInfo(item) {
+      if (item.destinos && item.destinos.length > 0) {
+        const first = item.destinos[0];
+        return { rua: first.rua || 'Multi-destino', bairro: first.bairro || item.coleta_nome || 'Rota' };
+      }
+      // Legacy local storage fallback fields
+      return { rua: item.rua || 'Multi-destino', bairro: item.bairro || item.coleta_nome || 'Rota' };
+    }
+
+    // Helper: rebuild WhatsApp message from a saved order object
+    function buildMsgFromOrder(item) {
+      let msg = '🏍️ *MOTO-CHAT • SOLICITAÇÃO DE CORRIDA* 🏍️\n\n';
+      msg += '*Ponto de Coleta:*\n';
+      msg += `🏢 *${item.coleta_nome}*\n`;
+      if (item.coleta_endereco) msg += `📍 ${item.coleta_endereco}\n`;
+      if (item.coleta_complemento) msg += `ℹ️ ${item.coleta_complemento}\n`;
+      msg += '\n*Entregas:*\n';
+      const destinos = item.destinos || [];
+      if (destinos.length === 1) {
+        const d = destinos[0];
+        msg += `📍 Endereço: ${d.rua}\n`;
+        if (d.comp) msg += `ℹ️ Complemento: ${d.comp}\n`;
+        msg += `🗺️ Bairro: ${d.bairro}\n`;
+        msg += `💵 Valor: R$ ${Number(d.valor).toFixed(2).replace('.', ',')}${d.tempo ? ' (Tempo est.: ' + d.tempo + ')' : ''}\n`;
+      } else {
+        msg += '----------------------------------\n';
+        destinos.forEach((d, idx) => {
+          msg += `📍 *${idx+1}:* ${d.rua}\n`;
+          if (d.comp) msg += `   ℹ️ Ref: ${d.comp}\n`;
+          msg += `   🗺️ Bairro: ${d.bairro}\n`;
+          msg += `   💵 Valor: R$ ${Number(d.valor).toFixed(2).replace('.', ',')}${d.tempo ? ' (Tempo: ' + d.tempo + ')' : ''}\n`;
+          msg += '----------------------------------\n';
+        });
+        msg += `\n💰 *Total das corridas:* R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n`;
+      }
+      msg += `🔄 *Tem retorno?* ${item.retorno ? 'Sim' : 'Não'}\n`;
+      if (item.obs) msg += `💬 *Obs:* ${item.obs}`;
+      msg += `\n\n👉 *Aceitar Corrida:* ${window.location.origin}/?aceitar=true&id=${item.id}`;
+      return msg.trimEnd();
+    }
+
     function renderHistorico() {
       const lista = document.getElementById('hist-lista');
-      const query = document.getElementById('hist-search')?.value.toLowerCase() || '';
+      const query = (document.getElementById('hist-search')?.value || '').toLowerCase();
       const filterStatus = document.getElementById('hist-filter-status')?.value || 'todos';
 
       const concluidas = state.historico.filter(h => h.status === 'concluido');
@@ -2239,12 +2298,16 @@
         listToShow = listToShow.filter(h => h.status === filterStatus);
       }
       if (query) {
-        listToShow = listToShow.filter(h => 
-          h.rua.toLowerCase().includes(query) || 
-          h.bairro.toLowerCase().includes(query) ||
-          (h.obs && h.obs.toLowerCase().includes(query)) ||
-          (h.motoboy_nome && h.motoboy_nome.toLowerCase().includes(query))
-        );
+        listToShow = listToShow.filter(h => {
+          const info = getDestInfo(h);
+          const destText = JSON.stringify(h.destinos || []).toLowerCase();
+          return info.rua.toLowerCase().includes(query) ||
+            info.bairro.toLowerCase().includes(query) ||
+            (h.coleta_nome || '').toLowerCase().includes(query) ||
+            (h.obs || '').toLowerCase().includes(query) ||
+            destText.includes(query) ||
+            (h.motoboy_nome || '').toLowerCase().includes(query);
+        });
       }
 
       if (!listToShow.length) {
@@ -2255,21 +2318,28 @@
       lista.innerHTML = '';
       listToShow.forEach(item => {
         const badges = { pendente: 'badge-pendente', aceito: 'badge-aceito', concluido: 'badge-concluido', cancelado: 'badge-cancelado' };
-        const labels = { pendente: 'Pendente', aceito: 'Aceito', concluido: 'Concluído', cancelado: 'Cancelado' };
+        const labels = { pendente: '⏳ Aguardando', aceito: '✅ Aceito', concluido: '🏁 Concluído', cancelado: '✕ Cancelado' };
         
-        const isMulti = item.destinos && item.destinos.length > 1;
+        const destinos = item.destinos || [];
+        const isMulti = destinos.length > 1;
         const icon = isMulti ? '⛓️' : '🗺️';
-        const typeLabel = isMulti ? ` (${item.destinos.length} paradas)` : '';
+        const typeLabel = isMulti ? ` (${destinos.length} paradas)` : '';
+        const info = getDestInfo(item);
         
         const div = document.createElement('div');
         div.className = 'hist-item ' + (item.status === 'cancelado' ? 'cancelado' : item.status === 'concluido' ? 'concluido' : '');
+        if (item.status === 'aceito') {
+          div.style.borderLeftColor = '#10b981';
+          div.style.background = 'linear-gradient(135deg, var(--bg-card) 0%, rgba(16,185,129,0.05) 100%)';
+        }
         
+        // Build destinations HTML
         let destHtml = '';
         if (isMulti) {
-          destHtml = `<div style="font-size:11.5px; margin-top:6px; color:var(--text-muted); background:var(--bg-app); border:1px solid var(--border-color); border-radius:8px; padding:8px 10px; line-height: 1.4;">`;
-          item.destinos.forEach((d, i) => {
+          destHtml = `<div style="font-size:11.5px; margin-top:6px; color:var(--text-muted); background:var(--bg-app); border:1px solid var(--border-color); border-radius:8px; padding:8px 10px; line-height:1.6;">`;
+          destinos.forEach((d, i) => {
             const areaLabel = d.areaDesc ? ` (${d.areaDesc})` : '';
-            destHtml += `<div style="margin-bottom: 3px; border-bottom: ${i < item.destinos.length - 1 ? '1px solid var(--border-color)' : 'none'}; padding-bottom: 2px;">📍 <b>#${i+1}:</b> ${d.rua} (${d.bairro})${areaLabel} - R$ ${Number(d.valor).toFixed(2).replace('.', ',')}</div>`;
+            destHtml += `<div style="margin-bottom:3px; ${i < destinos.length-1 ? 'border-bottom:1px solid var(--border-color); padding-bottom:3px;' : ''}">📍 <b>#${i+1}:</b> ${d.rua} — ${d.bairro}${areaLabel} <span style="color:var(--primary);font-weight:700;">R$ ${Number(d.valor).toFixed(2).replace('.', ',')}</span></div>`;
           });
           destHtml += `</div>`;
         }
@@ -2278,19 +2348,21 @@
         
         let motoboyInfo = '';
         if (item.motoboy_nome) {
-          motoboyInfo = `&nbsp;•&nbsp; 🏍️ <b>Rider:</b> ${item.motoboy_nome} (${item.motoboy_telefone})`;
+          motoboyInfo = `<div style="margin-top:6px; padding:8px 10px; background:rgba(16,185,129,0.08); border-radius:8px; border:1px solid rgba(16,185,129,0.2); font-size:12px;">🏍️ <b>Assumida por:</b> ${item.motoboy_nome} <span style="color:var(--text-muted)">(${item.motoboy_telefone})</span></div>`;
         }
 
         div.innerHTML = `
           <div class="hist-header">
-            <div class="hist-bairro">${icon} ${item.bairro || 'Rota'}${typeLabel}</div>
+            <div class="hist-bairro">${icon} ${info.bairro}${typeLabel}</div>
             <div class="hist-valor">R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}</div>
           </div>
-          <div class="hist-info">📍 ${item.rua || 'Multi-destino'}</div>
+          <div class="hist-info" style="font-size:12px; color:var(--text-muted); margin-bottom:2px;">🏢 ${item.coleta_nome || 'Estabelecimento'}</div>
+          <div class="hist-info">📍 ${info.rua}</div>
           ${destHtml}
-          <div class="hist-info" style="margin-top: 8px;">🕐 ${formatData} &nbsp;•&nbsp; Retorno: ${item.retorno ? 'Sim' : 'Não'}${motoboyInfo}</div>
+          ${motoboyInfo}
+          <div class="hist-info" style="margin-top:8px;">🕐 ${formatData} &nbsp;•&nbsp; Retorno: ${item.retorno ? 'Sim' : 'Não'}</div>
           ${item.obs ? `<div class="hist-obs">💬 ${item.obs}</div>` : ''}
-          <div style="margin-top:8px"><span class="badge ${badges[item.status]}">${labels[item.status]}</span></div>
+          <div style="margin-top:8px;"><span class="badge ${badges[item.status]}">${labels[item.status]}</span></div>
           <div class="hist-actions">
             <button class="hist-btn hist-btn-aceito" onclick="updateStatus(${item.id},'aceito')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Aceito
@@ -2301,7 +2373,7 @@
             <button class="hist-btn hist-btn-cancelado" onclick="updateStatus(${item.id},'cancelado')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Cancelado
             </button>
-            <button class="hist-btn" onclick="repetirPedido(${item.id})" style="border-color: var(--primary); color: var(--primary);" title="Repetir Pedido no formulário">
+            <button class="hist-btn" onclick="repetirPedido(${item.id})" style="border-color:var(--primary);color:var(--primary);" title="Repetir Pedido">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> Repetir
             </button>
             <button class="hist-btn hist-btn-copiar" onclick="copiarHist(${item.id})">
@@ -2337,12 +2409,16 @@
     }
 
     function copiarHist(id) {
-      const item = state.historico.find(h => h.id === id);
+      const item = state.historico.find(h => String(h.id) === String(id));
       if (!item) return;
-      navigator.clipboard.writeText(item.msg).then(() => {
-        toast('📋 Mensagem copiada!');
+      const msg = buildMsgFromOrder(item);
+      navigator.clipboard.writeText(msg).then(() => {
+        toast('📋 Mensagem com link de aceite copiada!');
         playSound('success');
-      }).catch(() => {});
+      }).catch(() => {
+        toast('⚠️ Falha ao copiar, tente novamente');
+        playSound('warning');
+      });
     }
 
     function repetirPedido(id) {
@@ -2616,14 +2692,67 @@
     }
 
     let dispatcherPollInterval = null;
+    let _lastKnownStatuses = {}; // track id->status for change detection
+
+    function _captureStatuses(orders) {
+      const map = {};
+      orders.forEach(o => { map[o.id] = o.status; });
+      return map;
+    }
+
+    function _detectAcceptChanges(newOrders) {
+      let newAccepts = [];
+      newOrders.forEach(o => {
+        const prev = _lastKnownStatuses[o.id];
+        if (prev === 'pendente' && o.status === 'aceito') {
+          newAccepts.push(o);
+        }
+      });
+      return newAccepts;
+    }
+
+    function mostrarNotificacaoAceite(orders) {
+      if (orders.length === 0) return;
+      // Play bell sound for each new accept (max 3x)
+      const times = Math.min(orders.length, 3);
+      let delay = 0;
+      for (let i = 0; i < times; i++) {
+        setTimeout(() => playSound('bell'), delay);
+        delay += 400;
+      }
+      // Show prominent toast
+      const names = orders.map(o => o.motoboy_nome).join(', ');
+      toast(`🔔 CORRIDA ACEITA por ${names}!`);
+      // Pulse the tab badge
+      const histTab = document.querySelector('.tab:nth-child(2)');
+      if (histTab) {
+        histTab.style.animation = 'none';
+        histTab.offsetHeight; // reflow
+        histTab.classList.add('tab-pulse');
+        setTimeout(() => histTab.classList.remove('tab-pulse'), 3000);
+      }
+    }
+
     function iniciarPollingDespachante() {
       if (dispatcherPollInterval) clearInterval(dispatcherPollInterval);
-      dispatcherPollInterval = setInterval(() => {
-        const histActive = document.getElementById('sec-historico').classList.contains('active');
-        if (histActive) {
-          carregarHistoricoServidor();
+      dispatcherPollInterval = setInterval(async () => {
+        try {
+          const res = await fetch('/api/orders');
+          if (!res.ok) return;
+          const orders = await res.json();
+          // Detect status changes before updating state
+          const newAccepts = _detectAcceptChanges(orders);
+          _lastKnownStatuses = _captureStatuses(orders);
+          state.historico = orders;
+          // Always re-render if tab is active
+          const histActive = document.getElementById('sec-historico').classList.contains('active');
+          if (histActive) renderHistorico();
+          // Always notify even if tab not active
+          if (newAccepts.length > 0) mostrarNotificacaoAceite(newAccepts);
+        } catch (e) {
+          // Silent fail on poll errors
         }
-      }, 15000); // Poll every 15s
+      }, 12000); // Poll every 12s
     }
 
     async function carregarDetalhesCorrida(orderId) {

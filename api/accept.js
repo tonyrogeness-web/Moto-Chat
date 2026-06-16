@@ -1,5 +1,14 @@
 const pool = require('./db');
 
+function handleError(res, error, prefix) {
+  console.error(`${prefix} error:`, error);
+  let errMsg = error.message || String(error);
+  if (errMsg.includes('relation "entregas" does not exist')) {
+    errMsg = 'A tabela "entregas" nao existe no banco de dados. Acesse o endpoint /api/setup-db no seu navegador para configurar as tabelas automaticamente.';
+  }
+  res.status(500).json({ error: errMsg });
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
@@ -43,7 +52,6 @@ module.exports = async (req, res) => {
     const { rows } = await pool.query(updateQuery, [motoboy_nome, motoboy_telefone, orderId]);
     res.status(200).json({ success: true, order: rows[0] });
   } catch (error) {
-    console.error('Accept order error:', error);
-    res.status(500).json({ error: error.message });
+    handleError(res, error, 'Accept order');
   }
 };

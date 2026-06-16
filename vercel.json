@@ -1,4 +1,10 @@
 {
   "version": 2,
-  "cleanUrls": true
+  "routes": [
+    { "src": "/api/setup-db", "dest": "/api/setup-db.js" },
+    { "src": "/api/orders",   "dest": "/api/orders.js"   },
+    { "src": "/api/accept",   "dest": "/api/accept.js"   },
+    { "src": "/api/motoboy-report", "dest": "/api/motoboy-report.js" },
+    { "src": "/(.*)",         "dest": "/index.html"      }
+  ]
 }
