@@ -1120,32 +1120,42 @@
         </div>
       </div>
 
-      <!-- ENDEREÇO DE ENTREGA -->
+      <!-- ENDEREÇO + BAIRRO UNIFICADO -->
       <div class="card">
         <div class="card-title">
           <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
           Endereço de Entrega
+          <span id="autosave-indicator" style="margin-left:auto; font-size:11px; font-weight:600; color: var(--text-muted); display:none; align-items:center; gap:4px;">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            salvando...
+          </span>
+          <span id="autosaved-indicator" style="margin-left:auto; font-size:11px; font-weight:700; color: var(--primary); display:none; align-items:center; gap:4px;">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            salvo!
+          </span>
         </div>
         <div class="field">
           <label for="end-rua">Rua / Avenida e Número</label>
-          <input type="text" id="end-rua" placeholder="Ex: Rua Calamar, 1498">
+          <input type="text" id="end-rua" placeholder="Ex: Rua Calamar, 1498" autocomplete="street-address">
         </div>
-        <div class="field">
-          <label for="end-comp">Complemento / Referência (opcional)</label>
-          <input type="text" id="end-comp" placeholder="Ex: Condomínio Rio D'ouro casa 35">
-        </div>
-      </div>
 
-      <!-- BAIRRO DE ENTREGA -->
-      <div class="card">
-        <div class="card-title">
-          <svg viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
-          Bairro de Entrega
+        <!-- BAIRRO - logo abaixo da Rua -->
+        <div class="field" style="margin-bottom: 6px;">
+          <label style="display:flex; align-items:center; gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary)"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+            Bairro de Entrega
+          </label>
         </div>
         <div class="bairros-grid" id="bairros-grid"></div>
-        <div class="bairro-input-row">
+        <div class="bairro-input-row" style="margin-bottom:16px;">
           <input type="text" id="bairro-custom" placeholder="Digitar bairro manualmente">
           <button class="btn-add-bairro" onclick="addBairroRapido()">+ Salvar</button>
+        </div>
+
+        <!-- COMPLEMENTO - por último -->
+        <div class="field" style="margin-bottom:0">
+          <label for="end-comp">Complemento / Referência (opcional)</label>
+          <input type="text" id="end-comp" placeholder="Ex: Casa 35, Bloco B, Portão Azul..." autocomplete="address-line2">
         </div>
       </div>
 
@@ -1815,7 +1825,8 @@
           document.getElementById('bairro-custom').value = ''; 
           playSound('click');
           renderBairros(); 
-          gerarPreview(); 
+          gerarPreview();
+          agendarAutoSave();
         };
         grid.appendChild(btn);
       });
@@ -1833,6 +1844,7 @@
       playSound('success');
       renderBairros();
       gerarPreview();
+      agendarAutoSave();
     }
 
     // ─── ÁREAS DE ENTREGA (VALORES) ───────────────────────────────────────────────
@@ -1856,7 +1868,8 @@
           document.getElementById('valor-custom').value = ''; 
           playSound('click');
           renderAreas(); 
-          gerarPreview(); 
+          gerarPreview();
+          agendarAutoSave();
         };
         grid.appendChild(btn);
       });
@@ -2145,11 +2158,27 @@
       });
       
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Erro ao salvar pedido no servidor');
+        // Safe JSON parse — server may return empty body on some errors
+        let errMsg = 'Erro ao salvar pedido no servidor';
+        try {
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const errBody = await res.json();
+            errMsg = errBody.error || errMsg;
+          } else {
+            errMsg = `Erro ${res.status}: ${res.statusText || errMsg}`;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
       }
       
-      const savedOrder = await res.json();
+      let savedOrder;
+      try {
+        savedOrder = await res.json();
+      } catch (_) {
+        throw new Error('Resposta inválida do servidor');
+      }
+      
       currentOrderState.id = savedOrder.id;
       currentOrderState.saved = true;
       
@@ -3018,16 +3047,67 @@
       });
     }
 
-    // ─── EVENT LISTENERS LIVE ────────────────────────────────────────────────────
+    // ─── EVENT LISTENERS LIVE + SMART AUTO-SAVE ──────────────────────────────────
+    let _autoSaveTimer = null;
+
+    function mostrarAutoSavando() {
+      const saving = document.getElementById('autosave-indicator');
+      const saved  = document.getElementById('autosaved-indicator');
+      if (saving) saving.style.display = 'flex';
+      if (saved)  saved.style.display  = 'none';
+    }
+
+    function mostrarAutoSalvo() {
+      const saving = document.getElementById('autosave-indicator');
+      const saved  = document.getElementById('autosaved-indicator');
+      if (saving) saving.style.display = 'none';
+      if (saved)  { saved.style.display = 'flex'; setTimeout(() => { saved.style.display = 'none'; }, 3000); }
+    }
+
+    function ocultarAutoSave() {
+      const saving = document.getElementById('autosave-indicator');
+      const saved  = document.getElementById('autosaved-indicator');
+      if (saving) saving.style.display = 'none';
+      if (saved)  saved.style.display  = 'none';
+    }
+
+    // Smart debounced auto-save: fires 1.5s after user stops typing
+    function agendarAutoSave() {
+      clearTimeout(_autoSaveTimer);
+      // Only schedule if there's enough data to save
+      const rua   = document.getElementById('end-rua')?.value.trim() || '';
+      const bairro = state.bairroSel || document.getElementById('bairro-custom')?.value.trim() || '';
+      const valorCustom = document.getElementById('valor-custom')?.value || '';
+      const temAlgo = rua.length > 3 || (state.destinos && state.destinos.length > 0);
+      const temBairro = bairro.length > 0 || state.destinos.length > 0;
+      const temValor  = valorCustom || state.areaSel || state.destinos.length > 0;
+
+      if (temAlgo && temBairro && temValor) {
+        mostrarAutoSavando();
+        _autoSaveTimer = setTimeout(async () => {
+          try {
+            await garantirPedidoSalvo();
+            mostrarAutoSalvo();
+          } catch (_) {
+            ocultarAutoSave(); // silent fail — user will be notified when they click send
+          }
+        }, 1500);
+      } else {
+        ocultarAutoSave();
+      }
+    }
+
     ['end-rua', 'end-comp', 'obs', 'valor-custom', 'bairro-custom'].forEach(id => {
       document.getElementById(id)?.addEventListener('input', () => {
         resetCurrentOrderState();
         gerarPreview();
+        agendarAutoSave();
       });
     });
     document.getElementById('retorno-toggle').addEventListener('change', () => {
       resetCurrentOrderState();
       gerarPreview();
+      agendarAutoSave();
     });
 
     // ─── INIT ────────────────────────────────────────────────────────────────────
