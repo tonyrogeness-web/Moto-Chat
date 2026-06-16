@@ -1558,24 +1558,39 @@
 
   <!-- MOTOBOY ACCEPT VIEW -->
   <div id="motoboy-accept-view" style="display: none; padding: 20px; max-width: 500px; margin: 0 auto; min-height: 100vh;">
-    <div style="text-align: center; margin-bottom: 24px; padding-top: 20px;">
+    <div style="text-align: center; margin-bottom: 20px; padding-top: 20px;">
       <div style="background: var(--primary-light); display: inline-flex; padding: 12px; border-radius: 16px; margin-bottom: 12px;">
         <svg style="width: 36px; height: 36px; fill: var(--primary);" viewBox="0 0 24 24">
           <path d="M19 15c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-14 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12.5-6H14V5h-3c-.55 0-1 .45-1 1v3H5c-1.1 0-2 .9-2 2v3h2c0-1.66 1.34-3 3-3s3 1.34 3 3h4c0-1.66 1.34-3 3-3s3 1.34 3 3h2v-5c0-1.1-.9-2-2-2zM12 7h2v2h-2V7z"/>
         </svg>
       </div>
       <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">Moto-Chat • Aceitar Corrida</h2>
-      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Confirme os dados e digite suas credenciais para aceite</p>
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Confirme os dados e aceite a corrida abaixo</p>
+    </div>
+
+    <!-- BOTÃO EU NO GRUPO - Card proeminente roxo -->
+    <div id="eu-group-card" style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 8px 32px rgba(168,85,247,0.4); border: 1px solid rgba(255,255,255,0.15);">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+        <div style="font-size:32px;">📢</div>
+        <div>
+          <div style="font-size:16px; font-weight:900; color:#fff; line-height:1.2;">Garanta sua vaga no grupo!</div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.75); margin-top:3px;">Envie EU no grupo antes de aceitar aqui</div>
+        </div>
+      </div>
+      <button onclick="enviarEuNoGrupo()" style="width:100%; background:rgba(255,255,255,0.18); border:2px solid rgba(255,255,255,0.5); color:#fff; font-weight:900; font-size:18px; padding:14px; border-radius:12px; cursor:pointer; letter-spacing:1px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.18)'">
+        📱 Enviar &quot;EU&quot; no Grupo Agora!
+      </button>
+      <div style="font-size:11px; color:rgba(255,255,255,0.6); text-align:center; margin-top:8px;">⚡ O primeiro que enviar EU no grupo tem prioridade</div>
     </div>
 
     <!-- Order Info Card -->
     <div class="card" id="accept-order-card">
-      <div style="text-align: center; padding: 20px; color: var(--text-muted);">Carregando detalhes da corrida...</div>
+      <div style="text-align: center; padding: 20px; color: var(--text-muted);">⏳ Carregando detalhes da corrida...</div>
     </div>
 
     <!-- Motoboy Registry Card -->
     <div class="card" id="accept-form-card" style="display: none;">
-      <div class="card-title">Preencha seus dados para assumir</div>
+      <div class="card-title">✍️ Seus Dados para Aceite</div>
       <div class="field">
         <label for="motoboy-nome">Seu Nome Completo</label>
         <input type="text" id="motoboy-nome" placeholder="Ex: João Silva">
@@ -1584,7 +1599,7 @@
         <label for="motoboy-telefone">Seu WhatsApp (apenas números com DDD)</label>
         <input type="tel" id="motoboy-telefone" placeholder="Ex: 75999990000">
       </div>
-      <button class="btn btn-green" onclick="confirmarAceiteCorrida()" style="margin-top: 10px;">
+      <button class="btn btn-green" onclick="confirmarAceiteCorrida()" style="margin-top: 10px; font-size:17px; padding:16px;">
         🏍️ Confirmar e Aceitar Corrida
       </button>
       <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
@@ -1693,7 +1708,7 @@
       coletas: savedColetas,
       coletaAtivaId: activeColetaId,
       destinos: [],
-      bairros: JSON.parse(localStorage.getItem('mc_bairros') || '["Conceição","Mangabeira","SIM","Centro","Brasília","Caseb","Tomba","Muchila","Campo Limpo"]'),
+      bairros: JSON.parse(localStorage.getItem('mc_bairros') || '["Conceição","Mangabeira","SIM","Centro","Brasília","Caseb","Tomba","Muchila","Campo Limpo","São João","Jequiezinho","Primavera","Boa Vista","Zabelê"]'),
       areas: savedAreas,
       historico: JSON.parse(localStorage.getItem('mc_historico') || '[]'),
       numero: localStorage.getItem('mc_numero') || '',
@@ -2232,7 +2247,24 @@
       if (obs) msg += '💬 *Obs:* ' + obs;
 
       if (dbId) {
-        msg += `\n\n👉 *Aceitar Corrida:* ${window.location.origin}/?aceitar=true&id=${dbId}`;
+        // Embeddar dados para o motoboy ver mesmo sem banco de dados
+        const orderData = {
+          coleta_nome: c ? c.nome : '',
+          coleta_endereco: c ? c.end : '',
+          coleta_complemento: c ? c.comp : '',
+          destinos: items.map(i => ({ rua: i.rua, comp: i.comp, bairro: i.bairro, valor: i.valor, tempo: i.tempo })),
+          valor_total: totalVal,
+          retorno: retorno,
+          obs: obs,
+          created_at: new Date().toISOString(),
+          status: 'pendente'
+        };
+        try {
+          const dataEncoded = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(orderData)))));
+          msg += `\n\n👉 *Aceitar Corrida:* ${window.location.origin}/?aceitar=true&id=${dbId}&data=${dataEncoded}`;
+        } catch(e) {
+          msg += `\n\n👉 *Aceitar Corrida:* ${window.location.origin}/?aceitar=true&id=${dbId}`;
+        }
       } else {
         msg += `\n\n👉 *Aceitar Corrida:* [Disponível ao copiar/enviar]`;
       }
@@ -2502,7 +2534,24 @@
       }
       msg += `🔄 *Tem retorno?* ${item.retorno ? 'Sim' : 'Não'}\n`;
       if (item.obs) msg += `💬 *Obs:* ${item.obs}`;
-      msg += `\n\n👉 *Aceitar Corrida:* ${window.location.origin}/?aceitar=true&id=${item.id}`;
+      // Embeddar dados da corrida para funcionar sem banco
+      const orderDataHist = {
+        coleta_nome: item.coleta_nome,
+        coleta_endereco: item.coleta_endereco,
+        coleta_complemento: item.coleta_complemento,
+        destinos: item.destinos,
+        valor_total: item.valor_total,
+        retorno: item.retorno,
+        obs: item.obs,
+        created_at: item.created_at,
+        status: 'pendente'
+      };
+      try {
+        const dataEncoded = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(orderDataHist)))));
+        msg += `\n\n👉 *Aceitar Corrida:* ${window.location.origin}/?aceitar=true&id=${item.id}&data=${dataEncoded}`;
+      } catch(e) {
+        msg += `\n\n👉 *Aceitar Corrida:* ${window.location.origin}/?aceitar=true&id=${item.id}`;
+      }
       return msg.trimEnd();
     }
 
@@ -3056,6 +3105,7 @@
       const urlParams = new URLSearchParams(window.location.search);
       const autoNome = urlParams.get('nome');
       const autoTel = urlParams.get('tel');
+      const dataParam = urlParams.get('data'); // dados embutidos em base64
       
       const preencherForm = (order) => {
         if (order.status === 'pendente') {
@@ -3078,32 +3128,56 @@
         }
       };
 
+      // 1) Tentar API
       try {
         const res = await fetch(`/api/orders?id=${orderId}`);
         if (res.ok) {
           const orders = await res.json();
-          if (orders.length === 0) {
-            card.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--accent); font-weight:700;">⚠️ Corrida não encontrada no sistema!</div>`;
+          if (orders.length > 0) {
+            const order = orders[0];
+            renderDetalhesCorridaHtml(order);
+            preencherForm(order);
             return;
           }
-          const order = orders[0];
+        }
+      } catch (e) {
+        console.warn('Erro ao buscar no servidor:', e);
+      }
+      
+      // 2) Fallback: dados embutidos no link (para IDs locais)
+      if (dataParam) {
+        try {
+          const order = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(dataParam)))));
+          order.id = orderId;
+          order.status = order.status || 'pendente';
           renderDetalhesCorridaHtml(order);
           preencherForm(order);
           return;
+        } catch(e) {
+          console.warn('Erro ao decodificar dados do link:', e);
         }
-      } catch (e) {
-        console.warn('Erro ao buscar no servidor, tentando localStorage:', e);
       }
-      
-      // Fallback
+
+      // 3) Fallback: localStorage local
       const localHistory = JSON.parse(localStorage.getItem('mc_historico') || '[]');
       const order = localHistory.find(h => String(h.id) === String(orderId));
-      if (!order) {
-        card.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--accent); font-weight:700;">⚠️ Corrida não encontrada no sistema!</div>`;
+      if (order) {
+        renderDetalhesCorridaHtml(order);
+        preencherForm(order);
         return;
       }
-      renderDetalhesCorridaHtml(order);
-      preencherForm(order);
+
+      // Nada encontrado
+      card.innerHTML = `
+        <div style="text-align:center; padding:24px;">
+          <div style="font-size:40px; margin-bottom:12px;">⚠️</div>
+          <div style="font-weight:800; font-size:16px; color:var(--accent); margin-bottom:8px;">Corrida não encontrada!</div>
+          <div style="font-size:13px; color:var(--text-muted); line-height:1.6;">
+            Este link foi criado em modo <b>offline</b>.<br>
+            Para que motoboys possam aceitar, o despachante precisa configurar o banco de dados na Vercel.<br><br>
+            <span style="color:var(--primary); font-weight:700;">ID: ${orderId}</span>
+          </div>
+        </div>`;
     }
 
     function renderDetalhesCorridaHtml(order) {
@@ -3259,6 +3333,22 @@
         const msg = `✅ *CORRIDA ASSUMIDA POR MOTOBOY (LOCAL)!*\n\n🏍️ *Motoboy:* ${nome}\n📞 *Contato:* ${telefone}\n📍 *Destino:* Rota para ${localHistory[idx].coleta_nome} (Valor R$ ${Number(localHistory[idx].valor_total).toFixed(2).replace('.', ',')})\n🆔 *ID:* ${orderId}`;
         setTimeout(() => redirecionar(msg), 600);
       }
+    }
+
+    function enviarEuNoGrupo() {
+      const urlParams = new URLSearchParams(window.location.search);
+      // Tenta pegar número do grupo dos parâmetros ou do localStorage
+      // O dispatcher pode ter configurado mc_numero como número do grupo
+      const groupNumber = localStorage.getItem('mc_numero') || '';
+      const msg = 'EU';
+      let url;
+      if (groupNumber && groupNumber.replace(/\D/g,'').length >= 10) {
+        url = `https://wa.me/${groupNumber.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
+      } else {
+        // Sem número configurado, abre WhatsApp genérico com texto EU
+        url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+      }
+      window.open(url, '_blank');
     }
 
     function abrirRelatorioMotoboyDireto() {
@@ -3612,7 +3702,20 @@
       msg += `🔄 *Tem retorno?* ${order.retorno ? 'Sim' : 'Não'}\n`;
       if (order.obs) msg += `💬 *Obs:* ${order.obs}\n`;
       
-      const acceptUrl = `${window.location.origin}/?aceitar=true&id=${order.id}&nome=${encodeURIComponent(nome)}&tel=${telefone}`;
+      // Embeddar dados da corrida para garantir que funcione mesmo sem banco
+      const orderData = {
+        coleta_nome: order.coleta_nome,
+        coleta_endereco: order.coleta_endereco,
+        coleta_complemento: order.coleta_complemento,
+        destinos: order.destinos,
+        valor_total: order.valor_total,
+        retorno: order.retorno,
+        obs: order.obs,
+        created_at: order.created_at,
+        status: 'pendente'
+      };
+      const dataEncoded = encodeURIComponent(btoa(JSON.stringify(orderData)));
+      const acceptUrl = `${window.location.origin}/?aceitar=true&id=${order.id}&nome=${encodeURIComponent(nome)}&tel=${telefone}&data=${dataEncoded}`;
       msg += `\n👉 *CLIQUE NO LINK PARA CONFIRMAR E ACEITAR:* \n${acceptUrl}`;
       
       const waUrl = `https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`;
