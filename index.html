@@ -1035,6 +1035,86 @@
       font-size: 14px;
       font-weight: 500;
     }
+
+    /* ─── MODAL SUB-TABS & DISPATCH QUEUE ───────────────────────────────────── */
+    .modal-tabs {
+      display: flex;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 16px;
+      gap: 16px;
+    }
+    
+    .modal-tab-btn {
+      background: none;
+      border: none;
+      padding: 8px 4px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all var(--transition-fast);
+    }
+    
+    .modal-tab-btn:hover {
+      color: var(--text-main);
+    }
+    
+    .modal-tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    
+    .parsed-rider-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      gap: 10px;
+    }
+    
+    .parsed-rider-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      text-align: left;
+    }
+    
+    .parsed-rider-rank {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #a855f7;
+    }
+    
+    .parsed-rider-name {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    
+    .parsed-rider-msg {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    
+    .parsed-rider-input-phone {
+      width: 140px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-main);
+      font-size: 12px;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -1319,6 +1399,21 @@
         </div>
       </div>
 
+      <!-- MOTOBOYS FREQUENTES CONFIG -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" style="fill: var(--primary); width: 18px; height: 18px;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          Motoboys Frequentes
+        </div>
+        <p style="font-size:13px; color: var(--text-muted); margin-bottom:12px">Configure a lista de contatos para despachar corridas com facilidade e reconhecer no chat.</p>
+        <div id="config-motoboys-lista"></div>
+        <div style="display: flex; gap: 8px; margin-top:12px">
+          <input type="text" id="config-novo-motoboy-nome" placeholder="Nome do motoboy" style="flex: 2;">
+          <input type="tel" id="config-novo-motoboy-tel" placeholder="WhatsApp (DDD+nº)" style="flex: 2;">
+          <button class="btn-add-bairro" onclick="addMotoboyConfig()" style="flex: 1;">+ Adicionar</button>
+        </div>
+      </div>
+
       <!-- NÚMERO DO GRUPO -->
       <div class="card">
         <div class="card-title">
@@ -1404,6 +1499,56 @@
           <button class="btn btn-outline" onclick="mostrarListColeta()">Voltar</button>
           <button class="btn btn-green" onclick="salvarColeta()">Salvar Coleta</button>
         </div>
+      </div>
+  <!-- MODAL FILA DESPACHO ("QUEM DISSE EU") -->
+  <div class="modal-overlay" id="modal-fila" onclick="if(event.target === this) closeModal('modal-fila')">
+    <div class="modal" style="max-width: 540px;">
+      <div class="modal-title" style="color: #a855f7;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        Fila de Aceite & Despacho
+      </div>
+      
+      <!-- Compact Order Info -->
+      <div id="fila-order-summary" style="background: var(--bg-input); padding: 12px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 16px; font-size: 13px; text-align: left; line-height: 1.4;">
+        <!-- Filled in JS -->
+      </div>
+      
+      <!-- Modal Sub-Tabs -->
+      <div class="modal-tabs">
+        <button class="modal-tab-btn active" id="modal-tab-btn-parser" onclick="setModalSubTab('parser')">Importar Chat (WhatsApp)</button>
+        <button class="modal-tab-btn" id="modal-tab-btn-frequentes" onclick="setModalSubTab('frequentes')">Contatos Cadastrados</button>
+      </div>
+      
+      <!-- Sub-Tab: Parser View -->
+      <div id="modal-sub-view-parser">
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px; text-align: left;">
+          Copie a conversa do grupo do WhatsApp e cole abaixo para detectar a fila:
+        </p>
+        <div class="field" style="margin-bottom: 12px;">
+          <textarea id="fila-chat-paste" placeholder="Exemplo:&#10;[15:10] João Motoboy: Eu&#10;Pedro: eu vou&#10;+55 75 9999-0000: eu" style="min-height: 100px; font-size: 12px; font-family: monospace; padding: 10px;" oninput="processarChatFila()"></textarea>
+        </div>
+        
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; display: flex; justify-content: space-between;">
+          <span>Fila Cronológica de Interessados:</span>
+          <span id="fila-detected-count" style="color: #a855f7;">0 detectados</span>
+        </div>
+        <div id="fila-parsed-results" style="max-height: 200px; overflow-y: auto; margin-bottom: 16px;">
+          <div style="text-align: center; padding: 16px; color: var(--text-muted); font-size: 12px;">Nenhum interessado detectado ainda. Cole mensagens contendo "eu", "quero", "vou" etc.</div>
+        </div>
+      </div>
+      
+      <!-- Sub-Tab: Frequentes View -->
+      <div id="modal-sub-view-frequentes" style="display: none;">
+        <div class="field" style="margin-bottom: 12px;">
+          <input type="text" id="fila-frequentes-search" placeholder="🔍 Buscar motoboy cadastrado..." oninput="renderFrequentesFila()" style="padding: 8px 12px; font-size: 13px;">
+        </div>
+        <div id="fila-frequentes-results" style="max-height: 250px; overflow-y: auto; margin-bottom: 16px;">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      
+      <div class="modal-actions" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+        <button class="btn btn-outline" onclick="closeModal('modal-fila')">Fechar</button>
       </div>
     </div>
   </div>
@@ -1535,6 +1680,15 @@
       localStorage.setItem('mc_areas', JSON.stringify(savedAreas));
     }
 
+    let savedMotoboys = JSON.parse(localStorage.getItem('mc_motoboys_frequentes') || '[]');
+    if (savedMotoboys.length === 0) {
+      savedMotoboys = [
+        { id: 'mb_1', nome: "João Motoboy", telefone: "5575999990001" },
+        { id: 'mb_2', nome: "Pedro Rápido", telefone: "5575999990002" }
+      ];
+      localStorage.setItem('mc_motoboys_frequentes', JSON.stringify(savedMotoboys));
+    }
+
     let state = {
       coletas: savedColetas,
       coletaAtivaId: activeColetaId,
@@ -1546,7 +1700,10 @@
       bairroSel: '',
       areaSel: null,
       theme: localStorage.getItem('mc_theme') || 'dark-theme',
-      soundEnabled: JSON.parse(localStorage.getItem('mc_sound') || 'true')
+      soundEnabled: JSON.parse(localStorage.getItem('mc_sound') || 'true'),
+      motoboysFrequentes: savedMotoboys,
+      modalSubTab: 'parser',
+      filaOrderId: null
     };
 
     function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
@@ -2024,7 +2181,10 @@
       if (c) {
         msg += '*Ponto de Coleta:*\n';
         msg += '🏢 *' + c.nome + '*\n';
-        if (c.end) msg += '📍 ' + c.end + '\n';
+        if (c.end) {
+          msg += '📍 ' + c.end + '\n';
+          msg += '🗺️ Maps: https://maps.google.com/?q=' + encodeURIComponent(c.nome + ' ' + c.end) + '\n';
+        }
         if (c.comp) msg += 'ℹ️ ' + c.comp + '\n';
         msg += '\n';
       } else {
@@ -2040,6 +2200,7 @@
         msg += '📍 Endereço: ' + items[0].rua + '\n';
         if (items[0].comp) msg += 'ℹ️ Complemento: ' + items[0].comp + '\n';
         msg += '🗺️ Bairro: ' + items[0].bairro + '\n';
+        msg += '🗺️ Maps: https://maps.google.com/?q=' + encodeURIComponent(items[0].rua + ' ' + items[0].bairro) + '\n';
         
         let valorLabel = 'R$ ' + Number(items[0].valor).toFixed(2).replace('.', ',');
         if (items[0].tempo) {
@@ -2052,6 +2213,7 @@
           msg += `📍 *${idx + 1}:* ${item.rua}\n`;
           if (item.comp) msg += `   ℹ️ Ref: ${item.comp}\n`;
           msg += `   🗺️ Bairro: ${item.bairro}\n`;
+          msg += `   🗺️ Maps: https://maps.google.com/?q=${encodeURIComponent(item.rua + ' ' + item.bairro)}\n`;
           
           let valorLabel = 'R$ ' + Number(item.valor).toFixed(2).replace('.', ',');
           if (item.tempo) {
@@ -2312,7 +2474,10 @@
       let msg = '🏍️ *MOTO-CHAT • SOLICITAÇÃO DE CORRIDA* 🏍️\n\n';
       msg += '*Ponto de Coleta:*\n';
       msg += `🏢 *${item.coleta_nome}*\n`;
-      if (item.coleta_endereco) msg += `📍 ${item.coleta_endereco}\n`;
+      if (item.coleta_endereco) {
+        msg += `📍 ${item.coleta_endereco}\n`;
+        msg += `🗺️ Maps: https://maps.google.com/?q=${encodeURIComponent(item.coleta_nome + ' ' + item.coleta_endereco)}\n`;
+      }
       if (item.coleta_complemento) msg += `ℹ️ ${item.coleta_complemento}\n`;
       msg += '\n*Entregas:*\n';
       const destinos = item.destinos || [];
@@ -2321,6 +2486,7 @@
         msg += `📍 Endereço: ${d.rua}\n`;
         if (d.comp) msg += `ℹ️ Complemento: ${d.comp}\n`;
         msg += `🗺️ Bairro: ${d.bairro}\n`;
+        msg += `🗺️ Maps: https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro)}\n`;
         msg += `💵 Valor: R$ ${Number(d.valor).toFixed(2).replace('.', ',')}${d.tempo ? ' (Tempo est.: ' + d.tempo + ')' : ''}\n`;
       } else {
         msg += '----------------------------------\n';
@@ -2328,6 +2494,7 @@
           msg += `📍 *${idx+1}:* ${d.rua}\n`;
           if (d.comp) msg += `   ℹ️ Ref: ${d.comp}\n`;
           msg += `   🗺️ Bairro: ${d.bairro}\n`;
+          msg += `   🗺️ Maps: https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro)}\n`;
           msg += `   💵 Valor: R$ ${Number(d.valor).toFixed(2).replace('.', ',')}${d.tempo ? ' (Tempo: ' + d.tempo + ')' : ''}\n`;
           msg += '----------------------------------\n';
         });
@@ -2432,6 +2599,11 @@
             <button class="hist-btn hist-btn-cancelado" onclick="updateStatus(${item.id},'cancelado')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Cancelado
             </button>
+            ${item.status === 'pendente' ? `
+            <button class="hist-btn" onclick="abrirModalFila('${item.id}')" style="border-color:#a855f7;color:#a855f7;" title="Quem disse EU?">
+              🏍️ Quem disse EU?
+            </button>
+            ` : ''}
             <button class="hist-btn" onclick="repetirPedido(${item.id})" style="border-color:var(--primary);color:var(--primary);" title="Repetir Pedido">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> Repetir
             </button>
@@ -2604,8 +2776,73 @@
         al.appendChild(row);
       });
 
+      // 3. Render Motoboys Frequentes
+      const ml = document.getElementById('config-motoboys-lista');
+      if (ml) {
+        ml.innerHTML = '';
+        state.motoboysFrequentes.forEach(m => {
+          const row = document.createElement('div');
+          row.className = 'config-item-row';
+          row.innerHTML = `
+            <span class="config-item-label">👤 <b>${m.nome}</b> • 📞 ${m.telefone}</span>
+            <button class="config-btn-remove" onclick="removeMotoboyConfig('${m.id}')">✕</button>
+          `;
+          ml.appendChild(row);
+        });
+      }
+
       document.getElementById('config-numero').value = state.numero;
       document.getElementById('config-som').checked = state.soundEnabled;
+    }
+
+    function formatarTelefoneWhatsApp(tel) {
+      let clean = tel.replace(/\D/g, '');
+      if (!clean) return '';
+      if (clean.length === 11 || clean.length === 10) {
+        clean = '55' + clean;
+      }
+      return clean;
+    }
+
+    function addMotoboyConfig() {
+      const nomeInput = document.getElementById('config-novo-motoboy-nome');
+      const telInput = document.getElementById('config-novo-motoboy-tel');
+      const nome = nomeInput.value.trim();
+      const tel = formatarTelefoneWhatsApp(telInput.value.trim());
+      
+      if (!nome) { toast('⚠️ Informe o nome do motoboy'); playSound('warning'); return; }
+      if (tel.length < 10) { toast('⚠️ Informe um WhatsApp válido (com DDD)'); playSound('warning'); return; }
+      
+      if (state.motoboysFrequentes.some(m => m.nome.toLowerCase() === nome.toLowerCase())) {
+        toast('⚠️ Este motoboy já está cadastrado');
+        playSound('warning');
+        return;
+      }
+      
+      const newMb = {
+        id: 'mb_' + Date.now(),
+        nome,
+        telefone: tel
+      };
+      
+      state.motoboysFrequentes.push(newMb);
+      save('mc_motoboys_frequentes', state.motoboysFrequentes);
+      
+      nomeInput.value = '';
+      telInput.value = '';
+      
+      renderConfig();
+      toast('✅ Motoboy cadastrado com sucesso!');
+      playSound('success');
+    }
+
+    function removeMotoboyConfig(id) {
+      if (!confirm('Deseja excluir este motoboy?')) return;
+      state.motoboysFrequentes = state.motoboysFrequentes.filter(m => m.id !== id);
+      save('mc_motoboys_frequentes', state.motoboysFrequentes);
+      renderConfig();
+      toast('✕ Motoboy removido');
+      playSound('warning');
     }
 
     function addBairroConfig() {
@@ -2816,6 +3053,31 @@
 
     async function carregarDetalhesCorrida(orderId) {
       const card = document.getElementById('accept-order-card');
+      const urlParams = new URLSearchParams(window.location.search);
+      const autoNome = urlParams.get('nome');
+      const autoTel = urlParams.get('tel');
+      
+      const preencherForm = (order) => {
+        if (order.status === 'pendente') {
+          document.getElementById('motoboy-nome').value = autoNome || localStorage.getItem('mc_motoboy_nome') || '';
+          document.getElementById('motoboy-telefone').value = autoTel || localStorage.getItem('mc_motoboy_telefone') || '';
+          document.getElementById('accept-form-card').style.display = 'block';
+          
+          if (autoNome && autoTel) {
+            const btn = document.querySelector('#accept-form-card button');
+            if (btn) {
+              btn.disabled = true;
+              btn.innerHTML = '⚙️ Aceitando corrida automaticamente...';
+            }
+            setTimeout(() => {
+              confirmarAceiteCorrida();
+            }, 800);
+          }
+        } else {
+          document.getElementById('accept-form-card').style.display = 'block';
+        }
+      };
+
       try {
         const res = await fetch(`/api/orders?id=${orderId}`);
         if (res.ok) {
@@ -2826,13 +3088,7 @@
           }
           const order = orders[0];
           renderDetalhesCorridaHtml(order);
-          if (order.status === 'pendente') {
-            document.getElementById('motoboy-nome').value = localStorage.getItem('mc_motoboy_nome') || '';
-            document.getElementById('motoboy-telefone').value = localStorage.getItem('mc_motoboy_telefone') || '';
-            document.getElementById('accept-form-card').style.display = 'block';
-          } else {
-            document.getElementById('accept-form-card').style.display = 'block';
-          }
+          preencherForm(order);
           return;
         }
       } catch (e) {
@@ -2847,13 +3103,7 @@
         return;
       }
       renderDetalhesCorridaHtml(order);
-      if (order.status === 'pendente') {
-        document.getElementById('motoboy-nome').value = localStorage.getItem('mc_motoboy_nome') || '';
-        document.getElementById('motoboy-telefone').value = localStorage.getItem('mc_motoboy_telefone') || '';
-        document.getElementById('accept-form-card').style.display = 'block';
-      } else {
-        document.getElementById('accept-form-card').style.display = 'block';
-      }
+      preencherForm(order);
     }
 
     function renderDetalhesCorridaHtml(order) {
@@ -2874,8 +3124,9 @@
             <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
               <b>Bairro:</b> ${d.bairro} ${d.comp ? ' — Ref: ' + d.comp : ''} ${d.tempo ? ' (' + d.tempo + ')' : ''}
             </div>
-            <div style="font-weight: 700; color: var(--primary); margin-top: 4px; font-size: 13px;">
-              Taxa: R$ ${Number(d.valor).toFixed(2).replace('.', ',')}
+            <div style="font-weight: 700; color: var(--primary); margin-top: 6px; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
+              <span>Taxa: R$ ${Number(d.valor).toFixed(2).replace('.', ',')}</span>
+              <a href="https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro)}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--primary); font-weight:700; text-decoration:none; background:var(--primary-glow); padding:4px 8px; border-radius:6px; border:1px solid rgba(16,185,129,0.2);">🗺️ Rota no Maps</a>
             </div>
           </div>
         `;
@@ -2892,6 +3143,10 @@
           <div style="font-weight: 800; font-size: 15px; color: var(--primary); margin-top: 4px;">${order.coleta_nome}</div>
           <div style="font-size: 13px; color: var(--text-main); margin-top: 2px;">${order.coleta_endereco}</div>
           ${order.coleta_complemento ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">ℹ️ ${order.coleta_complemento}</div>` : ''}
+          ${order.coleta_endereco ? `
+          <div style="margin-top: 8px;">
+            <a href="https://maps.google.com/?q=${encodeURIComponent(order.coleta_nome + ' ' + order.coleta_endereco)}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--primary); font-weight:700; text-decoration:none; background:var(--primary-glow); padding:4px 8px; border-radius:6px; border:1px solid rgba(16,185,129,0.2);">🗺️ Coleta no Maps</a>
+          </div>` : ''}
         </div>
         
         <div style="font-size: 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">🗺️ Destino(s)</div>
@@ -2921,6 +3176,27 @@
       localStorage.setItem('mc_motoboy_nome', nome);
       localStorage.setItem('mc_motoboy_telefone', telefone);
       
+      const btn = document.querySelector('#accept-form-card button');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⚙️ Processando aceite...';
+      }
+      
+      const redirecionar = (whatsappMsg) => {
+        const url = `https://wa.me/?text=${encodeURIComponent(whatsappMsg)}`;
+        if (btn) {
+          btn.disabled = false;
+          btn.style.background = '#059669';
+          btn.style.borderColor = '#059669';
+          btn.innerHTML = '💬 Notificar no WhatsApp';
+          btn.onclick = () => { window.open(url, '_blank'); };
+        }
+        const newWin = window.open(url, '_blank');
+        if (!newWin) {
+          toast('⚠️ Redirecionamento bloqueado. Clique no botão de WhatsApp para notificar.');
+        }
+      };
+
       try {
         const res = await fetch('/api/accept', {
           method: 'POST',
@@ -2936,16 +3212,16 @@
           carregarDetalhesCorrida(orderId);
           
           const msg = `✅ *CORRIDA ASSUMIDA POR MOTOBOY!*\n\n🏍️ *Motoboy:* ${nome}\n📞 *Contato:* ${telefone}\n📍 *Destino:* Rota para ${data.order.coleta_nome} (Valor R$ ${Number(data.order.valor_total).toFixed(2).replace('.', ',')})\n🆔 *ID:* ${orderId}`;
-          const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-          
-          setTimeout(() => {
-            window.open(url, '_blank');
-          }, 1500);
+          setTimeout(() => redirecionar(msg), 600);
           return;
         } else {
           const data = await res.json();
           toast('⚠️ ' + (data.message || 'Erro ao aceitar corrida'));
           playSound('warning');
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '🏍️ Confirmar e Aceitar Corrida';
+          }
           if (data.alreadyAccepted) {
             carregarDetalhesCorrida(orderId);
           }
@@ -2962,6 +3238,10 @@
         if (localHistory[idx].status !== 'pendente') {
           toast(`⚠️ Esta corrida já foi aceita por ${localHistory[idx].motoboy_nome || 'outro motoboy'}`);
           playSound('warning');
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '🏍️ Confirmar e Aceitar Corrida';
+          }
           carregarDetalhesCorrida(orderId);
           return;
         }
@@ -2977,10 +3257,7 @@
         carregarDetalhesCorrida(orderId);
         
         const msg = `✅ *CORRIDA ASSUMIDA POR MOTOBOY (LOCAL)!*\n\n🏍️ *Motoboy:* ${nome}\n📞 *Contato:* ${telefone}\n📍 *Destino:* Rota para ${localHistory[idx].coleta_nome} (Valor R$ ${Number(localHistory[idx].valor_total).toFixed(2).replace('.', ',')})\n🆔 *ID:* ${orderId}`;
-        const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-        setTimeout(() => {
-          window.open(url, '_blank');
-        }, 1500);
+        setTimeout(() => redirecionar(msg), 600);
       }
     }
 
@@ -3075,6 +3352,275 @@
         `;
         listEl.appendChild(itemDiv);
       });
+    }
+
+    // ─── FILA DESPACHO & CHAT PARSER LOGIC ────────────────────────────────────────
+    function parseWhatsAppChat(text) {
+      const lines = text.split('\n');
+      const results = [];
+      const acceptRegex = /\b(eu+|quero+|vou+|fui+|mim|opa|comigo|aceito|fila|manda)\b/i;
+      
+      for (let line of lines) {
+        line = line.trim();
+        if (!line) continue;
+        
+        let cleanLine = line.replace(/^\[[^\]]+\]\s*/, '');
+        cleanLine = cleanLine.replace(/^\d{2,4}[/-]\d{2}[/-]\d{2,4}\s+\d{2}:\d{2}\s*-\s*/, '');
+        cleanLine = cleanLine.replace(/^\d{2}:\d{2}\s*-\s*/, '');
+        cleanLine = cleanLine.replace(/^\d{2}:\d{2}\s*:\s*/, '');
+        
+        const colonIdx = cleanLine.indexOf(':');
+        if (colonIdx === -1) continue;
+        
+        const sender = cleanLine.substring(0, colonIdx).replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+        const msg = cleanLine.substring(colonIdx + 1).trim();
+        
+        if (acceptRegex.test(msg)) {
+          if (!results.some(r => r.name.toLowerCase() === sender.toLowerCase())) {
+            results.push({
+              name: sender,
+              message: msg
+            });
+          }
+        }
+      }
+      return results;
+    }
+
+    function abrirModalFila(orderId) {
+      state.filaOrderId = orderId;
+      state.modalSubTab = 'parser';
+      
+      const pasteArea = document.getElementById('fila-chat-paste');
+      if (pasteArea) pasteArea.value = '';
+      
+      const searchArea = document.getElementById('fila-frequentes-search');
+      if (searchArea) searchArea.value = '';
+      
+      document.getElementById('modal-tab-btn-parser').classList.add('active');
+      document.getElementById('modal-tab-btn-frequentes').classList.remove('active');
+      document.getElementById('modal-sub-view-parser').style.display = 'block';
+      document.getElementById('modal-sub-view-frequentes').style.display = 'none';
+      
+      const order = state.historico.find(h => String(h.id) === String(orderId));
+      const summaryEl = document.getElementById('fila-order-summary');
+      if (order && summaryEl) {
+        let destText = '';
+        if (order.destinos && order.destinos.length > 0) {
+          destText = order.destinos.map(d => `📍 ${d.rua} (${d.bairro})`).join('<br>');
+        } else {
+          destText = `📍 ${order.rua} (${order.bairro})`;
+        }
+        
+        summaryEl.innerHTML = `
+          <div><b>🏢 Coleta:</b> ${order.coleta_nome}</div>
+          <div style="margin-top: 4px;"><b>🗺️ Destino(s):</b><br>${destText}</div>
+          <div style="margin-top: 4px; display:flex; justify-content:space-between; font-weight:800; color:var(--primary);">
+            <span>💵 Valor Total:</span>
+            <span>R$ ${Number(order.valor_total).toFixed(2).replace('.', ',')}</span>
+          </div>
+        `;
+      }
+      
+      processarChatFila();
+      renderFrequentesFila();
+      openModal('modal-fila');
+      playSound('click');
+    }
+
+    function setModalSubTab(tab) {
+      state.modalSubTab = tab;
+      playSound('click');
+      if (tab === 'parser') {
+        document.getElementById('modal-tab-btn-parser').classList.add('active');
+        document.getElementById('modal-tab-btn-frequentes').classList.remove('active');
+        document.getElementById('modal-sub-view-parser').style.display = 'block';
+        document.getElementById('modal-sub-view-frequentes').style.display = 'none';
+      } else {
+        document.getElementById('modal-tab-btn-parser').classList.remove('active');
+        document.getElementById('modal-tab-btn-frequentes').classList.add('active');
+        document.getElementById('modal-sub-view-parser').style.display = 'none';
+        document.getElementById('modal-sub-view-frequentes').style.display = 'block';
+        renderFrequentesFila();
+      }
+    }
+
+    function processarChatFila() {
+      const text = document.getElementById('fila-chat-paste').value;
+      const parsed = parseWhatsAppChat(text);
+      
+      document.getElementById('fila-detected-count').textContent = `${parsed.length} detectados`;
+      
+      const resultsEl = document.getElementById('fila-parsed-results');
+      resultsEl.innerHTML = '';
+      
+      if (parsed.length === 0) {
+        resultsEl.innerHTML = `
+          <div style="text-align: center; padding: 16px; color: var(--text-muted); font-size: 12px;">
+            Nenhum interessado detectado ainda. Cole mensagens contendo "eu", "quero", "vou" etc.
+          </div>
+        `;
+        return;
+      }
+      
+      parsed.forEach((item, index) => {
+        const cleanName = item.name.toLowerCase();
+        const contact = state.motoboysFrequentes.find(m => m.nome.toLowerCase() === cleanName);
+        const phone = contact ? contact.telefone : '';
+        
+        const card = document.createElement('div');
+        card.className = 'parsed-rider-item';
+        
+        const badgeText = index === 0 ? '🏆 1º da Fila' : `${index + 1}º da Fila`;
+        
+        let actionButtonHtml = '';
+        if (phone) {
+          actionButtonHtml = `
+            <button class="btn btn-green btn-small" onclick="despacharParaMotoboy('${escapeString(item.name)}', '${phone}')" style="background:#a855f7; border-color:#a855f7; padding: 6px 12px; font-size:12px;">
+              🏍️ Despachar
+            </button>
+          `;
+        } else {
+          actionButtonHtml = `
+            <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+              <input type="tel" id="input-phone-parsed-${index}" class="parsed-rider-input-phone" placeholder="WhatsApp (DDD + Nº)" oninput="this.value = this.value.replace(/\\D/g, '')">
+              <button class="btn btn-green btn-small" onclick="despacharNovoParsed(${index}, '${escapeString(item.name)}')" style="background:#a855f7; border-color:#a855f7; padding: 4px 10px; font-size:11px;">
+                💾 Salvar e Enviar
+              </button>
+            </div>
+          `;
+        }
+        
+        card.innerHTML = `
+          <div class="parsed-rider-info">
+            <span class="parsed-rider-rank">${badgeText}</span>
+            <span class="parsed-rider-name">${item.name}</span>
+            <span class="parsed-rider-msg">"${item.message}"</span>
+            ${phone ? `<span style="font-size:11px; color:#10b981; font-weight:600;">📞 WhatsApp: ${phone}</span>` : ''}
+          </div>
+          <div>
+            ${actionButtonHtml}
+          </div>
+        `;
+        resultsEl.appendChild(card);
+      });
+    }
+
+    function escapeString(str) {
+      return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
+    function despacharNovoParsed(index, name) {
+      const inputEl = document.getElementById(`input-phone-parsed-${index}`);
+      if (!inputEl) return;
+      const rawPhone = inputEl.value.trim();
+      const phone = formatarTelefoneWhatsApp(rawPhone);
+      
+      if (phone.length < 10) {
+        toast('⚠️ Informe um WhatsApp válido (com DDD)');
+        playSound('warning');
+        return;
+      }
+      
+      despacharParaMotoboy(name, phone);
+    }
+
+    function renderFrequentesFila() {
+      const resultsEl = document.getElementById('fila-frequentes-results');
+      if (!resultsEl) return;
+      
+      const query = document.getElementById('fila-frequentes-search').value.toLowerCase();
+      let list = state.motoboysFrequentes;
+      
+      if (query) {
+        list = list.filter(m => m.nome.toLowerCase().includes(query) || m.telefone.includes(query));
+      }
+      
+      resultsEl.innerHTML = '';
+      
+      if (list.length === 0) {
+        resultsEl.innerHTML = `
+          <div style="text-align: center; padding: 16px; color: var(--text-muted); font-size: 12px;">
+            Nenhum motoboy correspondente encontrado.
+          </div>
+        `;
+        return;
+      }
+      
+      list.forEach(m => {
+        const card = document.createElement('div');
+        card.className = 'parsed-rider-item';
+        card.innerHTML = `
+          <div class="parsed-rider-info">
+            <span class="parsed-rider-name">👤 ${m.nome}</span>
+            <span class="parsed-rider-msg" style="font-style:normal;">📞 WhatsApp: ${m.telefone}</span>
+          </div>
+          <button class="btn btn-green btn-small" onclick="despacharParaMotoboy('${escapeString(m.nome)}', '${m.telefone}')" style="background:#a855f7; border-color:#a855f7; padding: 6px 12px; font-size:12px;">
+            🏍️ Despachar
+          </button>
+        `;
+        resultsEl.appendChild(card);
+      });
+    }
+
+    async function despacharParaMotoboy(nome, telefone) {
+      const orderId = state.filaOrderId;
+      if (!orderId) return;
+      
+      const exists = state.motoboysFrequentes.some(m => m.telefone === telefone);
+      if (!exists) {
+        state.motoboysFrequentes.push({
+          id: 'mb_' + Date.now(),
+          nome,
+          telefone
+        });
+        save('mc_motoboys_frequentes', state.motoboysFrequentes);
+        renderConfig();
+      }
+      
+      const order = state.historico.find(h => String(h.id) === String(orderId));
+      if (!order) {
+        toast('⚠️ Pedido não encontrado');
+        playSound('warning');
+        return;
+      }
+      
+      if (!confirm(`Deseja enviar o link de aceite para o motoboy ${nome}?`)) return;
+      
+      let msg = `Olá, *${nome}*! Você foi o primeiro da fila para a corrida! 🏍️💨\n\n`;
+      msg += `*Detalhes da Corrida:*\n`;
+      msg += `🏢 *Coleta:* ${order.coleta_nome}\n`;
+      if (order.coleta_endereco) {
+        msg += `📍 Coleta no Maps: https://maps.google.com/?q=${encodeURIComponent(order.coleta_nome + ' ' + order.coleta_endereco)}\n`;
+      }
+      msg += `\n*Entregas:*\n`;
+      
+      const destinos = order.destinos || [];
+      if (destinos.length === 1) {
+        const d = destinos[0];
+        msg += `📍 Endereço: ${d.rua}\n`;
+        msg += `🗺️ Bairro: ${d.bairro}\n`;
+        msg += `🗺️ Rota no Maps: https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro)}\n`;
+      } else {
+        destinos.forEach((d, idx) => {
+          msg += `📍 *#${idx+1}:* ${d.rua} — ${d.bairro}\n`;
+          msg += `   🗺️ Maps: https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro)}\n`;
+        });
+      }
+      
+      msg += `\n💵 *Valor total:* R$ ${Number(order.valor_total).toFixed(2).replace('.', ',')}\n`;
+      msg += `🔄 *Tem retorno?* ${order.retorno ? 'Sim' : 'Não'}\n`;
+      if (order.obs) msg += `💬 *Obs:* ${order.obs}\n`;
+      
+      const acceptUrl = `${window.location.origin}/?aceitar=true&id=${order.id}&nome=${encodeURIComponent(nome)}&tel=${telefone}`;
+      msg += `\n👉 *CLIQUE NO LINK PARA CONFIRMAR E ACEITAR:* \n${acceptUrl}`;
+      
+      const waUrl = `https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`;
+      window.open(waUrl, '_blank');
+      
+      playSound('success');
+      toast('📤 WhatsApp de despacho aberto!');
+      closeModal('modal-fila');
     }
 
     // ─── EVENT LISTENERS LIVE + SMART AUTO-SAVE ──────────────────────────────────
