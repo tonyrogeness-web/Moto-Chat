@@ -2092,23 +2092,30 @@
     }
 
     // ─── AÇÕES ───────────────────────────────────────────────────────────────────
-    async function garantirPedidoSalvo() {
-      if (currentOrderState.saved && currentOrderState.id) {
-        return currentOrderState.id;
+
+    // Detects if the API server is available (Vercel or local Node server)
+    let _apiAvailable = null; // null = unknown, true/false after first check
+
+    async function verificarAPI() {
+      if (_apiAvailable !== null) return _apiAvailable;
+      try {
+        const r = await fetch('/api/orders', { method: 'GET', signal: AbortSignal.timeout(3000) });
+        // If returns HTML (no API server), mark unavailable
+        const ct = r.headers.get('content-type') || '';
+        _apiAvailable = ct.includes('application/json') || r.ok;
+      } catch (_) {
+        _apiAvailable = false;
       }
-      
+      return _apiAvailable;
+    }
+
+    function _montarOrderData() {
       let destinosSalvar = [];
       let totalVal = 0;
-      let resumoBairro = '';
-      let resumoRua = '';
-      
+
       if (state.destinos.length > 0) {
         destinosSalvar = [...state.destinos];
         totalVal = destinosSalvar.reduce((acc, curr) => acc + curr.valor, 0);
-        
-        const bairrosSet = [...new Set(destinosSalvar.map(d => d.bairro))];
-        resumoBairro = bairrosSet.join(', ');
-        resumoRua = `Rota com ${destinosSalvar.length} entregas`;
       } else {
         const rua = document.getElementById('end-rua').value.trim();
         const comp = document.getElementById('end-comp').value.trim();
@@ -2116,32 +2123,21 @@
         const valorCustom = document.getElementById('valor-custom').value;
         const valor = valorCustom ? parseFloat(valorCustom) : (state.areaSel ? state.areaSel.valor : null);
         const tempo = valorCustom ? '' : (state.areaSel ? state.areaSel.tempo : '');
-        
-        if (!rua && !bairro && (valor === null || isNaN(valor))) {
-          return null;
-        }
-        
+
+        if (!rua && !bairro && (valor === null || isNaN(valor))) return null;
         if (!bairro || valor === null || isNaN(valor) || !rua) {
-          throw new Error('Preencha endereço, bairro e valor para salvar o pedido');
+          throw new Error('Preencha endereço, bairro e valor');
         }
-        
-        destinosSalvar = [{
-          id: 'destino_single',
-          rua,
-          comp,
-          bairro,
+
+        destinosSalvar = [{ id: 'destino_single', rua, comp, bairro,
           valor: parseFloat(valor),
           areaDesc: valorCustom ? 'Personalizado' : (state.areaSel ? state.areaSel.descricao : ''),
-          tempo
-        }];
+          tempo }];
         totalVal = parseFloat(valor);
-        resumoBairro = bairro;
-        resumoRua = rua;
       }
-      
+
       const coleta = state.coletas.find(x => x.id === state.coletaAtivaId) || state.coletas[0];
-      
-      const orderData = {
+      return {
         coleta_nome: coleta ? coleta.nome : 'Estabelecimento',
         coleta_endereco: coleta ? coleta.end : '',
         coleta_complemento: coleta ? coleta.comp : '',
@@ -2150,56 +2146,88 @@
         retorno: document.getElementById('retorno-toggle').checked,
         obs: document.getElementById('obs').value.trim()
       };
-      
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      });
-      
-      if (!res.ok) {
-        // Safe JSON parse — server may return empty body on some errors
-        let errMsg = 'Erro ao salvar pedido no servidor';
-        try {
-          const contentType = res.headers.get('content-type') || '';
-          if (contentType.includes('application/json')) {
-            const errBody = await res.json();
-            errMsg = errBody.error || errMsg;
-          } else {
-            errMsg = `Erro ${res.status}: ${res.statusText || errMsg}`;
-          }
-        } catch (_) {}
-        throw new Error(errMsg);
+    }
+
+    function _salvarLocalFallback(orderData) {
+      const localId = 'local_' + Date.now();
+      const record = {
+        id: localId,
+        created_at: new Date().toISOString(),
+        status: 'pendente',
+        motoboy_nome: null,
+        motoboy_telefone: null,
+        ...orderData
+      };
+      const hist = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      hist.unshift(record);
+      localStorage.setItem('mc_historico', JSON.stringify(hist));
+      state.historico = hist;
+      return localId;
+    }
+
+    async function garantirPedidoSalvo() {
+      if (currentOrderState.saved && currentOrderState.id) {
+        return currentOrderState.id;
       }
-      
-      let savedOrder;
+
+      const orderData = _montarOrderData();
+      if (!orderData) return null;
+
+      // Try API server first
+      let apiOk = false;
       try {
-        savedOrder = await res.json();
-      } catch (_) {
-        throw new Error('Resposta inválida do servidor');
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData),
+          signal: AbortSignal.timeout(5000)
+        });
+
+        const ct = res.headers.get('content-type') || '';
+        if (res.ok && ct.includes('application/json')) {
+          const savedOrder = await res.json();
+          currentOrderState.id = savedOrder.id;
+          currentOrderState.saved = true;
+          _apiAvailable = true;
+          document.getElementById('preview-msg').textContent = getMensagem(savedOrder.id);
+          return savedOrder.id;
+        } else if (res.status === 500 && ct.includes('application/json')) {
+          // Server is up but DB error — show the real error
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.error || `Erro ${res.status} no servidor`);
+        }
+        // else: server up but returned HTML (no route) — fall to localStorage
+      } catch (e) {
+        if (e.message && !e.message.includes('fetch') && !e.message.includes('timeout')
+            && !e.message.includes('network') && !e.message.includes('Failed')) {
+          throw e; // real validation error, rethrow
+        }
+        // network/timeout error — fall through to localStorage
       }
-      
-      currentOrderState.id = savedOrder.id;
+
+      // Fallback: save to localStorage and use local ID
+      _apiAvailable = false;
+      const localId = _salvarLocalFallback(orderData);
+      currentOrderState.id = localId;
       currentOrderState.saved = true;
-      
-      // Update preview with real Vercel link
-      document.getElementById('preview-msg').textContent = getMensagem(savedOrder.id);
-      
-      return savedOrder.id;
+      document.getElementById('preview-msg').textContent = getMensagem(localId);
+      return localId;
     }
 
     async function copiarMensagem() {
       try {
         const dbId = await garantirPedidoSalvo();
         if (!dbId) {
-          toast('⚠️ Preencha os campos para copiar a mensagem');
+          toast('⚠️ Preencha endereço, bairro e valor');
           playSound('warning');
           return;
         }
         const msg = getMensagem(dbId);
-        
         await navigator.clipboard.writeText(msg);
-        toast('📋 Mensagem com Link de Aceite copiada!');
+        const isLocal = String(dbId).startsWith('local_');
+        toast(isLocal
+          ? '📋 Mensagem copiada! (modo offline — sem link de aceite)'
+          : '📋 Mensagem com Link de Aceite copiada!');
         playSound('success');
       } catch (e) {
         toast('⚠️ ' + e.message);
@@ -2211,7 +2239,7 @@
       try {
         const dbId = await garantirPedidoSalvo();
         if (!dbId) {
-          toast('⚠️ Preencha os campos para enviar no WhatsApp');
+          toast('⚠️ Preencha endereço, bairro e valor');
           playSound('warning');
           return;
         }
@@ -2222,6 +2250,8 @@
           : `https://wa.me/?text=${encodeURIComponent(msg)}`;
         window.open(url, '_blank');
         playSound('click');
+        const isLocal = String(dbId).startsWith('local_');
+        if (isLocal) toast('📤 Enviado! (Para link de aceite, configure o banco de dados)');
       } catch (e) {
         toast('⚠️ ' + e.message);
         playSound('warning');
