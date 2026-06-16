@@ -1384,6 +1384,84 @@
   <!-- TOAST NOTIFICATION -->
   <div class="toast" id="toast"></div>
 
+  <!-- MOTOBOY ACCEPT VIEW -->
+  <div id="motoboy-accept-view" style="display: none; padding: 20px; max-width: 500px; margin: 0 auto; min-height: 100vh;">
+    <div style="text-align: center; margin-bottom: 24px; padding-top: 20px;">
+      <div style="background: var(--primary-light); display: inline-flex; padding: 12px; border-radius: 16px; margin-bottom: 12px;">
+        <svg style="width: 36px; height: 36px; fill: var(--primary);" viewBox="0 0 24 24">
+          <path d="M19 15c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-14 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12.5-6H14V5h-3c-.55 0-1 .45-1 1v3H5c-1.1 0-2 .9-2 2v3h2c0-1.66 1.34-3 3-3s3 1.34 3 3h4c0-1.66 1.34-3 3-3s3 1.34 3 3h2v-5c0-1.1-.9-2-2-2zM12 7h2v2h-2V7z"/>
+        </svg>
+      </div>
+      <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">Moto-Chat • Aceitar Corrida</h2>
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Confirme os dados e digite suas credenciais para aceite</p>
+    </div>
+
+    <!-- Order Info Card -->
+    <div class="card" id="accept-order-card">
+      <div style="text-align: center; padding: 20px; color: var(--text-muted);">Carregando detalhes da corrida...</div>
+    </div>
+
+    <!-- Motoboy Registry Card -->
+    <div class="card" id="accept-form-card" style="display: none;">
+      <div class="card-title">Preencha seus dados para assumir</div>
+      <div class="field">
+        <label for="motoboy-nome">Seu Nome Completo</label>
+        <input type="text" id="motoboy-nome" placeholder="Ex: João Silva">
+      </div>
+      <div class="field">
+        <label for="motoboy-telefone">Seu WhatsApp (apenas números com DDD)</label>
+        <input type="tel" id="motoboy-telefone" placeholder="Ex: 75999990000">
+      </div>
+      <button class="btn btn-green" onclick="confirmarAceiteCorrida()" style="margin-top: 10px;">
+        🏍️ Confirmar e Aceitar Corrida
+      </button>
+      <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
+        📊 Ver Minhas Corridas (Relatório)
+      </button>
+    </div>
+  </div>
+
+  <!-- MOTOBOY REPORT VIEW -->
+  <div id="motoboy-report-view" style="display: none; padding: 20px; max-width: 500px; margin: 0 auto; min-height: 100vh;">
+    <div style="text-align: center; margin-bottom: 24px; padding-top: 20px;">
+      <div style="background: var(--primary-light); display: inline-flex; padding: 12px; border-radius: 16px; margin-bottom: 12px;">
+        <svg style="width: 36px; height: 36px; fill: var(--primary); stroke: var(--primary); stroke-width: 0.5" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"></circle><polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2"></polyline>
+        </svg>
+      </div>
+      <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">Meu Extrato de Corridas</h2>
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Consulte seu relatório acumulado e faturado</p>
+    </div>
+
+    <!-- Inquiry Card -->
+    <div class="card">
+      <div class="card-title">Dados de Acesso</div>
+      <div class="field">
+        <label for="report-telefone">Digite seu WhatsApp cadastrado (apenas números)</label>
+        <input type="tel" id="report-telefone" placeholder="Ex: 75999990000">
+      </div>
+      <button class="btn btn-green" onclick="consultarRelatorioMotoboy()">
+        🔍 Consultar Minhas Corridas
+      </button>
+    </div>
+
+    <!-- Summary Statistics Grid -->
+    <div class="resumo-grid" id="report-summary-grid" style="display: none;">
+      <div class="resumo-card">
+        <div class="resumo-num" id="report-total-runs">0</div>
+        <div class="resumo-label">Total Corridas</div>
+      </div>
+      <div class="resumo-card">
+        <div class="resumo-valor" id="report-total-earnings">R$ 0,00</div>
+        <div class="resumo-label">Total Faturado</div>
+      </div>
+    </div>
+
+    <!-- Report List of Runs -->
+    <div id="report-runs-list"></div>
+  </div>
+
+
   <!-- ─── JAVASCRIPT STATE & LOGIC ────────────────────────────────────────── -->
   <script>
     // ─── STATE & MIGRATION ────────────────────────────────────────────────────────
@@ -1555,7 +1633,7 @@
       document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
       document.getElementById('sec-' + id).classList.add('active');
       playSound('click');
-      if (id === 'historico') renderHistorico();
+      if (id === 'historico') carregarHistoricoServidor();
       if (id === 'config') renderConfig();
     }
 
@@ -1871,7 +1949,8 @@
     }
 
     // ─── PREVIEW ─────────────────────────────────────────────────────────────────
-    function getMensagem() {
+    // ─── PREVIEW ─────────────────────────────────────────────────────────────────
+    function getMensagem(dbId = null) {
       const c = state.coletas.find(x => x.id === state.coletaAtivaId) || state.coletas[0];
       let items = [];
       let totalVal = 0;
@@ -1960,6 +2039,12 @@
       msg += '🔄 *Tem retorno?* ' + (retorno ? 'Sim' : 'Não') + '\n';
       if (obs) msg += '💬 *Obs:* ' + obs;
 
+      if (dbId) {
+        msg += `\n\n👉 *Aceitar Corrida:* ${window.location.origin}/?aceitar=true&id=${dbId}`;
+      } else {
+        msg += `\n\n👉 *Aceitar Corrida:* [Disponível ao copiar/enviar]`;
+      }
+
       return msg.trimEnd();
     }
 
@@ -1972,39 +2057,16 @@
     }
 
     function gerarPreview() {
-      document.getElementById('preview-msg').textContent = getMensagem();
+      document.getElementById('preview-msg').textContent = getMensagem(currentOrderState.id);
       updatePreviewTime();
     }
 
     // ─── AÇÕES ───────────────────────────────────────────────────────────────────
-    function copiarMensagem() {
-      const msg = getMensagem();
-      navigator.clipboard.writeText(msg).then(() => {
-        toast('📋 Mensagem copiada!');
-        playSound('success');
-      }).catch(() => {
-        const ta = document.createElement('textarea');
-        ta.value = msg; 
-        document.body.appendChild(ta); 
-        ta.select(); 
-        document.execCommand('copy'); 
-        ta.remove();
-        toast('📋 Mensagem copiada!');
-        playSound('success');
-      });
-    }
-
-    function enviarWhatsApp() {
-      const msg = getMensagem();
-      const num = state.numero || '';
-      const url = num
-        ? `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
-        : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-      window.open(url, '_blank');
-      playSound('click');
-    }
-
-    function salvarSolicitacao() {
+    async function garantirPedidoSalvo() {
+      if (currentOrderState.saved && currentOrderState.id) {
+        return currentOrderState.id;
+      }
+      
       let destinosSalvar = [];
       let totalVal = 0;
       let resumoBairro = '';
@@ -2025,10 +2087,12 @@
         const valor = valorCustom ? parseFloat(valorCustom) : (state.areaSel ? state.areaSel.valor : null);
         const tempo = valorCustom ? '' : (state.areaSel ? state.areaSel.tempo : '');
         
-        if (!bairro || valor === null || isNaN(valor) || !rua) { 
-          toast('⚠️ Preencha endereço, bairro e valor'); 
-          playSound('warning');
-          return; 
+        if (!rua && !bairro && (valor === null || isNaN(valor))) {
+          return null;
+        }
+        
+        if (!bairro || valor === null || isNaN(valor) || !rua) {
+          throw new Error('Preencha endereço, bairro e valor para salvar o pedido');
         }
         
         destinosSalvar = [{
@@ -2045,27 +2109,101 @@
         resumoRua = rua;
       }
       
-      const item = {
-        id: Date.now(),
-        data: new Date().toLocaleString('pt-BR'),
-        bairro: resumoBairro,
-        rua: resumoRua,
-        valor: totalVal,
+      const coleta = state.coletas.find(x => x.id === state.coletaAtivaId) || state.coletas[0];
+      
+      const orderData = {
+        coleta_nome: coleta ? coleta.nome : 'Estabelecimento',
+        coleta_endereco: coleta ? coleta.end : '',
+        coleta_complemento: coleta ? coleta.comp : '',
+        destinos: destinosSalvar,
+        valor_total: totalVal,
         retorno: document.getElementById('retorno-toggle').checked,
-        obs: document.getElementById('obs').value.trim(),
-        status: 'pendente',
-        msg: getMensagem(),
-        destinos: destinosSalvar
+        obs: document.getElementById('obs').value.trim()
       };
       
-      state.historico.unshift(item);
-      save('mc_historico', state.historico);
-      playSound('success');
-      toast('✅ Salvo no histórico!');
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      });
       
-      state.destinos = [];
-      limparFormEntrega();
-      renderRoteiro();
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro ao salvar pedido no servidor');
+      }
+      
+      const savedOrder = await res.json();
+      currentOrderState.id = savedOrder.id;
+      currentOrderState.saved = true;
+      
+      // Update preview with real Vercel link
+      document.getElementById('preview-msg').textContent = getMensagem(savedOrder.id);
+      
+      return savedOrder.id;
+    }
+
+    async function copiarMensagem() {
+      try {
+        const dbId = await garantirPedidoSalvo();
+        if (!dbId) {
+          toast('⚠️ Preencha os campos para copiar a mensagem');
+          playSound('warning');
+          return;
+        }
+        const msg = getMensagem(dbId);
+        
+        await navigator.clipboard.writeText(msg);
+        toast('📋 Mensagem com Link de Aceite copiada!');
+        playSound('success');
+      } catch (e) {
+        toast('⚠️ ' + e.message);
+        playSound('warning');
+      }
+    }
+
+    async function enviarWhatsApp() {
+      try {
+        const dbId = await garantirPedidoSalvo();
+        if (!dbId) {
+          toast('⚠️ Preencha os campos para enviar no WhatsApp');
+          playSound('warning');
+          return;
+        }
+        const msg = getMensagem(dbId);
+        const num = state.numero || '';
+        const url = num
+          ? `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
+          : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank');
+        playSound('click');
+      } catch (e) {
+        toast('⚠️ ' + e.message);
+        playSound('warning');
+      }
+    }
+
+    async function salvarSolicitacao() {
+      try {
+        const dbId = await garantirPedidoSalvo();
+        if (!dbId) {
+          toast('⚠️ Preencha os campos para salvar a solicitação');
+          playSound('warning');
+          return;
+        }
+        
+        toast('✅ Pedido salvo e sincronizado!');
+        playSound('success');
+        
+        state.destinos = [];
+        limparFormEntrega();
+        renderRoteiro();
+        resetCurrentOrderState();
+        
+        carregarHistoricoServidor();
+      } catch (e) {
+        toast('⚠️ ' + e.message);
+        playSound('warning');
+      }
     }
 
     function limparFormEntrega() {
@@ -2089,7 +2227,7 @@
       const filterStatus = document.getElementById('hist-filter-status')?.value || 'todos';
 
       const concluidas = state.historico.filter(h => h.status === 'concluido');
-      const totalVal = concluidas.reduce((a, b) => a + b.valor, 0);
+      const totalVal = concluidas.reduce((a, b) => a + Number(b.valor_total), 0);
 
       document.getElementById('res-total').textContent = state.historico.length;
       document.getElementById('res-valor').textContent = 'R$ ' + totalVal.toFixed(2).replace('.', ',');
@@ -2104,7 +2242,8 @@
         listToShow = listToShow.filter(h => 
           h.rua.toLowerCase().includes(query) || 
           h.bairro.toLowerCase().includes(query) ||
-          (h.obs && h.obs.toLowerCase().includes(query))
+          (h.obs && h.obs.toLowerCase().includes(query)) ||
+          (h.motoboy_nome && h.motoboy_nome.toLowerCase().includes(query))
         );
       }
 
@@ -2130,19 +2269,26 @@
           destHtml = `<div style="font-size:11.5px; margin-top:6px; color:var(--text-muted); background:var(--bg-app); border:1px solid var(--border-color); border-radius:8px; padding:8px 10px; line-height: 1.4;">`;
           item.destinos.forEach((d, i) => {
             const areaLabel = d.areaDesc ? ` (${d.areaDesc})` : '';
-            destHtml += `<div style="margin-bottom: 3px; border-bottom: ${i < item.destinos.length - 1 ? '1px solid var(--border-color)' : 'none'}; padding-bottom: 2px;">📍 <b>#${i+1}:</b> ${d.rua} (${d.bairro})${areaLabel} - R$ ${d.valor.toFixed(2).replace('.', ',')}</div>`;
+            destHtml += `<div style="margin-bottom: 3px; border-bottom: ${i < item.destinos.length - 1 ? '1px solid var(--border-color)' : 'none'}; padding-bottom: 2px;">📍 <b>#${i+1}:</b> ${d.rua} (${d.bairro})${areaLabel} - R$ ${Number(d.valor).toFixed(2).replace('.', ',')}</div>`;
           });
           destHtml += `</div>`;
         }
 
+        const formatData = new Date(item.created_at || item.id).toLocaleString('pt-BR');
+        
+        let motoboyInfo = '';
+        if (item.motoboy_nome) {
+          motoboyInfo = `&nbsp;•&nbsp; 🏍️ <b>Rider:</b> ${item.motoboy_nome} (${item.motoboy_telefone})`;
+        }
+
         div.innerHTML = `
           <div class="hist-header">
-            <div class="hist-bairro">${icon} ${item.bairro}${typeLabel}</div>
-            <div class="hist-valor">R$ ${item.valor.toFixed(2).replace('.', ',')}</div>
+            <div class="hist-bairro">${icon} ${item.bairro || 'Rota'}${typeLabel}</div>
+            <div class="hist-valor">R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}</div>
           </div>
-          <div class="hist-info">📍 ${item.rua}</div>
+          <div class="hist-info">📍 ${item.rua || 'Multi-destino'}</div>
           ${destHtml}
-          <div class="hist-info" style="margin-top: 8px;">🕐 ${item.data} &nbsp;•&nbsp; Retorno: ${item.retorno ? 'Sim' : 'Não'}</div>
+          <div class="hist-info" style="margin-top: 8px;">🕐 ${formatData} &nbsp;•&nbsp; Retorno: ${item.retorno ? 'Sim' : 'Não'}${motoboyInfo}</div>
           ${item.obs ? `<div class="hist-obs">💬 ${item.obs}</div>` : ''}
           <div style="margin-top:8px"><span class="badge ${badges[item.status]}">${labels[item.status]}</span></div>
           <div class="hist-actions">
@@ -2167,14 +2313,26 @@
       });
     }
 
-    function updateStatus(id, status) {
-      const item = state.historico.find(h => h.id === id);
-      if (item) { 
-        item.status = status; 
-        save('mc_historico', state.historico); 
-        renderHistorico(); 
-        playSound('success');
-        toast('✅ Status atualizado!'); 
+    async function updateStatus(id, status) {
+      try {
+        const res = await fetch('/api/orders', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, status })
+        });
+        
+        if (res.ok) {
+          toast('✅ Status atualizado!');
+          playSound('success');
+          carregarHistoricoServidor();
+        } else {
+          const err = await res.json();
+          toast('⚠️ ' + (err.error || 'Erro ao atualizar'));
+          playSound('warning');
+        }
+      } catch (e) {
+        toast('⚠️ Erro ao conectar ao servidor');
+        playSound('warning');
       }
     }
 
@@ -2192,6 +2350,7 @@
       if (!item) return;
       
       playSound('bell');
+      resetCurrentOrderState();
       
       document.getElementById('retorno-toggle').checked = item.retorno;
       document.getElementById('obs').value = item.obs || '';
@@ -2242,7 +2401,7 @@
 
     function copiarResumoDia() {
       const hoje = new Date().toLocaleDateString('pt-BR');
-      const itensHoje = state.historico.filter(h => h.status === 'concluido' && h.data.startsWith(hoje));
+      const itensHoje = state.historico.filter(h => h.status === 'concluido' && new Date(h.created_at).toLocaleDateString('pt-BR') === hoje);
       
       if (itensHoje.length === 0) {
         toast('⚠️ Nenhuma entrega concluída hoje!');
@@ -2254,8 +2413,8 @@
       let resumo = `📊 *MOTO-CHAT • RESUMO FINANCEIRO (${hoje})*\n`;
       resumo += `----------------------------------\n`;
       itensHoje.forEach((item, idx) => {
-        resumo += `🛵 Corrida #${idx + 1}: ${item.bairro} - R$ ${item.valor.toFixed(2).replace('.', ',')}\n`;
-        total += item.valor;
+        resumo += `🛵 Corrida #${idx + 1}: ${item.bairro} - R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n`;
+        total += Number(item.valor_total);
       });
       resumo += `----------------------------------\n`;
       resumo += `📈 *Total Faturado:* R$ ${total.toFixed(2).replace('.', ',')}\n`;
@@ -2271,12 +2430,11 @@
     }
 
     function limparHistorico() {
-      if (!confirm('Apagar todo o histórico de entregas?')) return;
+      if (!confirm('Esta ação apagará o histórico visual temporário. O histórico permanente no banco Neon continuará preservado.')) return;
       state.historico = []; 
-      save('mc_historico', state.historico); 
       renderHistorico(); 
       playSound('warning');
-      toast('🗑️ Histórico apagado!');
+      toast('🗑️ Histórico local ocultado!');
     }
 
     // ─── CONFIG ──────────────────────────────────────────────────────────────────
@@ -2425,18 +2583,355 @@
       setTimeout(() => el.classList.remove('show'), 2500);
     }
 
+    // ─── STATE RESET ON INPUT ───────────────────────────────────────────────────
+    let currentOrderState = {
+      saved: false,
+      id: null
+    };
+
+    function resetCurrentOrderState() {
+      if (currentOrderState.saved) {
+        currentOrderState.saved = false;
+        currentOrderState.id = null;
+        gerarPreview();
+      }
+    }
+
+    // ─── MOTOBOY & SERVER SYNC FUNCTIONS ──────────────────────────────────────────
+    async function carregarHistoricoServidor() {
+      try {
+        const res = await fetch('/api/orders');
+        if (res.ok) {
+          state.historico = await res.json();
+          renderHistorico();
+          return;
+        }
+      } catch (e) {
+        console.warn('Erro ao carregar histórico da nuvem, tentando localStorage:', e);
+      }
+      
+      // Fallback
+      state.historico = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      renderHistorico();
+    }
+
+    let dispatcherPollInterval = null;
+    function iniciarPollingDespachante() {
+      if (dispatcherPollInterval) clearInterval(dispatcherPollInterval);
+      dispatcherPollInterval = setInterval(() => {
+        const histActive = document.getElementById('sec-historico').classList.contains('active');
+        if (histActive) {
+          carregarHistoricoServidor();
+        }
+      }, 15000); // Poll every 15s
+    }
+
+    async function carregarDetalhesCorrida(orderId) {
+      const card = document.getElementById('accept-order-card');
+      try {
+        const res = await fetch(`/api/orders?id=${orderId}`);
+        if (res.ok) {
+          const orders = await res.json();
+          if (orders.length === 0) {
+            card.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--accent); font-weight:700;">⚠️ Corrida não encontrada no sistema!</div>`;
+            return;
+          }
+          const order = orders[0];
+          renderDetalhesCorridaHtml(order);
+          if (order.status === 'pendente') {
+            document.getElementById('motoboy-nome').value = localStorage.getItem('mc_motoboy_nome') || '';
+            document.getElementById('motoboy-telefone').value = localStorage.getItem('mc_motoboy_telefone') || '';
+            document.getElementById('accept-form-card').style.display = 'block';
+          } else {
+            document.getElementById('accept-form-card').style.display = 'block';
+          }
+          return;
+        }
+      } catch (e) {
+        console.warn('Erro ao buscar no servidor, tentando localStorage:', e);
+      }
+      
+      // Fallback
+      const localHistory = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      const order = localHistory.find(h => String(h.id) === String(orderId));
+      if (!order) {
+        card.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--accent); font-weight:700;">⚠️ Corrida não encontrada no sistema!</div>`;
+        return;
+      }
+      renderDetalhesCorridaHtml(order);
+      if (order.status === 'pendente') {
+        document.getElementById('motoboy-nome').value = localStorage.getItem('mc_motoboy_nome') || '';
+        document.getElementById('motoboy-telefone').value = localStorage.getItem('mc_motoboy_telefone') || '';
+        document.getElementById('accept-form-card').style.display = 'block';
+      } else {
+        document.getElementById('accept-form-card').style.display = 'block';
+      }
+    }
+
+    function renderDetalhesCorridaHtml(order) {
+      const card = document.getElementById('accept-order-card');
+      const formatData = new Date(order.created_at).toLocaleString('pt-BR');
+      
+      let statusBadgeClass = 'badge-pendente';
+      let statusLabel = 'Pendente';
+      if (order.status === 'aceito') { statusBadgeClass = 'badge-aceito'; statusLabel = `Aceita por ${order.motoboy_nome}`; }
+      else if (order.status === 'concluido') { statusBadgeClass = 'badge-concluido'; statusLabel = 'Concluída'; }
+      else if (order.status === 'cancelado') { statusBadgeClass = 'badge-cancelado'; statusLabel = 'Cancelada'; }
+      
+      let destinosHtml = '';
+      order.destinos.forEach((d, idx) => {
+        destinosHtml += `
+          <div style="margin-top: 10px; padding-bottom: 10px; border-bottom: 1px dashed var(--border-color);">
+            <div style="font-weight: 700; font-size: 14px;">📍 #${idx + 1}: ${d.rua}</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+              <b>Bairro:</b> ${d.bairro} ${d.comp ? ' — Ref: ' + d.comp : ''} ${d.tempo ? ' (' + d.tempo + ')' : ''}
+            </div>
+            <div style="font-weight: 700; color: var(--primary); margin-top: 4px; font-size: 13px;">
+              Taxa: R$ ${Number(d.valor).toFixed(2).replace('.', ',')}
+            </div>
+          </div>
+        `;
+      });
+      
+      card.innerHTML = `
+        <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">🕐 ${formatData}</span>
+          <span class="badge ${statusBadgeClass}">${statusLabel}</span>
+        </div>
+        
+        <div style="background: var(--bg-input); padding: 12px; border-radius: 10px; margin-bottom: 16px; border: 1px solid var(--border-color);">
+          <div style="font-size: 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">🏢 Ponto de Coleta</div>
+          <div style="font-weight: 800; font-size: 15px; color: var(--primary); margin-top: 4px;">${order.coleta_nome}</div>
+          <div style="font-size: 13px; color: var(--text-main); margin-top: 2px;">${order.coleta_endereco}</div>
+          ${order.coleta_complemento ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">ℹ️ ${order.coleta_complemento}</div>` : ''}
+        </div>
+        
+        <div style="font-size: 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">🗺️ Destino(s)</div>
+        ${destinosHtml}
+        
+        <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center; background: var(--primary-light); padding: 12px; border-radius: 10px; font-weight: 800; font-size: 15px;">
+          <span>Valor Total da Corrida:</span>
+          <span style="color: var(--primary); font-size: 18px;">R$ ${Number(order.valor_total).toFixed(2).replace('.', ',')}</span>
+        </div>
+        
+        <div style="margin-top: 10px; font-size: 13px; color: var(--text-muted);">
+          🔄 <b>Retorno?</b> ${order.retorno ? 'Sim' : 'Não'}
+        </div>
+        ${order.obs ? `<div class="hist-obs" style="margin-top: 10px;">💬 <b>Obs:</b> ${order.obs}</div>` : ''}
+      `;
+    }
+
+    async function confirmarAceiteCorrida() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const orderId = urlParams.get('id');
+      const nome = document.getElementById('motoboy-nome').value.trim();
+      const telefone = document.getElementById('motoboy-telefone').value.replace(/\D/g, '');
+      
+      if (!nome) { toast('⚠️ Por favor, digite seu nome completo'); playSound('warning'); return; }
+      if (telefone.length < 10) { toast('⚠️ Digite um telefone WhatsApp com DDD'); playSound('warning'); return; }
+      
+      localStorage.setItem('mc_motoboy_nome', nome);
+      localStorage.setItem('mc_motoboy_telefone', telefone);
+      
+      try {
+        const res = await fetch('/api/accept', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, motoboy_nome: nome, motoboy_telefone: telefone })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          toast('✅ Corrida aceita com sucesso!');
+          playSound('success');
+          
+          carregarDetalhesCorrida(orderId);
+          
+          const msg = `✅ *CORRIDA ASSUMIDA POR MOTOBOY!*\n\n🏍️ *Motoboy:* ${nome}\n📞 *Contato:* ${telefone}\n📍 *Destino:* Rota para ${data.order.coleta_nome} (Valor R$ ${Number(data.order.valor_total).toFixed(2).replace('.', ',')})\n🆔 *ID:* ${orderId}`;
+          const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+          
+          setTimeout(() => {
+            window.open(url, '_blank');
+          }, 1500);
+          return;
+        } else {
+          const data = await res.json();
+          toast('⚠️ ' + (data.message || 'Erro ao aceitar corrida'));
+          playSound('warning');
+          if (data.alreadyAccepted) {
+            carregarDetalhesCorrida(orderId);
+          }
+          return;
+        }
+      } catch (e) {
+        console.warn('Erro ao conectar ao servidor de aceite, usando localstorage fallback:', e);
+      }
+      
+      // Fallback
+      const localHistory = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      const idx = localHistory.findIndex(h => String(h.id) === String(orderId));
+      if (idx !== -1) {
+        if (localHistory[idx].status !== 'pendente') {
+          toast(`⚠️ Esta corrida já foi aceita por ${localHistory[idx].motoboy_nome || 'outro motoboy'}`);
+          playSound('warning');
+          carregarDetalhesCorrida(orderId);
+          return;
+        }
+        
+        localHistory[idx].status = 'aceito';
+        localHistory[idx].motoboy_nome = nome;
+        localHistory[idx].motoboy_telefone = telefone;
+        localHistory[idx].accepted_at = new Date().toISOString();
+        localStorage.setItem('mc_historico', JSON.stringify(localHistory));
+        
+        toast('✅ Corrida aceita (Local)!');
+        playSound('success');
+        carregarDetalhesCorrida(orderId);
+        
+        const msg = `✅ *CORRIDA ASSUMIDA POR MOTOBOY (LOCAL)!*\n\n🏍️ *Motoboy:* ${nome}\n📞 *Contato:* ${telefone}\n📍 *Destino:* Rota para ${localHistory[idx].coleta_nome} (Valor R$ ${Number(localHistory[idx].valor_total).toFixed(2).replace('.', ',')})\n🆔 *ID:* ${orderId}`;
+        const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+        setTimeout(() => {
+          window.open(url, '_blank');
+        }, 1500);
+      }
+    }
+
+    function abrirRelatorioMotoboyDireto() {
+      const telefone = document.getElementById('motoboy-telefone').value.replace(/\D/g, '') || localStorage.getItem('mc_motoboy_telefone') || '';
+      window.location.search = `?relatorio=true`;
+    }
+
+    async function consultarRelatorioMotoboy() {
+      const telefone = document.getElementById('report-telefone').value.replace(/\D/g, '');
+      if (telefone.length < 10) { toast('⚠️ Informe seu telefone WhatsApp com DDD'); playSound('warning'); return; }
+      
+      localStorage.setItem('mc_motoboy_telefone', telefone);
+      
+      const listEl = document.getElementById('report-runs-list');
+      listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">Consultando corridas no banco...</div>';
+      
+      try {
+        const res = await fetch(`/api/motoboy-report?telefone=${telefone}`);
+        if (res.ok) {
+          const runs = await res.json();
+          renderReportRunsHtml(runs);
+          playSound('success');
+          return;
+        }
+      } catch (e) {
+        console.warn('Erro ao obter extrato da nuvem, tentando local:', e);
+      }
+      
+      // Fallback
+      const localHistory = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      const runs = localHistory.filter(h => String(h.motoboy_telefone) === String(telefone) && ['aceito', 'concluido'].includes(h.status));
+      renderReportRunsHtml(runs);
+      playSound('success');
+    }
+
+    function renderReportRunsHtml(runs) {
+      const listEl = document.getElementById('report-runs-list');
+      const summaryGrid = document.getElementById('report-summary-grid');
+      const totalRunsEl = document.getElementById('report-total-runs');
+      const totalEarningsEl = document.getElementById('report-total-earnings');
+      
+      if (runs.length === 0) {
+        summaryGrid.style.display = 'none';
+        listEl.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">🏍️</div>
+            <p>Nenhuma corrida aceita ou concluída encontrada para este telefone.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      const totalCount = runs.length;
+      const totalEarnings = runs.reduce((acc, curr) => acc + Number(curr.valor_total), 0);
+      
+      totalRunsEl.textContent = totalCount;
+      totalEarningsEl.textContent = 'R$ ' + totalEarnings.toFixed(2).replace('.', ',');
+      summaryGrid.style.display = 'grid';
+      
+      listEl.innerHTML = '';
+      runs.forEach(run => {
+        const formatData = new Date(run.created_at).toLocaleString('pt-BR');
+        
+        let statusBadgeClass = 'badge-aceito';
+        let statusLabel = 'Assumida (Ativa)';
+        if (run.status === 'concluido') { statusBadgeClass = 'badge-concluido'; statusLabel = 'Concluída'; }
+        
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'hist-item';
+        if (run.status === 'concluido') {
+          itemDiv.style.borderLeftColor = '#3b82f6';
+        } else {
+          itemDiv.style.borderLeftColor = '#10b981';
+        }
+        
+        let destinosText = '';
+        run.destinos.forEach((d, idx) => {
+          destinosText += `<div>📍 <b>#${idx+1}:</b> ${d.rua} (${d.bairro})</div>`;
+        });
+        
+        itemDiv.innerHTML = `
+          <div class="hist-header">
+            <div class="hist-bairro">🏢 ${run.coleta_nome}</div>
+            <div class="hist-valor">R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}</div>
+          </div>
+          <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px; line-height: 1.4;">
+            ${destinosText}
+          </div>
+          <div class="hist-info">🕐 ${formatData}</div>
+          <div style="margin-top: 8px;"><span class="badge ${statusBadgeClass}">${statusLabel}</span></div>
+        `;
+        listEl.appendChild(itemDiv);
+      });
+    }
+
     // ─── EVENT LISTENERS LIVE ────────────────────────────────────────────────────
     ['end-rua', 'end-comp', 'obs', 'valor-custom', 'bairro-custom'].forEach(id => {
-      document.getElementById(id)?.addEventListener('input', gerarPreview);
+      document.getElementById(id)?.addEventListener('input', () => {
+        resetCurrentOrderState();
+        gerarPreview();
+      });
     });
-    document.getElementById('retorno-toggle').addEventListener('change', gerarPreview);
+    document.getElementById('retorno-toggle').addEventListener('change', () => {
+      resetCurrentOrderState();
+      gerarPreview();
+    });
 
     // ─── INIT ────────────────────────────────────────────────────────────────────
+    const urlParams = new URLSearchParams(window.location.search);
+    let isMotoboyMode = false;
+    
+    if (urlParams.has('aceitar') && urlParams.has('id')) {
+      isMotoboyMode = true;
+      document.querySelector('.sticky-header-container').style.display = 'none';
+      document.querySelector('.content').style.display = 'none';
+      document.getElementById('motoboy-accept-view').style.display = 'block';
+      carregarDetalhesCorrida(urlParams.get('id'));
+    } else if (urlParams.has('relatorio')) {
+      isMotoboyMode = true;
+      document.querySelector('.sticky-header-container').style.display = 'none';
+      document.querySelector('.content').style.display = 'none';
+      document.getElementById('motoboy-report-view').style.display = 'block';
+      const savedPhone = localStorage.getItem('mc_motoboy_telefone') || '';
+      if (savedPhone) {
+        document.getElementById('report-telefone').value = savedPhone;
+        consultarRelatorioMotoboy();
+      }
+    }
+
     initTheme();
-    renderColeta();
-    renderBairros();
-    renderAreas();
-    gerarPreview();
+    if (!isMotoboyMode) {
+      renderColeta();
+      renderBairros();
+      renderAreas();
+      gerarPreview();
+      carregarHistoricoServidor();
+      iniciarPollingDespachante();
+    }
   </script>
 </body>
 </html>

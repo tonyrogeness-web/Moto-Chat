@@ -1,0 +1,9 @@
+{
+  "name": "moto-chat",
+  "version": "1.0.0",
+  "description": "Moto-Chat Premium com Banco de Dados Neon e Vercel Serverless",
+  "main": "index.html",
+  "dependencies": {
+    "pg": "^8.11.3"
+  }
+}
