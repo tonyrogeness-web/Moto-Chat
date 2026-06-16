@@ -823,6 +823,83 @@
     .hist-btn-cancelado:hover { background: rgba(239, 68, 68, 0.08); }
     .hist-btn-copiar { border-color: var(--primary); color: var(--primary); }
     .hist-btn-copiar:hover { background: var(--primary-glow); }
+    .hist-btn-despachar { border-color: #a855f7; color: #a855f7; font-weight:800; }
+    .hist-btn-despachar:hover { background: rgba(168,85,247,0.1); }
+    .hist-btn-fav { border-color: #f59e0b; color: #f59e0b; }
+    .hist-btn-fav:hover { background: rgba(245,158,11,0.1); }
+    .hist-btn-rate { border-color: #ec4899; color: #ec4899; }
+    .hist-btn-rate:hover { background: rgba(236,72,153,0.1); }
+
+    /* ─── TAGS ───────────────────────────────────────────────────────────────── */
+    .tags-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .tag-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+      cursor: pointer; border: 1.5px solid; transition: all 0.15s;
+      user-select: none;
+    }
+    .tag-chip.selected { opacity: 1; transform: scale(1.05); }
+    .tag-chip:not(.selected) { opacity: 0.5; }
+    .tag-urgente { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.08); }
+    .tag-urgente.selected { background: rgba(239,68,68,0.15); }
+    .tag-fragil { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.08); }
+    .tag-fragil.selected { background: rgba(245,158,11,0.15); }
+    .tag-cobrar { border-color: #3b82f6; color: #3b82f6; background: rgba(59,130,246,0.08); }
+    .tag-cobrar.selected { background: rgba(59,130,246,0.15); }
+    .tag-retorno { border-color: #10b981; color: #10b981; background: rgba(16,185,129,0.08); }
+    .tag-retorno.selected { background: rgba(16,185,129,0.15); }
+
+    /* Bairro color dot in history */
+    .bairro-dot {
+      display: inline-block; width: 9px; height: 9px;
+      border-radius: 50%; margin-right: 5px; flex-shrink: 0;
+    }
+
+    /* Timer badge */
+    .timer-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(168,85,247,0.12); color: #a855f7;
+      font-size: 11px; font-weight: 800; padding: 3px 8px;
+      border-radius: 20px; border: 1px solid rgba(168,85,247,0.25);
+    }
+    .timer-badge.overdue { background: rgba(239,68,68,0.12); color: #ef4444; border-color: rgba(239,68,68,0.25); animation: livePulse 1.5s infinite; }
+
+    /* Quick dispatch inline panel */
+    .quick-dispatch-panel {
+      background: linear-gradient(135deg, rgba(168,85,247,0.08), rgba(124,58,237,0.08));
+      border: 1.5px solid rgba(168,85,247,0.25); border-radius: 10px;
+      padding: 12px; margin-top: 10px; display: none;
+    }
+    .quick-dispatch-panel.open { display: block; animation: fadeIn 0.15s ease; }
+
+    /* Favorites section */
+    .fav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; background: var(--bg-input);
+      border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border-color);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .fav-item:hover { border-color: var(--primary); background: var(--primary-glow); }
+    .fav-item-text { flex: 1; font-size: 13px; font-weight: 600; }
+    .fav-item-bairro { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+
+    /* Star rating */
+    .stars-row { display: flex; gap: 4px; }
+    .star { font-size: 22px; cursor: pointer; transition: transform 0.1s; filter: grayscale(1); }
+    .star.active { filter: none; transform: scale(1.15); }
+    .star:hover { transform: scale(1.25); }
+
+    /* Day panel */
+    .day-panel {
+      background: linear-gradient(135deg, var(--bg-card), var(--bg-input));
+      border: 1px solid var(--border-color); border-radius: 14px;
+      padding: 16px; margin-bottom: 16px;
+    }
+    .day-panel-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .day-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .day-stat { background: var(--bg-card); border-radius: 10px; padding: 12px; border: 1px solid var(--border-color); text-align: center; }
+    .day-stat-num { font-size: 22px; font-weight: 900; }
+    .day-stat-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-top: 2px; }
 
     /* ─── CONFIG LISTS ──────────────────────────────────────────────────────── */
     .config-item-row {
@@ -1214,12 +1291,8 @@
             salvo!
           </span>
         </div>
-        <div class="field">
-          <label for="end-rua">Rua / Avenida e Número</label>
-          <input type="text" id="end-rua" placeholder="Ex: Rua Calamar, 1498" autocomplete="street-address">
-        </div>
 
-        <!-- BAIRRO - logo abaixo da Rua -->
+        <!-- BAIRRO - primeiro, para definir a área/preço antes de digitar a rua -->
         <div class="field" style="margin-bottom: 6px;">
           <label style="display:flex; align-items:center; gap:6px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary)"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
@@ -1230,6 +1303,13 @@
         <div class="bairro-input-row" style="margin-bottom:16px;">
           <input type="text" id="bairro-custom" placeholder="Digitar bairro manualmente">
           <button class="btn-add-bairro" onclick="addBairroRapido()">+ Salvar</button>
+        </div>
+
+        <!-- RUA - logo abaixo do bairro -->
+        <div class="field">
+          <label for="end-rua">Rua / Avenida e Número</label>
+          <input type="text" id="end-rua" placeholder="Ex: Rua Calamar, 1498" autocomplete="street-address" list="ruas-sugestoes">
+          <datalist id="ruas-sugestoes"></datalist>
         </div>
 
         <!-- COMPLEMENTO - por último -->
@@ -1262,6 +1342,18 @@
           <svg viewBox="0 0 24 24"><path d="M14 17H4v2h10v-2zm6-8H4v2h16V9zM4 15h16v-2H4v2zM4 5v2h16V5H4z"/></svg>
           Detalhes Extras
         </div>
+
+        <!-- TAGS -->
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin-bottom:8px;">🏷️ Tags da Corrida</div>
+          <div class="tags-row" id="tags-row">
+            <span class="tag-chip tag-urgente" data-tag="urgente" onclick="toggleTag(this)">🚨 Urgente</span>
+            <span class="tag-chip tag-fragil" data-tag="fragil" onclick="toggleTag(this)">🥚 Frágil</span>
+            <span class="tag-chip tag-cobrar" data-tag="cobrar" onclick="toggleTag(this)">💳 Cobrar na Entrega</span>
+            <span class="tag-chip tag-retorno" data-tag="retorno" onclick="toggleTag(this)">🔄 Retorno Incluso</span>
+          </div>
+        </div>
+
         <div class="field">
           <div class="toggle-row">
             <label class="toggle">
@@ -1319,6 +1411,33 @@
 
     <!-- HISTÓRICO TAB -->
     <div id="sec-historico" class="section">
+
+      <!-- DAY PANEL -->
+      <div class="day-panel">
+        <div class="day-panel-title">
+          <span>📅 Painel do Dia</span>
+          <span id="day-panel-date" style="font-weight:600; font-size:12px; color:var(--text-muted);"></span>
+        </div>
+        <div class="day-stats">
+          <div class="day-stat">
+            <div class="day-stat-num" id="day-total" style="color:var(--primary);">0</div>
+            <div class="day-stat-lbl">📦 Hoje</div>
+          </div>
+          <div class="day-stat">
+            <div class="day-stat-num" id="day-faturado" style="color:#10b981;">R$ 0</div>
+            <div class="day-stat-lbl">💰 Faturado</div>
+          </div>
+          <div class="day-stat">
+            <div class="day-stat-num" id="day-pendentes" style="color:#f59e0b;">0</div>
+            <div class="day-stat-lbl">⏳ Pendentes</div>
+          </div>
+          <div class="day-stat">
+            <div class="day-stat-num" id="day-concluidas" style="color:#3b82f6;">0</div>
+            <div class="day-stat-lbl">✅ Concluídas</div>
+          </div>
+        </div>
+      </div>
+
       <div class="resumo-grid">
         <div class="resumo-card">
           <div class="resumo-num" id="res-total">0</div>
@@ -1354,9 +1473,26 @@
             </select>
           </div>
         </div>
+        <!-- FILTRO DE PERIODO -->
+        <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+          <button class="hist-btn" id="filter-hoje" onclick="filtrarPeriodo('hoje')" style="border-color:var(--primary); color:var(--primary); background:var(--primary-glow);">Hoje</button>
+          <button class="hist-btn" id="filter-ontem" onclick="filtrarPeriodo('ontem')">Ontem</button>
+          <button class="hist-btn" id="filter-semana" onclick="filtrarPeriodo('semana')">Esta Semana</button>
+          <button class="hist-btn" id="filter-mes" onclick="filtrarPeriodo('mes')">Este Mês</button>
+          <button class="hist-btn" id="filter-todos" onclick="filtrarPeriodo('todos')">Todos</button>
+        </div>
         <button class="btn btn-outline btn-small" onclick="copiarResumoDia()" style="width: 100%; height: auto; padding: 10px; border-style: dashed;">
           📊 Copiar Resumo Financeiro (Hoje)
         </button>
+      </div>
+
+      <!-- FAVORITOS SEÇÃO -->
+      <div id="sec-favoritos" style="display:none; margin-bottom:16px;">
+        <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+          <span>⭐ Endereços Favoritos</span>
+          <button onclick="document.getElementById('sec-favoritos').style.display='none'" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:18px;">×</button>
+        </div>
+        <div id="favoritos-lista"></div>
       </div>
 
       <div id="hist-lista"></div>
@@ -1553,6 +1689,21 @@
     </div>
   </div>
 
+  <!-- MODAL: AVALIAÇÃO DE MOTOBOY -->
+  <div class="modal-overlay" id="modal-avaliacao" onclick="if(event.target === this) closeModal('modal-avaliacao')">
+    <div class="modal" style="max-width: 360px;">
+      <div class="modal-title" style="color: #f59e0b;">
+        ⭐ Avaliar Motoboy
+      </div>
+      <div id="modal-avaliacao-body">
+        <!-- Preenchido pelo JS -->
+      </div>
+      <div class="modal-actions" style="margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+        <button class="btn btn-outline" onclick="closeModal('modal-avaliacao')">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST NOTIFICATION -->
   <div class="toast" id="toast"></div>
 
@@ -1565,22 +1716,7 @@
         </svg>
       </div>
       <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">Moto-Chat • Aceitar Corrida</h2>
-      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Confirme os dados e aceite a corrida abaixo</p>
-    </div>
-
-    <!-- BOTÃO EU NO GRUPO - Card proeminente roxo -->
-    <div id="eu-group-card" style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 8px 32px rgba(168,85,247,0.4); border: 1px solid rgba(255,255,255,0.15);">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-        <div style="font-size:32px;">📢</div>
-        <div>
-          <div style="font-size:16px; font-weight:900; color:#fff; line-height:1.2;">Garanta sua vaga no grupo!</div>
-          <div style="font-size:12px; color:rgba(255,255,255,0.75); margin-top:3px;">Envie EU no grupo antes de aceitar aqui</div>
-        </div>
-      </div>
-      <button onclick="enviarEuNoGrupo()" style="width:100%; background:rgba(255,255,255,0.18); border:2px solid rgba(255,255,255,0.5); color:#fff; font-weight:900; font-size:18px; padding:14px; border-radius:12px; cursor:pointer; letter-spacing:1px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.18)'">
-        📱 Enviar &quot;EU&quot; no Grupo Agora!
-      </button>
-      <div style="font-size:11px; color:rgba(255,255,255,0.6); text-align:center; margin-top:8px;">⚡ O primeiro que enviar EU no grupo tem prioridade</div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Confirme os dados abaixo e aceite a corrida</p>
     </div>
 
     <!-- Order Info Card -->
@@ -2338,7 +2474,8 @@
         destinos: destinosSalvar,
         valor_total: totalVal,
         retorno: document.getElementById('retorno-toggle').checked,
-        obs: document.getElementById('obs').value.trim()
+        obs: document.getElementById('obs').value.trim(),
+        tags: getSelectedTags()
       };
     }
 
@@ -2485,6 +2622,7 @@
       state.bairroSel = ''; 
       state.areaSel = null;
       document.getElementById('retorno-toggle').checked = false;
+      resetTags();
       renderBairros(); 
       renderAreas(); 
       gerarPreview();
@@ -2555,6 +2693,276 @@
       return msg.trimEnd();
     }
 
+
+    // ─── TAGS ────────────────────────────────────────────────────────────────────
+    function toggleTag(el) {
+      el.classList.toggle('selected');
+      gerarPreview();
+      agendarAutoSave();
+    }
+    function getSelectedTags() {
+      return [...document.querySelectorAll('#tags-row .tag-chip.selected')].map(el => el.dataset.tag);
+    }
+    function getTagsLabel() {
+      const map = { urgente:'🚨 URGENTE', fragil:'🥚 Frágil', cobrar:'💳 Cobrar na Entrega', retorno:'🔄 Retorno Incluso' };
+      return getSelectedTags().map(t => map[t] || t).join(' | ');
+    }
+    function resetTags() {
+      document.querySelectorAll('#tags-row .tag-chip').forEach(el => el.classList.remove('selected'));
+    }
+
+    // ─── BAIRRO COLOR HASH ───────────────────────────────────────────────────────
+    function bairroColor(bairro) {
+      const palette = ['#10b981','#3b82f6','#8b5cf6','#f59e0b','#ef4444','#ec4899','#06b6d4','#84cc16','#f97316','#6366f1'];
+      let hash = 0;
+      for (let c of (bairro || '')) hash = (hash * 31 + c.charCodeAt(0)) & 0xFFFFFF;
+      return palette[Math.abs(hash) % palette.length];
+    }
+
+    // ─── STREET AUTOCOMPLETE ─────────────────────────────────────────────────────
+    function atualizarSugestoesRua() {
+      const dl = document.getElementById('ruas-sugestoes');
+      if (!dl) return;
+      const ruas = new Set();
+      state.historico.forEach(h => {
+        (h.destinos || []).forEach(d => { if (d.rua) ruas.add(d.rua); });
+        if (h.rua) ruas.add(h.rua);
+      });
+      dl.innerHTML = [...ruas].map(r => `<option value="${r}">`).join('');
+    }
+
+    // ─── DATE PERIOD FILTER ──────────────────────────────────────────────────────
+    let _periodoFilter = 'hoje';
+    function filtrarPeriodo(p) {
+      _periodoFilter = p;
+      ['hoje','ontem','semana','mes','todos'].forEach(id => {
+        const el = document.getElementById('filter-' + id);
+        if (!el) return;
+        const isActive = id === p;
+        el.style.borderColor = isActive ? 'var(--primary)' : '';
+        el.style.color = isActive ? 'var(--primary)' : '';
+        el.style.background = isActive ? 'var(--primary-glow)' : '';
+      });
+      renderHistorico();
+    }
+    function getPeriodoRange(p) {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      if (p === 'hoje') return [start, null];
+      if (p === 'ontem') { const s = new Date(start); s.setDate(s.getDate()-1); const e = new Date(start); return [s, e]; }
+      if (p === 'semana') { const s = new Date(start); s.setDate(s.getDate() - s.getDay()); return [s, null]; }
+      if (p === 'mes') { const s = new Date(now.getFullYear(), now.getMonth(), 1); return [s, null]; }
+      return [null, null];
+    }
+
+    // ─── DAY PANEL ───────────────────────────────────────────────────────────────
+    function atualizarDayPanel() {
+      const hoje = new Date();
+      const startOfDay = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+      const todayItems = state.historico.filter(h => {
+        const d = new Date(h.created_at || h.id);
+        return d >= startOfDay;
+      });
+      const faturado = todayItems.filter(h => h.status === 'concluido').reduce((a, b) => a + Number(b.valor_total), 0);
+      const elDate = document.getElementById('day-panel-date');
+      if (elDate) elDate.textContent = hoje.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short' });
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set('day-total', todayItems.length);
+      set('day-faturado', 'R$ ' + faturado.toFixed(2).replace('.', ','));
+      set('day-pendentes', todayItems.filter(h => h.status === 'pendente').length);
+      set('day-concluidas', todayItems.filter(h => h.status === 'concluido').length);
+    }
+
+    // ─── TIMER BADGE ─────────────────────────────────────────────────────────────
+    function getElapsedBadge(item) {
+      if (!item.accepted_at && item.status !== 'aceito') return '';
+      const ref = item.accepted_at || item.created_at;
+      if (!ref) return '';
+      const mins = Math.floor((Date.now() - new Date(ref).getTime()) / 60000);
+      const isOverdue = mins > 60;
+      return `<span class="timer-badge ${isOverdue ? 'overdue' : ''}">⏱️ ${mins}min</span>`;
+    }
+
+    // ─── FAVORITES ───────────────────────────────────────────────────────────────
+    function salvarFavorito(id) {
+      const item = state.historico.find(h => String(h.id) === String(id));
+      if (!item) return;
+      const dest = (item.destinos && item.destinos[0]) || {};
+      const fav = { rua: dest.rua || item.rua, bairro: dest.bairro || item.bairro, comp: dest.comp || item.comp || '', savedAt: Date.now() };
+      if (!fav.rua) { toast('⚠️ Endereço vazio, não salvou'); return; }
+      const favs = JSON.parse(localStorage.getItem('mc_favoritos') || '[]');
+      if (favs.find(f => f.rua === fav.rua && f.bairro === fav.bairro)) { toast('⭐ Já está nos favoritos!'); return; }
+      favs.unshift(fav);
+      localStorage.setItem('mc_favoritos', JSON.stringify(favs.slice(0, 20)));
+      toast('⭐ Endereço salvo nos favoritos!');
+      playSound('success');
+      renderFavoritos();
+    }
+    function renderFavoritos() {
+      const favs = JSON.parse(localStorage.getItem('mc_favoritos') || '[]');
+      const sec = document.getElementById('sec-favoritos');
+      const lista = document.getElementById('favoritos-lista');
+      if (!sec || !lista) return;
+      if (!favs.length) { sec.style.display = 'none'; return; }
+      sec.style.display = 'block';
+      lista.innerHTML = favs.map((f, i) => `
+        <div class="fav-item" onclick="preencherDeFavorito(${i})">
+          <span class="bairro-dot" style="background:${bairroColor(f.bairro)};"></span>
+          <div style="flex:1;">
+            <div class="fav-item-text">${f.rua}</div>
+            <div class="fav-item-bairro">📍 ${f.bairro}${f.comp ? ' — ' + f.comp : ''}</div>
+          </div>
+          <button onclick="event.stopPropagation(); removerFavorito(${i})" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; padding:4px;">✕</button>
+        </div>`).join('');
+    }
+    function preencherDeFavorito(i) {
+      const favs = JSON.parse(localStorage.getItem('mc_favoritos') || '[]');
+      const f = favs[i];
+      if (!f) return;
+      document.getElementById('end-rua').value = f.rua;
+      document.getElementById('end-comp').value = f.comp || '';
+      if (f.bairro) {
+        state.bairroSel = f.bairro;
+        if (!state.bairros.includes(f.bairro)) { state.bairros.push(f.bairro); save('mc_bairros', state.bairros); }
+        renderBairros();
+      }
+      playSound('bell');
+      toast('⭐ Endereço favorito preenchido!');
+      gerarPreview(); agendarAutoSave();
+      showTab('solicitar');
+    }
+    function removerFavorito(i) {
+      const favs = JSON.parse(localStorage.getItem('mc_favoritos') || '[]');
+      favs.splice(i, 1);
+      localStorage.setItem('mc_favoritos', JSON.stringify(favs));
+      renderFavoritos();
+    }
+
+    // ─── RATING MOTOBOY ──────────────────────────────────────────────────────────
+    function abrirAvaliacao(itemId) {
+      const item = state.historico.find(h => String(h.id) === String(itemId));
+      if (!item || !item.motoboy_nome) { toast('⚠️ Corrida sem motoboy registrado'); return; }
+      const nota = item.rating || 0;
+      const html = `
+        <div style="text-align:center; padding:20px;">
+          <div style="font-size:36px; margin-bottom:8px;">⭐</div>
+          <div style="font-weight:800; font-size:16px; margin-bottom:4px;">Avaliar ${item.motoboy_nome}</div>
+          <div style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Toque nas estrelas para dar nota</div>
+          <div class="stars-row" id="rating-stars" style="justify-content:center; margin-bottom:20px;">
+            ${[1,2,3,4,5].map(n => `<span class="star ${nota >= n ? 'active' : ''}" onclick="selecionarEstrela(${n}, '${itemId}')" data-val="${n}">⭐</span>`).join('')}
+          </div>
+          <button class="btn btn-green" onclick="salvarAvaliacao('${itemId}'); closeModal('modal-avaliacao')" style="width:100%;">💾 Salvar Avaliação</button>
+        </div>`;
+      document.getElementById('modal-avaliacao-body').innerHTML = html;
+      openModal('modal-avaliacao');
+    }
+    let _ratingTemp = 0;
+    function selecionarEstrela(n, itemId) {
+      _ratingTemp = n;
+      document.querySelectorAll('#rating-stars .star').forEach((el, i) => {
+        el.classList.toggle('active', i < n);
+      });
+    }
+    function salvarAvaliacao(itemId) {
+      if (!_ratingTemp) { toast('⚠️ Selecione uma nota'); return; }
+      const idx = state.historico.findIndex(h => String(h.id) === String(itemId));
+      if (idx === -1) return;
+      state.historico[idx].rating = _ratingTemp;
+      save('mc_historico', state.historico);
+      toast('⭐ Avaliação salva: ' + '⭐'.repeat(_ratingTemp));
+      playSound('success');
+      renderHistorico();
+      _ratingTemp = 0;
+    }
+
+    // ─── QUICK DISPATCH ──────────────────────────────────────────────────────────
+    function toggleQuickDispatch(itemId) {
+      const panel = document.getElementById(`qdp-${itemId}`);
+      if (!panel) return;
+      panel.classList.toggle('open');
+      if (panel.classList.contains('open')) renderQuickDispatchPanel(itemId);
+    }
+    function renderQuickDispatchPanel(itemId) {
+      const panel = document.getElementById(`qdp-${itemId}`);
+      if (!panel) return;
+      const item = state.historico.find(h => String(h.id) === String(itemId));
+      if (!item) return;
+      const motoboys = state.motoboysFrequentes || [];
+      const mbList = motoboys.length > 0
+        ? motoboys.map(m => `<button class="hist-btn" onclick="despacharRapidoParaMotoboy('${itemId}','${m.nome}','${m.tel}')" style="border-color:#a855f7;color:#a855f7;margin:2px;">${m.nome}</button>`).join('')
+        : '<span style="font-size:12px;color:var(--text-muted);">Nenhum motoboy cadastrado</span>';
+      panel.innerHTML = `
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#a855f7;margin-bottom:8px;">⚡ Despachar Rápido</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">${mbList}</div>
+        <div style="display:flex;gap:6px;">
+          <input type="tel" id="qdp-tel-${itemId}" placeholder="Ou digitar número..." style="flex:1;font-size:12px;padding:7px 10px;">
+          <input type="text" id="qdp-nome-${itemId}" placeholder="Nome" style="flex:1;font-size:12px;padding:7px 10px;">
+          <button class="hist-btn hist-btn-despachar" onclick="despacharRapidoManual('${itemId}')">Enviar ↗</button>
+        </div>`;
+    }
+    function despacharRapidoParaMotoboy(itemId, nome, tel) {
+      const item = state.historico.find(h => String(h.id) === String(itemId));
+      if (!item) return;
+      enviarDespachoParaMotoboy(item, nome, tel.replace(/\D/g,''));
+      toast('📤 Despacho enviado para ' + nome + '!');
+      toggleQuickDispatch(itemId);
+    }
+    function despacharRapidoManual(itemId) {
+      const tel = document.getElementById(`qdp-tel-${itemId}`)?.value.replace(/\D/g,'');
+      const nome = document.getElementById(`qdp-nome-${itemId}`)?.value.trim() || 'Motoboy';
+      if (!tel || tel.length < 10) { toast('⚠️ Digite um número válido'); return; }
+      const item = state.historico.find(h => String(h.id) === String(itemId));
+      if (!item) return;
+      enviarDespachoParaMotoboy(item, nome, tel);
+    }
+    function enviarDespachoParaMotoboy(order, nome, telefone) {
+      const dest = (order.destinos && order.destinos[0]) || {};
+      let msg = `Olá, *${nome}*! 🏍️💨 Você foi escolhido para a corrida!\n\n`;
+      msg += `🏢 *Coleta:* ${order.coleta_nome}\n`;
+      if (order.coleta_endereco) msg += `📍 Coleta no Maps: https://maps.google.com/?q=${encodeURIComponent(order.coleta_nome + ' ' + order.coleta_endereco)}\n`;
+      msg += `\n*Entregas:*\n`;
+      (order.destinos || []).forEach((d, idx) => {
+        msg += `📍 ${order.destinos.length > 1 ? `#${idx+1}: ` : ''}${d.rua} — ${d.bairro}\n`;
+        msg += `   🗺️ Maps: https://maps.google.com/?q=${encodeURIComponent(d.rua + ' ' + d.bairro)}\n`;
+        msg += `   💵 R$ ${Number(d.valor).toFixed(2).replace('.', ',')}\n`;
+      });
+      msg += `\n💰 *Total:* R$ ${Number(order.valor_total).toFixed(2).replace('.', ',')}\n`;
+      msg += `🔄 Retorno: ${order.retorno ? 'Sim' : 'Não'}\n`;
+      const orderData = { coleta_nome:order.coleta_nome, coleta_endereco:order.coleta_endereco, coleta_complemento:order.coleta_complemento, destinos:order.destinos, valor_total:order.valor_total, retorno:order.retorno, obs:order.obs, created_at:order.created_at, status:'pendente' };
+      try {
+        const dataEncoded = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(orderData)))));
+        msg += `\n👉 *ACEITAR CORRIDA:*\n${window.location.origin}/?aceitar=true&id=${order.id}&nome=${encodeURIComponent(nome)}&tel=${telefone}&data=${dataEncoded}`;
+      } catch(e) { msg += `\n👉 *ACEITAR CORRIDA:*\n${window.location.origin}/?aceitar=true&id=${order.id}`; }
+      window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`, '_blank');
+      playSound('success');
+    }
+
+    // ─── PENDING ALERT ───────────────────────────────────────────────────────────
+    let _pendingAlertTimer = null;
+    function verificarPendentesAlerta() {
+      const now = Date.now();
+      const threshold = 5 * 60 * 1000; // 5 minutes
+      const hasOverdue = state.historico.some(h => {
+        if (h.status !== 'pendente') return false;
+        const created = new Date(h.created_at || h.id).getTime();
+        return (now - created) > threshold;
+      });
+      const tabBadge = document.querySelector('.tab:nth-child(2)');
+      if (hasOverdue && tabBadge) {
+        if (!tabBadge.querySelector('.overdue-alert')) {
+          const badge = document.createElement('span');
+          badge.className = 'overdue-alert';
+          badge.style.cssText = 'width:8px;height:8px;background:#ef4444;border-radius:50%;display:inline-block;margin-left:4px;animation:livePulse 1s infinite;';
+          tabBadge.appendChild(badge);
+        }
+        if (!_pendingAlertTimer) {
+          _pendingAlertTimer = setTimeout(() => { playSound('warning'); _pendingAlertTimer = null; }, 1000);
+        }
+      } else {
+        tabBadge?.querySelector('.overdue-alert')?.remove();
+      }
+    }
+
     function renderHistorico() {
       const lista = document.getElementById('hist-lista');
       const query = (document.getElementById('hist-search')?.value || '').toLowerCase();
@@ -2568,7 +2976,19 @@
       document.getElementById('res-pendentes').textContent = state.historico.filter(h => h.status === 'pendente').length;
       document.getElementById('res-concluidas').textContent = concluidas.length;
 
+      atualizarDayPanel();
+      atualizarSugestoesRua();
+      verificarPendentesAlerta();
+
+      // Apply period filter
+      const [rangeStart, rangeEnd] = getPeriodoRange(_periodoFilter);
       let listToShow = state.historico;
+      if (rangeStart) {
+        listToShow = listToShow.filter(h => {
+          const d = new Date(h.created_at || h.id);
+          return d >= rangeStart && (!rangeEnd || d < rangeEnd);
+        });
+      }
       if (filterStatus !== 'todos') {
         listToShow = listToShow.filter(h => h.status === filterStatus);
       }
@@ -2600,11 +3020,24 @@
         const icon = isMulti ? '⛓️' : '🗺️';
         const typeLabel = isMulti ? ` (${destinos.length} paradas)` : '';
         const info = getDestInfo(item);
+        const color = bairroColor(info.bairro);
+        const timerBadge = getElapsedBadge(item);
+        
+        // Build tags HTML
+        const tagsArr = item.tags || [];
+        const tagMap = { urgente:'🚨 Urgente', fragil:'🥚 Frágil', cobrar:'💳 Cobrar', retorno:'🔄 Retorno' };
+        const tagColors = { urgente:'#ef4444', fragil:'#f59e0b', cobrar:'#3b82f6', retorno:'#10b981' };
+        const tagsHtml = tagsArr.length > 0
+          ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">${tagsArr.map(t => `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;background:rgba(0,0,0,0.15);border:1px solid ${tagColors[t]||'#888'};color:${tagColors[t]||'#888'};">${tagMap[t]||t}</span>`).join('')}</div>`
+          : '';
+
+        // Rating stars display
+        const ratingHtml = item.rating ? `<span style="font-size:11px;margin-left:6px;">${'⭐'.repeat(item.rating)}</span>` : '';
         
         const div = document.createElement('div');
         div.className = 'hist-item ' + (item.status === 'cancelado' ? 'cancelado' : item.status === 'concluido' ? 'concluido' : '');
+        div.style.borderLeftColor = color;
         if (item.status === 'aceito') {
-          div.style.borderLeftColor = '#10b981';
           div.style.background = 'linear-gradient(135deg, var(--bg-card) 0%, rgba(16,185,129,0.05) 100%)';
         }
         
@@ -2614,7 +3047,7 @@
           destHtml = `<div style="font-size:11.5px; margin-top:6px; color:var(--text-muted); background:var(--bg-app); border:1px solid var(--border-color); border-radius:8px; padding:8px 10px; line-height:1.6;">`;
           destinos.forEach((d, i) => {
             const areaLabel = d.areaDesc ? ` (${d.areaDesc})` : '';
-            destHtml += `<div style="margin-bottom:3px; ${i < destinos.length-1 ? 'border-bottom:1px solid var(--border-color); padding-bottom:3px;' : ''}">📍 <b>#${i+1}:</b> ${d.rua} — ${d.bairro}${areaLabel} <span style="color:var(--primary);font-weight:700;">R$ ${Number(d.valor).toFixed(2).replace('.', ',')}</span></div>`;
+            destHtml += `<div style="margin-bottom:3px; ${i < destinos.length-1 ? 'border-bottom:1px solid var(--border-color); padding-bottom:3px;' : ''}"><span class="bairro-dot" style="background:${bairroColor(d.bairro)};"></span>📍 <b>#${i+1}:</b> ${d.rua} — ${d.bairro}${areaLabel} <span style="color:var(--primary);font-weight:700;">R$ ${Number(d.valor).toFixed(2).replace('.', ',')}</span></div>`;
           });
           destHtml += `</div>`;
         }
@@ -2623,13 +3056,17 @@
         
         let motoboyInfo = '';
         if (item.motoboy_nome) {
-          motoboyInfo = `<div style="margin-top:6px; padding:8px 10px; background:rgba(16,185,129,0.08); border-radius:8px; border:1px solid rgba(16,185,129,0.2); font-size:12px;">🏍️ <b>Assumida por:</b> ${item.motoboy_nome} <span style="color:var(--text-muted)">(${item.motoboy_telefone})</span></div>`;
+          motoboyInfo = `<div style="margin-top:6px; padding:8px 10px; background:rgba(16,185,129,0.08); border-radius:8px; border:1px solid rgba(16,185,129,0.2); font-size:12px;">🏍️ <b>Assumida por:</b> ${item.motoboy_nome}${ratingHtml} <span style="color:var(--text-muted)">(${item.motoboy_telefone})</span></div>`;
         }
 
         div.innerHTML = `
+          ${tagsHtml}
           <div class="hist-header">
-            <div class="hist-bairro">${icon} ${info.bairro}${typeLabel}</div>
-            <div class="hist-valor">R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}</div>
+            <div class="hist-bairro"><span class="bairro-dot" style="background:${color};"></span>${icon} ${info.bairro}${typeLabel}</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              ${timerBadge}
+              <div class="hist-valor">R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}</div>
+            </div>
           </div>
           <div class="hist-info" style="font-size:12px; color:var(--text-muted); margin-bottom:2px;">🏢 ${item.coleta_nome || 'Estabelecimento'}</div>
           <div class="hist-info">📍 ${info.rua}</div>
@@ -2649,21 +3086,29 @@
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Cancelado
             </button>
             ${item.status === 'pendente' ? `
-            <button class="hist-btn" onclick="abrirModalFila('${item.id}')" style="border-color:#a855f7;color:#a855f7;" title="Quem disse EU?">
-              🏍️ Quem disse EU?
+            <button class="hist-btn hist-btn-despachar" onclick="toggleQuickDispatch('${item.id}')" title="Despachar rápido">
+              ⚡ Despachar
+            </button>` : ''}
+            ${(item.status === 'aceito' || item.status === 'concluido') ? `
+            <button class="hist-btn hist-btn-rate" onclick="abrirAvaliacao('${item.id}')" title="Avaliar motoboy">
+              ⭐ Avaliar
+            </button>` : ''}
+            <button class="hist-btn hist-btn-fav" onclick="salvarFavorito('${item.id}')" title="Salvar endereço">
+              ⭐ Favorito
             </button>
-            ` : ''}
             <button class="hist-btn" onclick="repetirPedido(${item.id})" style="border-color:var(--primary);color:var(--primary);" title="Repetir Pedido">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> Repetir
             </button>
             <button class="hist-btn hist-btn-copiar" onclick="copiarHist(${item.id})">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar Msg
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar
             </button>
           </div>
+          <div class="quick-dispatch-panel" id="qdp-${item.id}"></div>
         `;
         lista.appendChild(div);
       });
     }
+
 
     async function updateStatus(id, status) {
       try {
@@ -3025,6 +3470,7 @@
         if (res.ok) {
           state.historico = await res.json();
           renderHistorico();
+          renderFavoritos();
           return;
         }
       } catch (e) {
@@ -3034,6 +3480,7 @@
       // Fallback
       state.historico = JSON.parse(localStorage.getItem('mc_historico') || '[]');
       renderHistorico();
+      renderFavoritos();
     }
 
     let dispatcherPollInterval = null;
@@ -3819,6 +4266,11 @@
       gerarPreview();
       carregarHistoricoServidor();
       iniciarPollingDespachante();
+      // Auto-atualiza badges de cronômetro a cada 60s se a aba histórico estiver ativa
+      setInterval(() => {
+        const histTab = document.getElementById('sec-historico');
+        if (histTab && histTab.style.display !== 'none') renderHistorico();
+      }, 60000);
     }
   </script>
 </body>

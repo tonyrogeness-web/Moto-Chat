@@ -76,7 +76,7 @@ if (process.env.DATABASE_URL) {
       
       // Simulating: INSERT INTO entregas
       if (text.startsWith('INSERT INTO entregas')) {
-        const [coleta_nome, coleta_endereco, coleta_complemento, destinosJson, valor_total, retorno, obs] = params;
+        const [coleta_nome, coleta_endereco, coleta_complemento, destinosJson, valor_total, retorno, obs, tagsJson] = params;
         const newRecord = {
           id: Date.now(),
           created_at: new Date().toISOString(),
@@ -87,6 +87,7 @@ if (process.env.DATABASE_URL) {
           valor_total: parseFloat(valor_total),
           retorno: !!retorno,
           obs,
+          tags: tagsJson ? JSON.parse(tagsJson) : [],
           status: 'pendente',
           motoboy_nome: null,
           motoboy_telefone: null,
@@ -98,6 +99,7 @@ if (process.env.DATABASE_URL) {
         fs.writeFileSync(mockDbPath, JSON.stringify(dbData, null, 2));
         return { rows: [newRecord] };
       }
+
       
       // Simulating: UPDATE entregas SET status = $1 ...
       if (text.startsWith('UPDATE entregas SET status = $1')) {

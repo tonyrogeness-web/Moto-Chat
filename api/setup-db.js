@@ -16,12 +16,15 @@ module.exports = async (req, res) => {
         valor_total NUMERIC(10,2) NOT NULL,
         retorno BOOLEAN DEFAULT FALSE,
         obs TEXT,
+        tags JSONB DEFAULT '[]',
         status VARCHAR(50) DEFAULT 'pendente',
         motoboy_nome VARCHAR(255),
         motoboy_telefone VARCHAR(50),
         accepted_at TIMESTAMP WITH TIME ZONE,
         completed_at TIMESTAMP WITH TIME ZONE
       );
+      -- add tags column to existing tables that don't have it
+      ALTER TABLE entregas ADD COLUMN IF NOT EXISTS tags JSONB DEFAULT '[]';
     `);
     
     client.release();
