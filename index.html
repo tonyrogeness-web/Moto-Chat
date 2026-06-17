@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark-theme">
+<html lang="pt-BR" class="light-theme">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1573,8 +1573,11 @@
       </div>
 
       <div class="btn-row" style="margin-bottom:12px">
-        <button class="btn btn-outline" onclick="copiarLinkConfirmacaoAtual()" style="flex: 1; border-color: #a855f7; color: #a855f7;">
-          🔗 Copiar Link (Corrida Concluída)
+        <button class="btn btn-outline" onclick="copiarLinkConfirmacaoAtual()" style="border-color: #a855f7; color: #a855f7;">
+          🔗 Copiar Link
+        </button>
+        <button class="btn btn-outline" onclick="limparFormEntrega()" style="border-color: #f59e0b; color: #f59e0b;">
+          🧹 Nova Corrida
         </button>
       </div>
 
@@ -2047,7 +2050,7 @@
       numero: localStorage.getItem('mc_numero') || '',
       bairroSel: '',
       areaSel: null,
-      theme: localStorage.getItem('mc_theme') || 'dark-theme',
+      theme: localStorage.getItem('mc_theme') || 'light-theme',
       soundEnabled: JSON.parse(localStorage.getItem('mc_sound') || 'true'),
       motoboysFrequentes: savedMotoboys,
       modalSubTab: 'parser',
@@ -4443,6 +4446,17 @@
         const acceptFormCard = document.getElementById('accept-form-card');
         if (!acceptFormCard) return;
         acceptFormCard.style.display = 'block';
+
+        // Ocultar detalhes da corrida se já estiver concluída (Opção A)
+        const orderCard = document.getElementById('accept-order-card');
+        if (orderCard) {
+          if (order.status === 'concluido') {
+            orderCard.style.display = 'none';
+          } else {
+            orderCard.style.display = 'block';
+          }
+        }
+
         if (order.status === 'pendente') {
           acceptFormCard.innerHTML = `
             <div class="card-title">✍️ Identificação do Entregador</div>
