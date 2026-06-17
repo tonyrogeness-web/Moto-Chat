@@ -1572,13 +1572,16 @@
         </button>
       </div>
 
-      <div class="btn-row" style="margin-bottom:32px">
-        <button class="btn btn-green" onclick="salvarSolicitacao()" style="background: var(--bg-card); color: var(--primary); border: 2px solid var(--primary); box-shadow: none; flex: 1;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-          Salvar no Histórico
-        </button>
+      <div class="btn-row" style="margin-bottom:12px">
         <button class="btn btn-outline" onclick="copiarLinkConfirmacaoAtual()" style="flex: 1; border-color: #a855f7; color: #a855f7;">
           🔗 Copiar Link (Corrida Concluída)
+        </button>
+      </div>
+
+      <div class="btn-row" style="margin-bottom:32px">
+        <button class="btn" onclick="limparHistoricoTotal()" style="flex:1; background:rgba(239,68,68,0.12); border:2px solid #ef4444; color:#ef4444; font-weight:800; letter-spacing:0.3px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+          🗑️ Limpar Histórico
         </button>
       </div>
 
@@ -2865,12 +2868,12 @@
       try {
         const dbId = await garantirPedidoSalvo();
         if (!dbId) {
-          toast('⚠️ Preencha os campos para salvar a solicitação');
+          toast('\u26a0\ufe0f Preencha os campos para salvar a solicita\u00e7\u00e3o');
           playSound('warning');
           return;
         }
         
-        toast('✅ Pedido salvo e sincronizado!');
+        toast('\u2705 Pedido salvo e sincronizado!');
         playSound('success');
         
         state.destinos = [];
@@ -2880,9 +2883,109 @@
         
         carregarHistoricoServidor();
       } catch (e) {
-        toast('⚠️ ' + e.message);
+        toast('\u26a0\ufe0f ' + e.message);
         playSound('warning');
       }
+    }
+
+    function limparHistoricoTotal() {
+      // Custom confirm modal
+      const existing = document.getElementById('modal-limpar-confirm');
+      if (existing) existing.remove();
+
+      const modal = document.createElement('div');
+      modal.id = 'modal-limpar-confirm';
+      modal.style.cssText = `
+        position:fixed; inset:0; z-index:9999;
+        background:rgba(0,0,0,0.75); backdrop-filter:blur(4px);
+        display:flex; align-items:center; justify-content:center;
+        animation: fadeIn 0.15s ease;
+      `;
+      modal.innerHTML = `
+        <div style="
+          background:var(--bg-card);
+          border:2px solid #ef4444;
+          border-radius:18px;
+          padding:28px 24px;
+          max-width:320px; width:90%;
+          text-align:center;
+          box-shadow: 0 20px 60px rgba(239,68,68,0.25);
+          animation: slideUp 0.2s ease;
+        ">
+          <div style="font-size:48px; margin-bottom:12px;">&#x26A0;&#xFE0F;</div>
+          <div style="font-size:17px; font-weight:900; color:#ef4444; margin-bottom:8px;">Limpar Hist&#243;rico?</div>
+          <div style="font-size:13px; color:var(--text-muted); line-height:1.6; margin-bottom:20px;">
+            Isso ir&#225; apagar <b style="color:var(--text-main);">TODO</b> o hist&#243;rico de corridas, lixeira e dados salvos.<br>
+            <b style="color:#ef4444;">Esta a&#231;&#227;o n&#227;o pode ser desfeita!</b>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button id="limpar-cancel-btn" style="
+              flex:1; padding:12px;
+              border:2px solid var(--border-color);
+              border-radius:10px;
+              background:none;
+              color:var(--text-muted);
+              font-size:14px; font-weight:700;
+              cursor:pointer;
+            ">&#10006; Cancelar</button>
+            <button id="limpar-confirm-btn" style="
+              flex:1; padding:12px;
+              border:2px solid #ef4444;
+              border-radius:10px;
+              background:#ef4444;
+              color:#fff;
+              font-size:14px; font-weight:800;
+              cursor:pointer;
+            ">&#x1F5D1;&#xFE0F; Limpar Tudo</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      document.getElementById('limpar-cancel-btn').onclick = () => modal.remove();
+      modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+      document.getElementById('limpar-confirm-btn').onclick = () => {
+        // Clear all local storage keys
+        const keysToRemove = [
+          'mc_historico', 'mc_lixeira', 'mc_favoritos',
+          'mc_bairros', 'mc_areas', 'mc_coleta',
+          'mc_motoboys_frequentes', 'mc_numero_whatsapp',
+          'mc_form_draft', 'mc_tema', 'mc_motoboy_nome', 'mc_motoboy_telefone'
+        ];
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+
+        // Also try to clear via API if available
+        if (_apiAvailable) {
+          fetch('/api/orders', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clearAll: true }) })
+            .catch(() => {});
+        }
+
+        // Reset in-memory state
+        state.historico = [];
+        state.bairros = [];
+        state.areas = [];
+        state.destinos = [];
+        state.motoboysFrequentes = [];
+        currentOrderState.saved = false;
+        currentOrderState.id = null;
+
+        modal.remove();
+
+        // Re-render everything
+        limparFormEntrega();
+        renderColeta();
+        renderBairros();
+        renderAreas();
+        renderHistorico();
+        renderConfig();
+        _atualizarBadgeLixeira();
+        gerarPreview();
+
+        toast('\ud83d\uddd1\ufe0f Hist\u00f3rico limpo com sucesso!');
+        playSound('success');
+      };
     }
 
     function limparFormEntrega() {
