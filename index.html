@@ -1495,7 +1495,9 @@
           <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 1.21-1.04 1.93-2.7 1.93-1.96 0-2.74-1.14-2.85-2.6H6.19c.11 2.22 1.69 3.5 3.81 3.91V21h3v-2.15c2-.39 3.5-1.5 3.5-3.57 0-2.84-2.43-3.79-4.7-3.98z"/></svg>
           Área / Taxa de Entrega
         </div>
-        <div class="valores-grid" id="areas-grid"></div>
+        <div class="field">
+          <select id="areas-select" onchange="selecionarAreaDropdown(this.value)"></select>
+        </div>
         <div class="field" style="margin-top:8px">
           <input type="number" id="valor-custom" placeholder="R$ Valor personalizado" min="0" step="0.50">
         </div>
@@ -2601,6 +2603,24 @@
       msg += '🔄 *Tem retorno?* ' + (retorno ? 'Sim' : 'Não');
       if (obs) msg += '\n💬 *Obs:* ' + obs;
 
+      if (dbId) {
+        const isLocal = String(dbId).startsWith('local_');
+        let link = `${window.location.origin}${window.location.pathname}?aceitar=true&id=${dbId}`;
+        
+        if (isLocal) {
+          const orderData = _montarOrderData();
+          if (orderData) {
+            orderData.id = dbId;
+            orderData.created_at = new Date().toISOString();
+            orderData.status = 'pendente';
+            const orderJson = JSON.stringify(orderData);
+            const base64Data = btoa(unescape(encodeURIComponent(orderJson)));
+            link += `&data=${encodeURIComponent(base64Data)}`;
+          }
+        }
+        msg += `\n\n🤝 *Complementar histórico / Aceitar corrida:*\n${link}`;
+      }
+
       return msg.trimEnd();
     }
 
@@ -2869,6 +2889,16 @@
       }
       msg += `🔄 *Tem retorno?* ${item.retorno ? 'Sim' : 'Não'}`;
       if (item.obs) msg += `\n💬 *Obs:* ${item.obs}`;
+      
+      const isLocal = String(item.id).startsWith('local_');
+      let link = `${window.location.origin}${window.location.pathname}?aceitar=true&id=${item.id}`;
+      if (isLocal) {
+        const orderJson = JSON.stringify(item);
+        const base64Data = btoa(unescape(encodeURIComponent(orderJson)));
+        link += `&data=${encodeURIComponent(base64Data)}`;
+      }
+      msg += `\n\n🤝 *Complementar histórico / Aceitar corrida:*\n${link}`;
+
       return msg.trimEnd();
     }
 
@@ -3254,13 +3284,13 @@
           ${item.obs ? `<div class="hist-obs">💬 ${item.obs}</div>` : ''}
           <div style="margin-top:8px;"><span class="badge ${badges[item.status]}">${labels[item.status]}</span></div>
           <div class="hist-actions">
-            <button class="hist-btn hist-btn-aceito" onclick="updateStatus(${item.id},'aceito')">
+            <button class="hist-btn hist-btn-aceito" onclick="updateStatus('${item.id}','aceito')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Aceito
             </button>
-            <button class="hist-btn hist-btn-concluido" onclick="updateStatus(${item.id},'concluido')">
+            <button class="hist-btn hist-btn-concluido" onclick="updateStatus('${item.id}','concluido')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Concluído
             </button>
-            <button class="hist-btn hist-btn-cancelado" onclick="updateStatus(${item.id},'cancelado')">
+            <button class="hist-btn hist-btn-cancelado" onclick="updateStatus('${item.id}','cancelado')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Cancelado
             </button>
             ${item.status === 'pendente' ? `
@@ -3274,10 +3304,10 @@
             <button class="hist-btn hist-btn-fav" onclick="salvarFavorito('${item.id}')" title="Salvar endereço">
               ⭐ Favorito
             </button>
-            <button class="hist-btn" onclick="repetirPedido(${item.id})" style="border-color:var(--primary);color:var(--primary);" title="Repetir Pedido">
+            <button class="hist-btn" onclick="repetirPedido('${item.id}')" style="border-color:var(--primary);color:var(--primary);" title="Repetir Pedido">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> Repetir
             </button>
-            <button class="hist-btn hist-btn-copiar" onclick="copiarHist(${item.id})">
+            <button class="hist-btn hist-btn-copiar" onclick="copiarHist('${item.id}')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar
             </button>
             <button class="hist-btn" onclick="deletarPedido('${item.id}')" title="Excluir Corrida" style="border-color:var(--accent);color:var(--accent);">
@@ -4334,13 +4364,35 @@
       const dataParam = urlParams.get('data'); // dados embutidos em base64
       
       const preencherForm = (order) => {
+        const acceptFormCard = document.getElementById('accept-form-card');
+        if (!acceptFormCard) return;
+        
+        acceptFormCard.style.display = 'block';
+        
         if (order.status === 'pendente') {
+          acceptFormCard.innerHTML = `
+            <div class="card-title">✍️ Seus Dados para Aceite</div>
+            <div class="field">
+              <label for="motoboy-nome">Seu Nome Completo</label>
+              <input type="text" id="motoboy-nome" placeholder="Ex: João Silva">
+            </div>
+            <div class="field">
+              <label for="motoboy-telefone">Seu WhatsApp (apenas números com DDD)</label>
+              <input type="tel" id="motoboy-telefone" placeholder="Ex: 75999990000">
+            </div>
+            <button class="btn btn-green" onclick="confirmarAceiteCorrida()" style="margin-top: 10px; font-size:17px; padding:16px;">
+              🏍️ Confirmar e Aceitar Corrida
+            </button>
+            <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
+              📊 Ver Minhas Corridas (Relatório)
+            </button>
+          `;
+          
           document.getElementById('motoboy-nome').value = autoNome || localStorage.getItem('mc_motoboy_nome') || '';
           document.getElementById('motoboy-telefone').value = autoTel || localStorage.getItem('mc_motoboy_telefone') || '';
-          document.getElementById('accept-form-card').style.display = 'block';
           
           if (autoNome && autoTel) {
-            const btn = document.querySelector('#accept-form-card button');
+            const btn = acceptFormCard.querySelector('button');
             if (btn) {
               btn.disabled = true;
               btn.innerHTML = '⚙️ Aceitando corrida automaticamente...';
@@ -4349,8 +4401,47 @@
               confirmarAceiteCorrida();
             }, 800);
           }
-        } else {
-          document.getElementById('accept-form-card').style.display = 'block';
+        } else if (order.status === 'aceito') {
+          acceptFormCard.innerHTML = `
+            <div class="card-title" style="color:#10b981;">✅ Corrida Aceita!</div>
+            <div style="font-size:13.5px; margin-bottom:16px; line-height:1.5;">
+              Esta corrida foi assumida por: <br>
+              <b>👤 Nome:</b> ${order.motoboy_nome} <br>
+              <b>📞 WhatsApp:</b> ${order.motoboy_telefone}
+            </div>
+            <button class="btn btn-green" onclick="finalizarCorridaMotoboy('${order.id}')" style="background:var(--primary); border-color:var(--primary); font-size:16px; padding:14px; margin-top:8px;">
+              🏁 Marcar como Concluída (Finalizar Entrega)
+            </button>
+            <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
+              📊 Ver Minhas Corridas (Relatório)
+            </button>
+          `;
+        } else if (order.status === 'concluido') {
+          acceptFormCard.innerHTML = `
+            <div class="card-title" style="color:#3b82f6;">🏁 Corrida Concluída!</div>
+            <div style="font-size:13.5px; margin-bottom:16px; line-height:1.5;">
+              Corrida finalizada com sucesso por: <br>
+              <b>👤 Nome:</b> ${order.motoboy_nome} <br>
+              <b>📞 WhatsApp:</b> ${order.motoboy_telefone} <br>
+              ${order.completed_at ? `<b>🕐 Concluída em:</b> ${new Date(order.completed_at).toLocaleString('pt-BR')}` : ''}
+            </div>
+            <div style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.25); color:#2563eb; padding:12px; border-radius:10px; text-align:center; font-weight:700; margin-bottom:12px;">
+              🎉 Entrega Finalizada! Obrigado pelo excelente trabalho.
+            </div>
+            <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
+              📊 Ver Minhas Corridas (Relatório)
+            </button>
+          `;
+        } else if (order.status === 'cancelado') {
+          acceptFormCard.innerHTML = `
+            <div class="card-title" style="color:var(--accent);">❌ Corrida Cancelada</div>
+            <div style="font-size:13.5px; margin-bottom:16px; color:var(--text-muted);">
+              Esta solicitação de corrida foi cancelada pelo estabelecimento e não está mais activa.
+            </div>
+            <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
+              📊 Ver Minhas Corridas (Relatório)
+            </button>
+          `;
         }
       };
 
@@ -4571,6 +4662,76 @@
         
         const msg = `✅ *CORRIDA ASSUMIDA POR MOTOBOY (LOCAL)!*\n\n🏍️ *Motoboy:* ${nome}\n📞 *Contato:* ${telefone}\n📍 *Destino:* Rota para ${localHistory[idx].coleta_nome} (Valor R$ ${Number(localHistory[idx].valor_total).toFixed(2).replace('.', ',')})\n🆔 *ID:* ${orderId}`;
         setTimeout(() => redirecionar(msg), 600);
+      }
+    }
+
+    async function finalizarCorridaMotoboy(orderId) {
+      if (!confirm('Deseja realmente marcar esta corrida como Concluída?')) return;
+      const isLocal = String(orderId).startsWith('local_');
+      
+      const btn = document.querySelector('#accept-form-card button');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⚙️ Concluindo corrida...';
+      }
+      
+      if (!isLocal) {
+        try {
+          const res = await fetch('/api/orders', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: orderId, status: 'concluido' })
+          });
+          
+          if (res.ok) {
+            toast('🏁 Corrida concluída com sucesso!');
+            playSound('success');
+            carregarDetalhesCorrida(orderId);
+            return;
+          } else {
+            console.warn('Erro ao concluir no servidor:', res.status);
+          }
+        } catch (e) {
+          console.warn('Erro de rede ao concluir corrida:', e);
+        }
+      }
+      
+      // Fallback local ou offline
+      const localHistory = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      const idx = localHistory.findIndex(h => String(h.id) === String(orderId));
+      if (idx !== -1) {
+        localHistory[idx].status = 'concluido';
+        localHistory[idx].completed_at = new Date().toISOString();
+        localStorage.setItem('mc_historico', JSON.stringify(localHistory));
+        
+        toast('🏁 Corrida concluída (Local)!');
+        playSound('success');
+        carregarDetalhesCorrida(orderId);
+      } else {
+        const dataParam = new URLSearchParams(window.location.search).get('data');
+        if (dataParam) {
+          try {
+            const order = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(dataParam)))));
+            order.id = orderId;
+            order.status = 'concluido';
+            order.completed_at = new Date().toISOString();
+            localHistory.unshift(order);
+            localStorage.setItem('mc_historico', JSON.stringify(localHistory));
+            
+            toast('🏁 Corrida concluída (Salva offline)!');
+            playSound('success');
+            carregarDetalhesCorrida(orderId);
+          } catch(e) {
+            toast('⚠️ Erro ao salvar status offline');
+          }
+        } else {
+          toast('⚠️ Corrida não encontrada no histórico para concluir');
+        }
+      }
+      
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '🏁 Marcar como Concluída (Finalizar Entrega)';
       }
     }
 
