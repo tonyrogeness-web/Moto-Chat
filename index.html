@@ -2801,13 +2801,27 @@
       if (isLocal) {
         const order = state.historico.find(h => String(h.id) === String(dbId));
         if (order) {
-          const orderJson = JSON.stringify(order);
+          const mini = {
+            cn: order.coleta_nome,
+            ce: order.coleta_endereco || '',
+            cc: order.coleta_complemento || '',
+            vt: order.valor_total,
+            rt: order.retorno ? 1 : 0,
+            ob: order.obs || '',
+            d: (order.destinos || []).map(dest => ({
+              r: dest.rua,
+              b: dest.bairro,
+              v: dest.valor,
+              c: dest.comp || ''
+            }))
+          };
+          const orderJson = JSON.stringify(mini);
           const base64Data = btoa(unescape(encodeURIComponent(orderJson)));
           link += `&data=${encodeURIComponent(base64Data)}`;
         }
       }
       
-      const message = `Olá! Clique no link abaixo para finalizar a entrega. Ao concluir, você terá acesso ao seu extrato completo de corridas realizadas para nossa empresa:\n\n${link}`;
+      const message = `Após a conclusão da entrega, por favor, confirme no link abaixo!!!\n\n${link}`;
       return message;
     }
 
@@ -3577,7 +3591,12 @@
           row.className = 'config-item-row';
           row.innerHTML = `
             <span class="config-item-label">👤 <b>${m.nome}</b> • 📞 ${m.telefone}</span>
-            <button class="config-btn-remove" onclick="removeMotoboyConfig('${m.id}')">✕</button>
+            <div style="display:flex; gap: 8px; align-items: center;">
+              <button class="hist-btn" onclick="copiarLinkRelatorioMotoboy('${m.telefone}')" title="Copiar Link do Extrato" style="border-color:#10b981; color:#10b981; font-size:11px; padding:2px 8px; height:auto; width:auto; line-height:1.4; margin:0;">
+                🔗 Extrato
+              </button>
+              <button class="config-btn-remove" onclick="removeMotoboyConfig('${m.id}')" style="margin:0;">✕</button>
+            </div>
           `;
           ml.appendChild(row);
         });
@@ -3585,6 +3604,18 @@
 
       document.getElementById('config-numero').value = state.numero;
       document.getElementById('config-som').checked = state.soundEnabled;
+    }
+
+    function copiarLinkRelatorioMotoboy(telefone) {
+      const cleanTel = telefone.replace(/\D/g, '');
+      const link = `${window.location.origin}${window.location.pathname}?relatorio=true&tel=${cleanTel}`;
+      navigator.clipboard.writeText(link).then(() => {
+        toast('📋 Link do extrato do motoboy copiado!');
+        playSound('success');
+      }).catch(() => {
+        toast('⚠️ Falha ao copiar o link');
+        playSound('warning');
+      });
     }
 
     function formatarTelefoneWhatsApp(tel) {
@@ -4511,9 +4542,30 @@
       // 2) Fallback: dados embutidos no link (para IDs locais)
       if (dataParam) {
         try {
-          const order = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(dataParam)))));
-          order.id = orderId;
-          order.status = order.status || 'pendente';
+          const raw = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(dataParam)))));
+          let order;
+          if (raw.cn !== undefined) {
+            order = {
+              id: orderId,
+              status: 'pendente',
+              coleta_nome: raw.cn,
+              coleta_endereco: raw.ce,
+              coleta_complemento: raw.cc,
+              valor_total: raw.vt,
+              retorno: !!raw.rt,
+              obs: raw.ob,
+              destinos: (raw.d || []).map(dest => ({
+                rua: dest.r,
+                bairro: dest.b,
+                valor: dest.v,
+                comp: dest.c
+              }))
+            };
+          } else {
+            order = raw;
+            order.id = orderId;
+            order.status = order.status || 'pendente';
+          }
           renderDetalhesCorridaHtml(order);
           preencherForm(order);
           return;
@@ -4693,8 +4745,29 @@
       
       if (idx === -1 && dataParam) {
         try {
-          const order = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(dataParam)))));
-          order.id = orderId;
+          const raw = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(dataParam)))));
+          let order;
+          if (raw.cn !== undefined) {
+            order = {
+              id: orderId,
+              status: 'pendente',
+              coleta_nome: raw.cn,
+              coleta_endereco: raw.ce,
+              coleta_complemento: raw.cc,
+              valor_total: raw.vt,
+              retorno: !!raw.rt,
+              obs: raw.ob,
+              destinos: (raw.d || []).map(dest => ({
+                rua: dest.r,
+                bairro: dest.b,
+                valor: dest.v,
+                comp: dest.c
+              }))
+            };
+          } else {
+            order = raw;
+            order.id = orderId;
+          }
           localHistory.unshift(order);
           idx = 0;
         } catch(e) {
@@ -5318,7 +5391,7 @@
       if (content) content.style.display = 'none';
       const reportView = document.getElementById('motoboy-report-view');
       if (reportView) reportView.style.display = 'block';
-      const savedPhone = localStorage.getItem('mc_motoboy_telefone') || '';
+      const savedPhone = urlParams.get('tel') || localStorage.getItem('mc_motoboy_telefone') || '';
       if (savedPhone) {
         const reportTel = document.getElementById('report-telefone');
         if (reportTel) reportTel.value = savedPhone;
