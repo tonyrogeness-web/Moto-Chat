@@ -46,10 +46,10 @@ if (process.env.DATABASE_URL) {
           return { rows: filtered };
         }
         
-        // Motoboy report query
+        // Motoboy report query — keep 7 days so motoboys see their full week
         if (text.includes('motoboy_telefone = $1')) {
           const tel = params[0];
-          const limitTime = Date.now() - 48 * 60 * 60 * 1000;
+          const limitTime = Date.now() - 7 * 24 * 60 * 60 * 1000;
           filtered = filtered.filter(x => {
             const time = new Date(x.created_at || x.id).getTime();
             return String(x.motoboy_telefone) === String(tel) && 
@@ -59,8 +59,8 @@ if (process.env.DATABASE_URL) {
           return { rows: filtered };
         }
         
-        // Filter out entries older than 48 hours for general queries
-        const limitTime = Date.now() - 48 * 60 * 60 * 1000;
+        // Active history: only last 24h for dispatcher view
+        const limitTime = Date.now() - 24 * 60 * 60 * 1000;
         filtered = filtered.filter(x => {
           const time = new Date(x.created_at || x.id).getTime();
           return !isNaN(time) && time > limitTime;
