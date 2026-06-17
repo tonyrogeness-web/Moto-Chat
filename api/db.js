@@ -129,15 +129,16 @@ if (process.env.DATABASE_URL) {
         return { rows: [] };
       }
       
-      // Simulating: UPDATE entregas SET status = 'aceito' ... (motoboy accept)
-      if (text.includes("status = 'aceito'")) {
+      // Simulating: UPDATE entregas SET status = 'concluido' ... (motoboy accept/conclude)
+      if (text.includes("status = 'concluido'") && text.includes("motoboy_nome = $1")) {
         const [motoboy_nome, motoboy_telefone, orderId] = params;
         const record = dbData.find(x => String(x.id) === String(orderId));
         if (record) {
-          record.status = 'aceito';
+          record.status = 'concluido';
           record.motoboy_nome = motoboy_nome;
           record.motoboy_telefone = motoboy_telefone;
-          record.accepted_at = new Date().toISOString();
+          record.accepted_at = record.accepted_at || new Date().toISOString();
+          record.completed_at = new Date().toISOString();
           fs.writeFileSync(mockDbPath, JSON.stringify(dbData, null, 2));
           return { rows: [record] };
         }

@@ -17,6 +17,9 @@ module.exports = async (req, res) => {
       const { status, search, id } = req.query;
       
       if (id) {
+        if (isNaN(id) || !/^\d+$/.test(String(id))) {
+          return res.status(200).json([]);
+        }
         const { rows } = await pool.query('SELECT * FROM entregas WHERE id = $1', [id]);
         return res.status(200).json(rows);
       }

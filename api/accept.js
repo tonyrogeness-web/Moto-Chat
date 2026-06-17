@@ -34,17 +34,18 @@ module.exports = async (req, res) => {
     if (order.status !== 'pendente') {
       return res.status(400).json({ 
         alreadyAccepted: true, 
-        message: `Esta corrida já foi confirmada pelo motoboy ${order.motoboy_nome}!` 
+        message: `Esta corrida já foi concluída pelo motoboy ${order.motoboy_nome}!` 
       });
     }
     
-    // Update order status to accepted
+    // Update order status to concluded
     const updateQuery = `
       UPDATE entregas 
-      SET status = 'aceito', 
+      SET status = 'concluido', 
           motoboy_nome = $1, 
           motoboy_telefone = $2, 
-          accepted_at = CURRENT_TIMESTAMP 
+          accepted_at = COALESCE(accepted_at, CURRENT_TIMESTAMP),
+          completed_at = CURRENT_TIMESTAMP 
       WHERE id = $3 
       RETURNING *
     `;
