@@ -10,8 +10,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Tesseract.js for offline local OCR address scanner -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 
   <style>
@@ -1021,7 +1019,7 @@
 
     /* ─── MODAL GLASSMORPHISM ───────────────────────────────────────────────── */
     .modal-overlay {
-      display: none;
+      display: flex;
       position: fixed;
       inset: 0;
       background: rgba(15, 23, 42, 0.6);
@@ -1031,12 +1029,15 @@
       justify-content: center;
       padding: 20px;
       opacity: 0;
-      transition: opacity var(--transition-normal);
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity var(--transition-normal), visibility var(--transition-normal);
     }
     
     .modal-overlay.open {
-      display: flex;
       opacity: 1;
+      visibility: visible;
+      pointer-events: all;
     }
     
     .modal {
@@ -3616,25 +3617,27 @@
     // ─── UTILS ───────────────────────────────────────────────────────────────────
     function openModal(id) { 
       const overlay = document.getElementById(id);
-      overlay.style.display = 'flex';
-      // Trigger reflow for transition
-      overlay.offsetHeight;
+      if (!overlay) return;
       overlay.classList.add('open');
     }
     
     function closeModal(id) { 
       const overlay = document.getElementById(id);
+      if (!overlay) return;
       overlay.classList.remove('open');
-      setTimeout(() => {
-        if (!overlay.classList.contains('open')) {
-          overlay.style.display = 'none';
-        }
-      }, 250); // Match transition duration
     }
 
-    // ─── OCR ADDRESS SCANNER (TESSERACT.JS) ──────────────────────────────────────────
+    // ─── OCR ADDRESS SCANNER ─────────────────────────────────────────────────────
+    // Tesseract.js é carregado dinamicamente apenas quando necessário
+    let _ocrScriptLoaded = false;
+    let _ocrLoadingScript = false;
+
     function abrirModalOCR() {
-      // Reset UI state
+      // Abre modal imediatamente — sem depender de script externo ainda
+      const el = document.getElementById('modal-ocr');
+      if (!el) { alert('Modal OCR não encontrada.'); return; }
+
+      // Reset UI
       document.getElementById('ocr-preview-container').style.display = 'none';
       document.getElementById('ocr-status-container').style.display = 'none';
       document.getElementById('ocr-result-container').style.display = 'none';
@@ -3644,252 +3647,198 @@
       document.getElementById('ocr-res-bairro').value = '';
       document.getElementById('ocr-res-comp').value = '';
       document.getElementById('ocr-raw-text').textContent = '';
-      
+
       openModal('modal-ocr');
-      
-      // Setup dropzone events only once
+
+      // Setup dropzone once
       const dropzone = document.getElementById('ocr-dropzone');
       const fileInput = document.getElementById('ocr-file-input');
-      
-      if (!dropzone.dataset.initialized) {
-        dropzone.dataset.initialized = 'true';
-        
+      if (!dropzone._ocr_init) {
+        dropzone._ocr_init = true;
         dropzone.addEventListener('click', () => fileInput.click());
-        
-        fileInput.addEventListener('change', (e) => {
-          if (e.target.files.length > 0) {
-            processarImagemOCR(e.target.files[0]);
-          }
+        fileInput.addEventListener('change', (ev) => {
+          if (ev.target.files.length > 0) processarImagemOCR(ev.target.files[0]);
         });
-        
-        dropzone.addEventListener('dragover', (e) => {
-          e.preventDefault();
+        dropzone.addEventListener('dragover', (ev) => {
+          ev.preventDefault();
           dropzone.style.borderColor = 'var(--primary)';
-          dropzone.style.background = 'rgba(16, 185, 129, 0.05)';
+          dropzone.style.background = 'var(--primary-glow)';
         });
-        
         dropzone.addEventListener('dragleave', () => {
           dropzone.style.borderColor = 'var(--border-color)';
           dropzone.style.background = 'rgba(0,0,0,0.02)';
         });
-        
-        dropzone.addEventListener('drop', (e) => {
-          e.preventDefault();
+        dropzone.addEventListener('drop', (ev) => {
+          ev.preventDefault();
           dropzone.style.borderColor = 'var(--border-color)';
           dropzone.style.background = 'rgba(0,0,0,0.02)';
-          if (e.dataTransfer.files.length > 0) {
-            processarImagemOCR(e.dataTransfer.files[0]);
-          }
+          if (ev.dataTransfer.files.length > 0) processarImagemOCR(ev.dataTransfer.files[0]);
         });
       }
     }
 
-    // Global listener for Ctrl+V when OCR modal is open
-    window.addEventListener('paste', (e) => {
+    // Ctrl+V / clipboard paste quando modal está aberta
+    document.addEventListener('paste', (ev) => {
       const modal = document.getElementById('modal-ocr');
-      if (modal && modal.classList.contains('open')) {
-        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-        for (let item of items) {
-          if (item.kind === 'file' && item.type.startsWith('image/')) {
-            const file = item.getAsFile();
-            processarImagemOCR(file);
-            break;
-          }
+      if (!modal || !modal.classList.contains('open')) return;
+      const items = ev.clipboardData ? ev.clipboardData.items : [];
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
+          processarImagemOCR(items[i].getAsFile());
+          break;
         }
       }
     });
 
-    function processarImagemOCR(file) {
-      if (!file) return;
-      
-      if (!file.type.startsWith('image/')) {
-        toast('⚠️ Por favor, selecione apenas arquivos de imagem.');
+    function _ocrSetStatus(msg) {
+      document.getElementById('ocr-status-text').textContent = msg;
+      document.getElementById('ocr-status-container').style.display = 'flex';
+    }
+
+    function _carregarTesseract(callback) {
+      if (typeof Tesseract !== 'undefined') { callback(); return; }
+      if (_ocrLoadingScript) {
+        const t = setInterval(() => {
+          if (typeof Tesseract !== 'undefined') { clearInterval(t); callback(); }
+        }, 300);
         return;
       }
-      
-      playSound('click');
-      
-      // Show preview
+      _ocrLoadingScript = true;
+      _ocrSetStatus('Carregando leitor de imagem... (aguarde)');
+      const s = document.createElement('script');
+      // Tesseract.js v4 - API mais estável e compatível
+      s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js';
+      s.onload = () => { _ocrScriptLoaded = true; _ocrLoadingScript = false; callback(); };
+      s.onerror = () => {
+        _ocrLoadingScript = false;
+        document.getElementById('ocr-status-container').style.display = 'none';
+        toast('❌ Falha ao carregar leitor OCR. Verifique sua conexão com a internet.');
+      };
+      document.head.appendChild(s);
+    }
+
+    async function processarImagemOCR(file) {
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        toast('⚠️ Selecione apenas arquivos de imagem (PNG, JPG).');
+        return;
+      }
+
+      // Mostrar preview imediatamente
       const previewImg = document.getElementById('ocr-preview-img');
       const reader = new FileReader();
-      reader.onload = (e) => {
-        previewImg.src = e.target.result;
+      reader.onload = (ev) => {
+        previewImg.src = ev.target.result;
         document.getElementById('ocr-preview-container').style.display = 'block';
       };
       reader.readAsDataURL(file);
-      
-      // Update OCR status
-      const statusContainer = document.getElementById('ocr-status-container');
-      const statusText = document.getElementById('ocr-status-text');
-      statusContainer.style.display = 'flex';
-      statusText.textContent = 'Inicializando leitor (Tesseract)...';
-      
+
       document.getElementById('ocr-result-container').style.display = 'none';
       document.getElementById('ocr-confirm-btn').style.display = 'none';
-      
-      // Perform OCR
-      Tesseract.recognize(
-        file,
-        'por', // Portuguese pack
-        {
-          logger: m => {
-            if (m.status === 'recognizing text') {
-              statusText.textContent = `Lendo imagem... ${Math.round(m.progress * 100)}%`;
-            } else if (m.status === 'loading por traineddata') {
-              statusText.textContent = 'Baixando dados do idioma (por)...';
-            } else {
-              statusText.textContent = 'Processando...';
+      _ocrSetStatus('Iniciando leitura...');
+
+      _carregarTesseract(async () => {
+        try {
+          _ocrSetStatus('Criando leitor de texto...');
+          // Tesseract.js v4 API
+          const worker = await Tesseract.createWorker({
+            logger: m => {
+              if (m.status === 'recognizing text') {
+                _ocrSetStatus(`Lendo imagem... ${Math.round(m.progress * 100)}%`);
+              } else if (m.status && m.status.length > 0) {
+                _ocrSetStatus(m.status.includes('load') ? 'Carregando dados de idioma...' : m.status);
+              }
             }
-          }
+          });
+          await worker.loadLanguage('por');
+          await worker.initialize('por');
+          const { data: { text } } = await worker.recognize(file);
+          await worker.terminate();
+
+          document.getElementById('ocr-status-container').style.display = 'none';
+          document.getElementById('ocr-raw-text').textContent = text || '(nenhum texto detectado)';
+
+          const parsed = extrairEnderecoDoTexto(text || '');
+          document.getElementById('ocr-res-rua').value = parsed.rua;
+          document.getElementById('ocr-res-bairro').value = parsed.bairro;
+          document.getElementById('ocr-res-comp').value = parsed.comp;
+
+          document.getElementById('ocr-result-container').style.display = 'flex';
+          document.getElementById('ocr-confirm-btn').style.display = 'block';
+          toast('✅ Imagem lida com sucesso!');
+        } catch (err) {
+          console.error('[OCR error]', err);
+          document.getElementById('ocr-status-container').style.display = 'none';
+          // Mostrar campos mesmo com erro para preenchimento manual
+          document.getElementById('ocr-result-container').style.display = 'flex';
+          document.getElementById('ocr-confirm-btn').style.display = 'block';
+          toast('⚠️ Erro na leitura automática. Preencha os campos manualmente.');
         }
-      ).then(({ data: { text } }) => {
-        statusContainer.style.display = 'none';
-        playSound('success');
-        
-        // Populate Raw Text
-        document.getElementById('ocr-raw-text').textContent = text;
-        
-        // Parse the text
-        const parsed = extrairEnderecoDoTexto(text);
-        
-        // Populate inputs
-        document.getElementById('ocr-res-rua').value = parsed.rua;
-        document.getElementById('ocr-res-bairro').value = parsed.bairro;
-        document.getElementById('ocr-res-comp').value = parsed.comp;
-        
-        // Show result area & confirm button
-        document.getElementById('ocr-result-container').style.display = 'flex';
-        document.getElementById('ocr-confirm-btn').style.display = 'block';
-      }).catch(err => {
-        console.error(err);
-        statusContainer.style.display = 'none';
-        toast('❌ Erro ao ler a imagem. Tente outra imagem ou digite manualmente.');
-        playSound('error');
       });
     }
 
     function extrairEnderecoDoTexto(texto) {
-      let rua = '';
-      let bairro = '';
-      let comp = '';
+      let rua = '', bairro = '', comp = '';
+      const linhas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+      const reRua = /\b(rua|r\.|av\.|avenida|travessa|tv\.|alameda|al\.|rodovia|rod\.|estrada|est\.)\b/i;
 
-      // Split lines and trim
-      const linhas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-
-      // Palavras chaves de rua em português
-      const keywordsEndereco = /\b(rua|r\.|av\.|avenida|travessa|tv\.|alameda|al\.|rodovia|rod\.|estrada|est\.)\b/i;
-
-      // 1. Encontrar a linha com palavra-chave de logradouro
-      let linhaEndereco = '';
-      for (let i = 0; i < linhas.length; i++) {
-        if (keywordsEndereco.test(linhas[i])) {
-          linhaEndereco = linhas[i];
-          break;
-        }
-      }
-
-      // Fallback: se não achar a palavra-chave, pegar a primeira linha
-      if (!linhaEndereco && linhas.length > 0) {
-        linhaEndereco = linhas[0];
-      }
+      let linhaEndereco = linhas.find(l => reRua.test(l)) || (linhas.length ? linhas[0] : '');
 
       if (linhaEndereco) {
-        // Remover prefixos comuns do WhatsApp ou do sistema (ex: "Endereço: ", "Entregar em: ")
-        linhaEndereco = linhaEndereco.replace(/^(endereço|endereco|entregar em|entrega|destinatário|destinatario|destin|cliente|local|entregas?|casa|localizacao|localização):/i, '').trim();
-
-        // Tentar quebrar por separadores comuns
-        const partes = linhaEndereco.split(/[,–-]/).map(p => p.trim()).filter(p => p.length > 0);
-
+        linhaEndereco = linhaEndereco.replace(/^(endere[çc]o|entregar em|entrega|cliente|local|destino):\s*/i, '').trim();
+        const partes = linhaEndereco.split(/[,–\-]/).map(p => p.trim()).filter(p => p.length > 0);
         if (partes.length > 0) {
           rua = partes[0];
-          
-          // Se a rua não tiver número nela e a próxima parte parecer um número, junta
           if (partes.length > 1) {
-            const proximaParte = partes[1];
-            if (!/\d+/.test(rua) && /^\d+/.test(proximaParte)) {
-              rua += ', ' + proximaParte;
-              
-              if (partes.length > 2) {
-                bairro = partes[2];
-              }
-              if (partes.length > 3) {
-                comp = partes.slice(3).join(', ');
-              }
+            const prox = partes[1];
+            if (!/\d/.test(rua) && /^\d/.test(prox)) {
+              rua += ', ' + prox;
+              bairro = partes[2] || '';
+              comp = partes.slice(3).join(', ');
             } else {
-              // Bairro é a segunda parte
               bairro = partes[1];
-              if (partes.length > 2) {
-                comp = partes.slice(2).join(', ');
-              }
+              comp = partes.slice(2).join(', ');
             }
           }
-        } else {
-          rua = linhaEndereco;
+        } else { rua = linhaEndereco; }
+      }
+
+      // Capturar linhas com labels dedicadas
+      for (const linha of linhas) {
+        const mb = linha.match(/\bbairro:\s*([^,\n]+)/i);
+        if (mb) bairro = mb[1].trim();
+        const mc = linha.match(/\b(comp|complemento|ref|referencia|referência|apto|bloco):\s*([^,\n]+)/i);
+        if (mc) comp = mc[2].trim();
+      }
+
+      // Bairro do histórico se nada detectado
+      if (!bairro && state.bairros && state.bairros.length) {
+        for (const linha of linhas) {
+          const found = state.bairros.find(b => linha.toLowerCase().includes(b.toLowerCase()));
+          if (found) { bairro = found; break; }
         }
       }
 
-      // Procurar se bairro ou complemento estão em linhas dedicadas (ex: "Bairro: Centro")
-      for (let linha of linhas) {
-        const matchBairro = linha.match(/(?:bairro|b\.):\s*([^,\n]+)/i);
-        if (matchBairro) {
-          bairro = matchBairro[1].trim();
-        }
-        const matchComp = linha.match(/(?:comp|complemento|ref|referencia|referência|casa|apto|apartamento|obs|bloco|bl):\s*([^,\n]+)/i);
-        if (matchComp) {
-          comp = matchComp[1].trim();
-        }
-      }
+      const reCity = /,?\s*\b(feira de santana|fsa|salvador|camacari|lauro de freitas|bahia|ba)\b/ig;
+      rua = (rua || '').replace(reCity, '').trim().replace(/[^\w)]+$/, '').trim();
+      bairro = (bairro || '').replace(reCity, '').trim().replace(/[^\w)]+$/, '').trim();
 
-      // Detectar se alguma das linhas contém um bairro do histórico cadastrado (se não detectou bairro ainda)
-      if (!bairro && state.bairros && state.bairros.length > 0) {
-        for (let linha of linhas) {
-          for (let b of state.bairros) {
-            if (linha.toLowerCase().includes(b.toLowerCase())) {
-              bairro = b;
-              break;
-            }
-          }
-          if (bairro) break;
-        }
-      }
-
-      // Limpar cidades e estados comuns que poluem o input da rua ou bairro
-      const removerCidades = /\b(feira de santana|fsa|salvador|camacari|lauro de freitas|bahia|ba)\b/i;
-      if (rua) rua = rua.replace(removerCidades, '').replace(/,\s*$/, '').trim();
-      if (bairro) bairro = bairro.replace(removerCidades, '').replace(/,\s*$/, '').trim();
-
-      // Ajustes de pontuação e strings remanescentes
-      if (rua) rua = rua.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9)]+$/g, '').trim();
-      if (bairro) bairro = bairro.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9)]+$/g, '').trim();
-
-      return { rua, bairro, comp };
+      return { rua, bairro, comp: comp || '' };
     }
 
     function confirmarOCR() {
       const rua = document.getElementById('ocr-res-rua').value.trim();
       const bairro = document.getElementById('ocr-res-bairro').value.trim();
       const comp = document.getElementById('ocr-res-comp').value.trim();
-      
-      if (!rua) {
-        toast('⚠️ Preencha pelo menos a rua.');
-        return;
-      }
-      
+      if (!rua && !bairro) { toast('⚠️ Preencha ao menos a rua ou bairro.'); return; }
       document.getElementById('end-rua').value = rua;
       document.getElementById('bairro-custom').value = bairro;
       document.getElementById('end-comp').value = comp;
-      
       state.bairroSel = bairro;
-      
       const matched = state.bairros.find(b => b.toLowerCase() === bairro.toLowerCase());
-      if (matched) {
-        detectarPrecoPorBairro(matched);
-      }
-      
+      if (matched) detectarPrecoPorBairro(matched);
       closeModal('modal-ocr');
-      toast('✅ Dados do OCR importados com sucesso!');
-      playSound('success');
-      
+      toast('✅ Endereço preenchido!');
       resetCurrentOrderState();
       gerarPreview();
     }
