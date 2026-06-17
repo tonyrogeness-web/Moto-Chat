@@ -1417,13 +1417,52 @@
           </span>
         </div>
 
-        <!-- OCR SCAN BUTTON -->
-        <div style="margin-bottom: 12px;">
-          <button id="btn-scan-ocr" onclick="abrirModalOCR()" type="button" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; font-weight: 700; font-size: 13px; border-radius: 8px; cursor: pointer; border: 1.5px dashed var(--primary); background: var(--primary-glow); color: var(--primary); transition: all 0.2s;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-            <span>Preencher por Print ou Foto (OCR)</span>
-          </button>
+        <!-- INLINE PASTE BOX (Cole print ou texto aqui) -->
+        <div id="ocr-inline-box"
+          tabindex="0"
+          style="
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            margin-bottom: 12px;
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            background: var(--primary-glow);
+            cursor: pointer;
+            transition: all 0.2s;
+            outline: none;
+            position: relative;
+            overflow: hidden;
+          "
+          onfocus="ocrBoxFocus(this)"
+          onblur="ocrBoxBlur(this)"
+          onclick="document.getElementById('ocr-inline-file-input').click()"
+          ondragover="event.preventDefault(); this.style.borderColor='#10b981'; this.style.background='rgba(16,185,129,0.15)';"
+          ondragleave="this.style.borderColor='var(--primary)'; this.style.background='var(--primary-glow)';"
+          ondrop="event.preventDefault(); this.style.borderColor='var(--primary)'; this.style.background='var(--primary-glow)'; const f=event.dataTransfer.files[0]; if(f && f.type.startsWith('image/')) processarOcrInlineImagem(f);"
+        >
+          <!-- Anel pulsante sutil -->
+          <div id="ocr-inline-ring" style="position:absolute;inset:0;border-radius:10px;border:2px solid var(--primary);opacity:0.25;pointer-events:none;animation:ocrPulseRing 2.5s ease-in-out infinite;"></div>
+
+          <!-- Ícone -->
+          <div style="flex-shrink:0; background:rgba(16,185,129,0.15); border-radius:8px; width:34px; height:34px; display:flex; align-items:center; justify-content:center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          </div>
+
+          <!-- Texto instrução -->
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:13px; font-weight:700; color:var(--primary); white-space:nowrap;">Cole um print ou clique aqui &nbsp;<kbd style="background:rgba(16,185,129,0.15);border:1px solid var(--primary);border-radius:4px;padding:1px 6px;font-size:11px;font-family:monospace;">Ctrl+V</kbd></div>
+            <div id="ocr-inline-status" style="font-size:11px; color:var(--text-muted); margin-top:1px;">Imagem (OCR) ou texto de endereço — detecta automaticamente</div>
+          </div>
+
+          <!-- Indicador de atividade -->
+          <div id="ocr-inline-spinner" style="display:none; flex-shrink:0;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+          </div>
+          <div id="ocr-inline-check" style="display:none; flex-shrink:0; color:var(--primary); font-size:18px;">✅</div>
         </div>
+        <input type="file" id="ocr-inline-file-input" accept="image/*" style="display:none;" onchange="if(this.files[0]) processarOcrInlineImagem(this.files[0])">
 
 
         <!-- RUA - primeiro -->
@@ -1835,175 +1874,6 @@
     </div>
   </div>
 
-  <!-- MODAL OCR (Ler endereço por imagem/print) -->
-  <div class="modal-overlay" id="modal-ocr" onclick="if(event.target === this) closeModal('modal-ocr')">
-    <div class="modal" style="max-width: 520px; padding: 0; overflow: hidden;">
-
-      <!-- Header -->
-      <div style="background: linear-gradient(135deg, var(--primary) 0%, #059669 100%); padding: 20px 24px; display: flex; align-items: center; justify-content: space-between;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 10px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-          </div>
-          <div>
-            <div style="font-weight: 800; font-size: 16px; color: white;">Ler Endereço por Print</div>
-            <div style="font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 1px;">Cole um print ou imagem do endereço</div>
-          </div>
-        </div>
-        <button onclick="closeModal('modal-ocr')" type="button" style="background: rgba(255,255,255,0.15); border: none; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; transition: background 0.2s;">×</button>
-      </div>
-
-      <!-- Tabs -->
-      <div style="display: flex; border-bottom: 1px solid var(--border-color); background: var(--bg-card);">
-        <button id="ocr-tab-img" type="button" onclick="ocrMudarAba('img')" style="flex: 1; padding: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; background: none; border-bottom: 3px solid var(--primary); color: var(--primary); transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-          📸 Colar Print / Foto
-        </button>
-        <button id="ocr-tab-txt" type="button" onclick="ocrMudarAba('txt')" style="flex: 1; padding: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; background: none; border-bottom: 3px solid transparent; color: var(--text-muted); transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 17H4v2h10v-2zm6-8H4v2h16V9zM4 15h16v-2H4v2zM4 5v2h16V5H4z"/></svg>
-          📝 Colar Texto
-        </button>
-      </div>
-
-      <div style="padding: 20px 24px 24px; background: var(--bg-card);">
-
-        <!-- === ABA IMAGEM === -->
-        <div id="ocr-panel-img">
-          <!-- Zona de Colagem Principal -->
-          <div id="ocr-paste-zone"
-            tabindex="0"
-            onclick="document.getElementById('ocr-file-input').click()"
-            style="
-              position: relative;
-              border: 3px dashed var(--primary);
-              border-radius: 16px;
-              min-height: 180px;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              gap: 12px;
-              cursor: pointer;
-              transition: all 0.25s;
-              background: var(--primary-glow);
-              outline: none;
-              overflow: hidden;
-            "
-            ondragover="event.preventDefault(); this.style.borderColor='#10b981'; this.style.background='rgba(16,185,129,0.15)';"
-            ondragleave="this.style.borderColor='var(--primary)'; this.style.background='var(--primary-glow)';"
-            ondrop="event.preventDefault(); this.style.borderColor='var(--primary)'; this.style.background='var(--primary-glow)'; const f=event.dataTransfer.files[0]; if(f && f.type.startsWith('image/')) processarImagemOCR(f);"
-          >
-            <!-- Anel pulsante animado -->
-            <div style="position: absolute; inset: 0; border-radius: 13px; border: 2px solid var(--primary); opacity: 0.3; animation: ocrPulseRing 2s ease-in-out infinite;"></div>
-
-            <!-- Ícone grande -->
-            <div style="background: rgba(16,185,129,0.15); border-radius: 50%; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1;">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            </div>
-
-            <!-- Instrução principal -->
-            <div style="text-align: center; position: relative; z-index: 1;">
-              <div style="font-size: 16px; font-weight: 800; color: var(--primary); margin-bottom: 4px;">Cole aqui seu Print</div>
-              <div style="font-size: 22px; font-weight: 900; color: var(--primary); background: rgba(16,185,129,0.12); border-radius: 8px; padding: 4px 16px; display: inline-block; letter-spacing: 2px;">Ctrl + V</div>
-              <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">ou clique para escolher arquivo</div>
-            </div>
-
-            <input type="file" id="ocr-file-input" accept="image/*" style="display:none;" onchange="if(this.files[0]) processarImagemOCR(this.files[0])">
-          </div>
-
-          <!-- Dica de uso -->
-          <div style="display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); border-radius: 10px; padding: 10px 12px;">
-            <span style="font-size: 16px; flex-shrink: 0;">💡</span>
-            <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
-              <strong style="color: var(--text-main);">Como usar:</strong> Tire um print do endereço no WhatsApp, Google Maps ou qualquer lugar. Abra esta tela e pressione <strong>Ctrl + V</strong>. O sistema detecta o endereço automaticamente!
-            </div>
-          </div>
-
-          <!-- Preview da Imagem + Status -->
-          <div id="ocr-preview-container" style="display:none; margin-top: 14px; text-align:center; position: relative;">
-            <img id="ocr-preview-img" style="max-height: 160px; max-width: 100%; border-radius: 10px; border: 2px solid var(--primary); object-fit: contain; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">📷 Imagem recebida — aguardando leitura...</div>
-          </div>
-        </div>
-
-        <!-- === ABA TEXTO === -->
-        <div id="ocr-panel-txt" style="display:none;">
-          <div style="margin-bottom: 10px;">
-            <div style="font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Cole ou digite o endereço abaixo:</div>
-            <div style="font-size: 12px; color: var(--text-muted);">Ex: Rua das Flores, 123, Bairro Centro, Feira de Santana</div>
-          </div>
-          <textarea
-            id="ocr-text-input"
-            placeholder="Cole aqui o endereço copiado do WhatsApp, Google Maps, iFood, ou qualquer outro lugar..."
-            style="
-              width: 100%;
-              min-height: 120px;
-              padding: 14px;
-              border: 2px solid var(--border-color);
-              border-radius: 12px;
-              font-size: 14px;
-              line-height: 1.6;
-              background: var(--bg-input);
-              color: var(--text-main);
-              resize: vertical;
-              font-family: inherit;
-              transition: border-color 0.2s;
-              outline: none;
-            "
-            oninput="ocrTextChange()"
-            onfocus="this.style.borderColor='var(--primary)'"
-            onblur="this.style.borderColor='var(--border-color)'"
-          ></textarea>
-          <button type="button" onclick="ocrLerTexto()" id="ocr-read-text-btn" style="margin-top: 10px; width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; opacity: 0.5; pointer-events: none;">
-            🔍 Detectar Endereço no Texto
-          </button>
-        </div>
-
-        <!-- Status do Processamento (compartilhado) -->
-        <div id="ocr-status-container" style="display:none; align-items:center; justify-content:center; gap:10px; font-weight:700; color:var(--primary); font-size:14px; margin-top: 16px; background: var(--primary-glow); border-radius: 10px; padding: 14px;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite; flex-shrink:0;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
-          <span id="ocr-status-text">Lendo imagem...</span>
-        </div>
-
-        <!-- Resultado do Parse (compartilhado) -->
-        <div id="ocr-result-container" style="display:none; flex-direction:column; gap:10px; margin-top: 16px; border-top: 2px solid var(--primary); padding-top: 16px;">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-            <span style="font-size: 18px;">✅</span>
-            <div style="font-weight: 800; font-size: 14px; color: var(--primary);">Endereço Detectado! Revise e confirme:</div>
-          </div>
-
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            <div>
-              <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">📍 Rua / Avenida e Número</label>
-              <input type="text" id="ocr-res-rua" style="width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid var(--border-color); background:var(--bg-input); color:var(--text-main); font-size:14px; font-weight:600; outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border-color)'">
-            </div>
-            <div>
-              <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">🏘️ Bairro</label>
-              <input type="text" id="ocr-res-bairro" style="width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid var(--border-color); background:var(--bg-input); color:var(--text-main); font-size:14px; font-weight:600; outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border-color)'">
-            </div>
-            <div>
-              <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">🏠 Complemento (opcional)</label>
-              <input type="text" id="ocr-res-comp" style="width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid var(--border-color); background:var(--bg-input); color:var(--text-main); font-size:14px; outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border-color)'">
-            </div>
-          </div>
-
-          <!-- Raw text expando -->
-          <details style="margin-top:2px;">
-            <summary style="font-size:11px; cursor:pointer; color:var(--text-muted); outline:none; user-select:none;">▶ Ver texto bruto extraído</summary>
-            <pre id="ocr-raw-text" style="font-family:monospace; font-size:11px; padding:8px; background:rgba(0,0,0,0.08); border-radius:6px; max-height:80px; overflow-y:auto; margin-top:6px; white-space:pre-wrap; border: 1px solid var(--border-color); color: var(--text-muted);"></pre>
-          </details>
-        </div>
-
-        <!-- Ações -->
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
-          <button class="btn btn-outline" onclick="closeModal('modal-ocr')" type="button" style="flex: 1;">Cancelar</button>
-          <button class="btn btn-green" id="ocr-confirm-btn" onclick="confirmarOCR()" type="button" style="flex: 2; display:none;">
-            ✅ Confirmar e Preencher
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- TOAST NOTIFICATION -->
   <div class="toast" id="toast"></div>
@@ -3889,188 +3759,38 @@
     let _ocrScriptLoaded = false;
     let _ocrLoadingScript = false;
 
-    function abrirModalOCR() {
-      const el = document.getElementById('modal-ocr');
-      if (!el) { alert('Modal OCR não encontrada.'); return; }
-
-      // Reset UI
-      document.getElementById('ocr-preview-container').style.display = 'none';
-      document.getElementById('ocr-status-container').style.display = 'none';
-      document.getElementById('ocr-result-container').style.display = 'none';
-      document.getElementById('ocr-confirm-btn').style.display = 'none';
-      document.getElementById('ocr-preview-img').src = '';
-      document.getElementById('ocr-res-rua').value = '';
-      document.getElementById('ocr-res-bairro').value = '';
-      document.getElementById('ocr-res-comp').value = '';
-      document.getElementById('ocr-raw-text').textContent = '';
-      const txtInput = document.getElementById('ocr-text-input');
-      if (txtInput) txtInput.value = '';
-      const readBtn = document.getElementById('ocr-read-text-btn');
-      if (readBtn) { readBtn.style.opacity = '0.5'; readBtn.style.pointerEvents = 'none'; }
-
-      // Voltar para aba imagem
-      ocrMudarAba('img');
-
-      openModal('modal-ocr');
-
-      // Focus na zona de colagem para capturar Ctrl+V
-      setTimeout(() => {
-        const pz = document.getElementById('ocr-paste-zone');
-        if (pz) pz.focus();
-      }, 150);
-
-      // ★ PRÉ-CARREGA TESSERACT SILENCIOSAMENTE ao abrir modal
-      // (não bloqueia, não mostra status — só baixa em background)
-      if (typeof Tesseract === 'undefined' && !_ocrLoadingScript) {
-        _ocrLoadingScript = true;
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js';
-        s.onload = () => { _ocrScriptLoaded = true; _ocrLoadingScript = false; };
-        s.onerror = () => {
-          _ocrLoadingScript = false;
-          // Tentar CDN alternativa (unpkg)
-          const s2 = document.createElement('script');
-          s2.src = 'https://unpkg.com/tesseract.js@4/dist/tesseract.min.js';
-          s2.onload = () => { _ocrScriptLoaded = true; };
-          document.head.appendChild(s2);
-        };
-        document.head.appendChild(s);
-      }
+    // Estilização sutil de foco para o inline box
+    function ocrBoxFocus(el) {
+      el.style.borderColor = 'var(--primary)';
+      el.style.boxShadow = '0 0 0 3px var(--primary-glow)';
+      el.style.background = 'rgba(16, 185, 129, 0.08)';
     }
 
-    function ocrMudarAba(aba) {
-      const panelImg = document.getElementById('ocr-panel-img');
-      const panelTxt = document.getElementById('ocr-panel-txt');
-      const tabImg = document.getElementById('ocr-tab-img');
-      const tabTxt = document.getElementById('ocr-tab-txt');
-      if (!panelImg || !panelTxt) return;
-
-      if (aba === 'img') {
-        panelImg.style.display = 'block';
-        panelTxt.style.display = 'none';
-        tabImg.style.borderBottomColor = 'var(--primary)';
-        tabImg.style.color = 'var(--primary)';
-        tabTxt.style.borderBottomColor = 'transparent';
-        tabTxt.style.color = 'var(--text-muted)';
-        // Focus na zona de colagem
-        setTimeout(() => {
-          const pz = document.getElementById('ocr-paste-zone');
-          if (pz) pz.focus();
-        }, 50);
-      } else {
-        panelImg.style.display = 'none';
-        panelTxt.style.display = 'block';
-        tabImg.style.borderBottomColor = 'transparent';
-        tabImg.style.color = 'var(--text-muted)';
-        tabTxt.style.borderBottomColor = 'var(--primary)';
-        tabTxt.style.color = 'var(--primary)';
-        setTimeout(() => {
-          const ti = document.getElementById('ocr-text-input');
-          if (ti) ti.focus();
-        }, 50);
-      }
+    function ocrBoxBlur(el) {
+      el.style.borderColor = 'var(--primary)';
+      el.style.boxShadow = 'none';
+      el.style.background = 'var(--primary-glow)';
     }
 
-    function ocrTextChange() {
-      const txt = (document.getElementById('ocr-text-input').value || '').trim();
-      const btn = document.getElementById('ocr-read-text-btn');
-      if (!btn) return;
-      if (txt.length > 5) {
-        btn.style.opacity = '1';
-        btn.style.pointerEvents = 'auto';
-      } else {
-        btn.style.opacity = '0.5';
-        btn.style.pointerEvents = 'none';
-      }
-    }
-
-    function ocrLerTexto() {
-      const txt = (document.getElementById('ocr-text-input').value || '').trim();
-      if (!txt) { toast('⚠️ Digite ou cole um endereço primeiro.'); return; }
-
-      document.getElementById('ocr-status-container').style.display = 'flex';
-      document.getElementById('ocr-status-text').textContent = 'Analisando texto...';
-      document.getElementById('ocr-result-container').style.display = 'none';
-      document.getElementById('ocr-confirm-btn').style.display = 'none';
-
-      // Processar o texto (sem OCR, direto no parser)
-      setTimeout(() => {
-        document.getElementById('ocr-raw-text').textContent = txt;
-        const parsed = extrairEnderecoDoTexto(txt);
-        document.getElementById('ocr-res-rua').value = parsed.rua;
-        document.getElementById('ocr-res-bairro').value = parsed.bairro;
-        document.getElementById('ocr-res-comp').value = parsed.comp;
-
-        document.getElementById('ocr-status-container').style.display = 'none';
-        document.getElementById('ocr-result-container').style.display = 'flex';
-        document.getElementById('ocr-confirm-btn').style.display = 'block';
-
-        if (parsed.rua || parsed.bairro) {
-          toast('✅ Endereço detectado no texto!');
-        } else {
-          toast('⚠️ Não identificamos endereço. Preencha manualmente.');
-        }
-      }, 300);
-    }
-
-
-    // Ctrl+V / clipboard paste quando modal está aberta
-    document.addEventListener('paste', (ev) => {
-      const modal = document.getElementById('modal-ocr');
-      if (!modal || !modal.classList.contains('open')) return;
-
-      const items = ev.clipboardData ? ev.clipboardData.items : [];
-      let foundImage = false;
-
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
-          foundImage = true;
-          // Flash visual na zona de colagem
-          const zone = document.getElementById('ocr-paste-zone');
-          if (zone) {
-            zone.style.animation = 'ocrFlash 0.6s ease';
-            zone.style.borderColor = '#10b981';
-            setTimeout(() => {
-              zone.style.animation = '';
-              zone.style.borderColor = 'var(--primary)';
-            }, 700);
-          }
-          // Mudar para aba de imagem se estiver em outra
-          ocrMudarAba('img');
-          processarImagemOCR(items[i].getAsFile());
-          break;
-        }
-      }
-
-      // Se não achou imagem, tentar texto
-      if (!foundImage) {
-        const textData = ev.clipboardData.getData('text/plain') || '';
-        if (textData.length > 3) {
-          // Mudar para aba de texto e preencher
-          ocrMudarAba('txt');
-          const ti = document.getElementById('ocr-text-input');
-          if (ti) {
-            ti.value = textData;
-            ocrTextChange();
-            // Auto-processar se parecer endereço
-            const temRua = /\b(rua|av\.|avenida|travessa|alameda|estrada)\b/i.test(textData);
-            if (temRua) {
-              setTimeout(() => ocrLerTexto(), 300);
-            } else {
-              toast('📝 Texto colado! Clique em "Detectar Endereço".');
-            }
-          }
-        }
-      }
-    });
-
-
+    // Callback para atualizar status
     function _ocrSetStatus(msg) {
-      document.getElementById('ocr-status-text').textContent = msg;
-      document.getElementById('ocr-status-container').style.display = 'flex';
+      const statusEl = document.getElementById('ocr-inline-status');
+      if (statusEl) {
+        statusEl.textContent = msg;
+        statusEl.style.color = 'var(--text-muted)';
+      }
     }
 
-    // ── Carregamento do Tesseract com CDN principal + fallback ───────────────
+    // Fallback manual para erros ou falta de internet
+    function _ocrFallbackManual(motivo) {
+      const statusEl = document.getElementById('ocr-inline-status');
+      if (statusEl) {
+        statusEl.textContent = 'Leitor indisponível: ' + motivo;
+        statusEl.style.color = 'var(--accent)';
+      }
+      toast('⚠️ OCR indisponível. Preencha o endereço manualmente.');
+    }
+
     const _OCR_CDNS = [
       'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js',
       'https://unpkg.com/tesseract.js@4/dist/tesseract.min.js'
@@ -4079,7 +3799,6 @@
     function _carregarTesseract(callback) {
       if (typeof Tesseract !== 'undefined') { callback(); return; }
       if (_ocrLoadingScript) {
-        // Já está carregando — aguardar (máx 30s)
         let waited = 0;
         const t = setInterval(() => {
           waited += 300;
@@ -4096,7 +3815,7 @@
 
     function _ocrCarregarComRetry(idx, callback) {
       if (idx >= _OCR_CDNS.length) {
-        _ocrFallbackManual('Não foi possível carregar o leitor OCR. Verifique sua internet.');
+        _ocrFallbackManual('Não foi possível carregar o leitor OCR.');
         return;
       }
       _ocrLoadingScript = true;
@@ -4106,7 +3825,7 @@
       s.onload = () => {
         _ocrScriptLoaded = true;
         _ocrLoadingScript = false;
-        _ocrSetStatus('Leitor carregado! Preparando...');
+        _ocrSetStatus('Leitor pronto! Iniciando...');
         callback();
       };
       s.onerror = () => {
@@ -4117,40 +3836,28 @@
       document.head.appendChild(s);
     }
 
-    function _ocrFallbackManual(motivo) {
-      document.getElementById('ocr-status-container').style.display = 'none';
-      // Mostrar campos para preenchimento manual mesmo sem OCR
-      document.getElementById('ocr-result-container').style.display = 'flex';
-      document.getElementById('ocr-confirm-btn').style.display = 'block';
-      document.getElementById('ocr-raw-text').textContent = '(OCR indisponível: ' + motivo + ')';
-      toast('⚠️ OCR indisponível. Preencha o endereço manualmente nos campos abaixo.');
-    }
-
-    async function processarImagemOCR(file) {
+    // Processamento de Imagem (OCR)
+    async function processarOcrInlineImagem(file) {
       if (!file) return;
       if (!file.type.startsWith('image/')) {
-        toast('⚠️ Selecione apenas arquivos de imagem (PNG, JPG, JPEG).');
+        toast('⚠️ Selecione apenas arquivos de imagem.');
         return;
       }
 
-      // ── 1. Preview imediato da imagem ────────────────────────────────────────
-      const previewImg = document.getElementById('ocr-preview-img');
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        previewImg.src = ev.target.result;
-        document.getElementById('ocr-preview-container').style.display = 'block';
-      };
-      reader.readAsDataURL(file);
+      const statusEl = document.getElementById('ocr-inline-status');
+      const spinnerEl = document.getElementById('ocr-inline-spinner');
+      const checkEl = document.getElementById('ocr-inline-check');
 
-      document.getElementById('ocr-result-container').style.display = 'none';
-      document.getElementById('ocr-confirm-btn').style.display = 'none';
-      _ocrSetStatus('Preparando leitura...');
+      if (statusEl) {
+        statusEl.textContent = 'Preparando leitura...';
+        statusEl.style.color = 'var(--text-muted)';
+      }
+      if (spinnerEl) spinnerEl.style.display = 'block';
+      if (checkEl) checkEl.style.display = 'none';
 
-      // ── 2. Carregar Tesseract (com retry) ───────────────────────────────────
       _carregarTesseract(async () => {
         let worker = null;
         try {
-          // ── 3. Criar worker (Tesseract v4 API correta) ──────────────────────
           _ocrSetStatus('Iniciando leitor de texto...');
           worker = await Tesseract.createWorker({
             logger: (m) => {
@@ -4168,75 +3875,138 @@
             }
           });
 
-          // ── 4. Carregar idioma português ────────────────────────────────────
-          _ocrSetStatus('Carregando dados do idioma...');
           await worker.loadLanguage('por');
-
-          // ── 5. Inicializar com português ────────────────────────────────────
-          _ocrSetStatus('Configurando idioma...');
           await worker.initialize('por');
 
-          // ── 6. Reconhecer texto na imagem ───────────────────────────────────
           _ocrSetStatus('🔍 Lendo imagem...');
           const result = await worker.recognize(file);
           const text = result && result.data ? (result.data.text || '') : '';
 
-          // ── 7. Liberar worker ────────────────────────────────────────────────
           await worker.terminate();
           worker = null;
 
-          // ── 8. Mostrar resultado ────────────────────────────────────────────
-          document.getElementById('ocr-status-container').style.display = 'none';
-          document.getElementById('ocr-raw-text').textContent = text || '(nenhum texto detectado na imagem)';
-
           if (!text.trim()) {
-            toast('⚠️ Nenhum texto detectado. Tente uma imagem mais clara ou preencha manualmente.');
-            document.getElementById('ocr-result-container').style.display = 'flex';
-            document.getElementById('ocr-confirm-btn').style.display = 'block';
+            if (statusEl) {
+              statusEl.textContent = 'Nenhum texto detectado na imagem.';
+              statusEl.style.color = 'var(--accent)';
+            }
+            if (spinnerEl) spinnerEl.style.display = 'none';
+            toast('⚠️ Nenhum texto detectado.');
             return;
           }
 
-          // ── 9. Parser de endereço ────────────────────────────────────────────
           const parsed = extrairEnderecoDoTexto(text);
-          document.getElementById('ocr-res-rua').value = parsed.rua;
-          document.getElementById('ocr-res-bairro').value = parsed.bairro;
-          document.getElementById('ocr-res-comp').value = parsed.comp;
-
-          document.getElementById('ocr-result-container').style.display = 'flex';
-          document.getElementById('ocr-confirm-btn').style.display = 'block';
-
           if (parsed.rua || parsed.bairro) {
-            toast('✅ Endereço detectado! Revise e confirme.');
-          } else {
-            toast('⚠️ Texto lido mas endereço não identificado. Revise os campos.');
-          }
+            document.getElementById('end-rua').value = parsed.rua;
+            document.getElementById('bairro-custom').value = parsed.bairro;
+            document.getElementById('end-comp').value = parsed.comp;
 
+            state.bairroSel = parsed.bairro;
+            const matched = state.bairros.find(b => b.toLowerCase() === parsed.bairro.toLowerCase());
+            if (matched) detectarPrecoPorBairro(matched);
+
+            resetCurrentOrderState();
+            gerarPreview();
+
+            if (statusEl) {
+              statusEl.textContent = 'Endereço preenchido com sucesso!';
+              statusEl.style.color = 'var(--primary)';
+            }
+            if (checkEl) checkEl.style.display = 'block';
+            toast('✅ Endereço detectado e preenchido!');
+          } else {
+            if (statusEl) {
+              statusEl.textContent = 'Texto lido, mas endereço não identificado.';
+              statusEl.style.color = 'var(--accent)';
+            }
+            toast('⚠️ Endereço não identificado na imagem.');
+          }
         } catch (err) {
           console.error('[OCR] Erro no processamento:', err);
           if (worker) { try { await worker.terminate(); } catch(e) {} }
-          document.getElementById('ocr-status-container').style.display = 'none';
-          document.getElementById('ocr-result-container').style.display = 'flex';
-          document.getElementById('ocr-confirm-btn').style.display = 'block';
-          toast('⚠️ Erro ao ler imagem. Preencha os campos manualmente ou tente outra imagem.');
+          if (statusEl) {
+            statusEl.textContent = 'Erro ao processar imagem.';
+            statusEl.style.color = 'var(--accent)';
+          }
+          toast('⚠️ Erro ao ler imagem.');
+        } finally {
+          if (spinnerEl) spinnerEl.style.display = 'none';
         }
       });
     }
 
-    function confirmarOCR() {
-      const rua = document.getElementById('ocr-res-rua').value.trim();
-      const bairro = document.getElementById('ocr-res-bairro').value.trim();
-      const comp = document.getElementById('ocr-res-comp').value.trim();
-      if (!rua && !bairro) { toast('⚠️ Preencha ao menos a rua ou bairro.'); return; }
-      document.getElementById('end-rua').value = rua;
-      document.getElementById('bairro-custom').value = bairro;
-      document.getElementById('end-comp').value = comp;
-      state.bairroSel = bairro;
-      const matched = state.bairros.find(b => b.toLowerCase() === bairro.toLowerCase());
-      if (matched) detectarPrecoPorBairro(matched);
-      closeModal('modal-ocr');
-      toast('✅ Endereço preenchido!');
-      resetCurrentOrderState();
-      gerarPreview();
+    // Processamento de Texto
+    function processarOcrInlineTexto(text) {
+      const statusEl = document.getElementById('ocr-inline-status');
+      const spinnerEl = document.getElementById('ocr-inline-spinner');
+      const checkEl = document.getElementById('ocr-inline-check');
+
+      if (statusEl) {
+        statusEl.textContent = 'Processando texto...';
+        statusEl.style.color = 'var(--text-muted)';
+      }
+      if (spinnerEl) spinnerEl.style.display = 'block';
+      if (checkEl) checkEl.style.display = 'none';
+
+      setTimeout(() => {
+        const parsed = extrairEnderecoDoTexto(text);
+        if (parsed.rua || parsed.bairro) {
+          document.getElementById('end-rua').value = parsed.rua;
+          document.getElementById('bairro-custom').value = parsed.bairro;
+          document.getElementById('end-comp').value = parsed.comp;
+
+          state.bairroSel = parsed.bairro;
+          const matched = state.bairros.find(b => b.toLowerCase() === parsed.bairro.toLowerCase());
+          if (matched) detectarPrecoPorBairro(matched);
+
+          resetCurrentOrderState();
+          gerarPreview();
+
+          if (statusEl) {
+            statusEl.textContent = 'Endereço detectado e preenchido!';
+            statusEl.style.color = 'var(--primary)';
+          }
+          if (checkEl) checkEl.style.display = 'block';
+          toast('✅ Endereço detectado no texto!');
+        } else {
+          if (statusEl) {
+            statusEl.textContent = 'Nenhum endereço identificado no texto.';
+            statusEl.style.color = 'var(--accent)';
+          }
+          toast('⚠️ Endereço não identificado no texto.');
+        }
+        if (spinnerEl) spinnerEl.style.display = 'none';
+      }, 300);
+    }
+
+    // Handler global/inline para colar (paste)
+    function handleOcrInlinePaste(ev) {
+      const items = ev.clipboardData ? ev.clipboardData.items : [];
+      let foundImage = false;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
+          foundImage = true;
+          const file = items[i].getAsFile();
+          processarOcrInlineImagem(file);
+          ev.preventDefault();
+          break;
+        }
+      }
+
+      if (!foundImage) {
+        const textData = ev.clipboardData.getData('text/plain') || '';
+        if (textData.trim().length > 3) {
+          processarOcrInlineTexto(textData);
+          ev.preventDefault();
+        }
+      }
+    }
+
+    // Ativa o event listener de paste no inline box
+    const inlineBox = document.getElementById('ocr-inline-box');
+    if (inlineBox) {
+      inlineBox.addEventListener('paste', handleOcrInlinePaste);
     }
 
 
