@@ -106,8 +106,22 @@ module.exports = async (req, res) => {
       handleError(res, error, 'PUT orders');
     }
     
+  } else if (method === 'DELETE') {
+    try {
+      const { id } = req.body;
+      if (!id) {
+        return res.status(400).json({ error: 'ID é obrigatório' });
+      }
+      const { rows } = await pool.query('DELETE FROM entregas WHERE id = $1 RETURNING *', [id]);
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Corrida não encontrada' });
+      }
+      res.status(200).json({ success: true, deleted: rows[0] });
+    } catch (error) {
+      handleError(res, error, 'DELETE order');
+    }
   } else {
-    res.setHeader('Allow', ['GET', 'POST', 'PUT']);
+    res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
     res.status(405).end(`Method ${method} Not Allowed`);
   }
 };

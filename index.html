@@ -2363,30 +2363,44 @@
 
     // ─── ÁREAS DE ENTREGA (VALORES) ───────────────────────────────────────────────
     function renderAreas() {
-      const grid = document.getElementById('areas-grid');
-      grid.innerHTML = '';
+      const select = document.getElementById('areas-select');
+      if (!select) return;
+      
+      select.innerHTML = '<option value="">-- Selecione a Área / Taxa --</option>';
       state.areas.forEach(area => {
-        const btn = document.createElement('button');
-        btn.className = 'valor-btn' + (state.areaSel && state.areaSel.id === area.id ? ' selected' : '');
+        const opt = document.createElement('option');
+        opt.value = area.id;
         
         let label = area.descricao;
         if (area.valor > 0) {
-          label += ` • R$ ${Number(area.valor).toFixed(2).replace('.', ',')}`;
+          label += ` (R$ ${Number(area.valor).toFixed(2).replace('.', ',')})`;
         } else {
-          label += ` • Grátis`;
+          label += ` (Grátis)`;
         }
         
-        btn.textContent = label;
-        btn.onclick = () => { 
-          state.areaSel = area; 
-          document.getElementById('valor-custom').value = ''; 
-          playSound('click');
-          renderAreas(); 
-          gerarPreview();
-          agendarAutoSave();
-        };
-        grid.appendChild(btn);
+        opt.textContent = label;
+        
+        if (state.areaSel && state.areaSel.id === area.id) {
+          opt.selected = true;
+        }
+        
+        select.appendChild(opt);
       });
+    }
+
+    function selecionarAreaDropdown(areaId) {
+      if (!areaId) {
+        state.areaSel = null;
+      } else {
+        const area = state.areas.find(a => a.id === areaId);
+        if (area) {
+          state.areaSel = area;
+          document.getElementById('valor-custom').value = '';
+        }
+      }
+      playSound('click');
+      gerarPreview();
+      agendarAutoSave();
     }
 
     // ─── ROTEIRO MULTI-DESTINO ────────────────────────────────────────────────────
@@ -2709,6 +2723,7 @@
           currentOrderState.saved = true;
           _apiAvailable = true;
           document.getElementById('preview-msg').textContent = getMensagem(savedOrder.id);
+          await carregarHistoricoServidor(); // Refresh history immediately
           return savedOrder.id;
         } else {
           console.warn('Erro na resposta da API, utilizando fallback local:', res.status);
@@ -2723,6 +2738,7 @@
       currentOrderState.id = localId;
       currentOrderState.saved = true;
       document.getElementById('preview-msg').textContent = getMensagem(localId);
+      renderHistorico(); // Refresh local list rendering
       return localId;
     }
 
@@ -2807,6 +2823,10 @@
       renderBairros(); 
       renderAreas(); 
       gerarPreview();
+      
+      // Limpa o rascunho salvo ao limpar o formulário
+      localStorage.removeItem('mc_form_draft');
+      ocultarAutoSave();
     }
 
     // ─── HISTÓRICO ───────────────────────────────────────────────────────────────
@@ -3260,6 +3280,9 @@
             <button class="hist-btn hist-btn-copiar" onclick="copiarHist(${item.id})">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar
             </button>
+            <button class="hist-btn" onclick="deletarPedido('${item.id}')" title="Excluir Corrida" style="border-color:var(--accent);color:var(--accent);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg> Excluir
+            </button>
           </div>
           <div class="quick-dispatch-panel" id="qdp-${item.id}"></div>
         `;
@@ -3267,6 +3290,40 @@
       });
     }
 
+    async function deletarPedido(id) {
+      if (!confirm('Deseja realmente excluir esta corrida permanentemente?')) return;
+      const isLocal = String(id).startsWith('local_');
+      
+      if (!isLocal) {
+        try {
+          const res = await fetch('/api/orders', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+          });
+          
+          if (res.ok) {
+            toast('🗑️ Corrida excluída com sucesso!');
+            playSound('warning');
+            await carregarHistoricoServidor();
+            return;
+          } else {
+            console.warn('Erro ao excluir no servidor:', res.status);
+          }
+        } catch (e) {
+          console.warn('Erro de rede ao excluir:', e);
+        }
+      }
+      
+      // Fallback local ou caso falte conexão
+      const localHistory = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      const newLocal = localHistory.filter(h => String(h.id) !== String(id));
+      localStorage.setItem('mc_historico', JSON.stringify(newLocal));
+      state.historico = newLocal;
+      renderHistorico();
+      toast('🗑️ Corrida excluída localmente!');
+      playSound('warning');
+    }
 
     async function updateStatus(id, status) {
       const isLocal = String(id).startsWith('local_');
@@ -3625,101 +3682,158 @@
         .trim();
 
       let rua = '', bairro = '', comp = '';
-      const linhas = textoNorm.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+      const linhas = textoNorm.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-      // ── Padrão 1: Campos explícitos com labels (Rua:, Bairro:, Nº:, etc.) ──
-      for (const linha of linhas) {
-        // Rua / Logradouro
-        const mRua = linha.match(/^(?:rua|r\.|av(?:enida)?\.?|logradouro|endere[çc]o|local|local de entrega)\s*[:\-]?\s*(.+)/i);
-        if (mRua && !rua) rua = mRua[1].trim();
+      // --- MULTI-LINE STRUCTURE DETECTION ---
+      const reLogradouro = /\b(rua|r\.|av(?:enida)?\.?|travessa|tv\.?|alameda|al\.?|rodovia|rod\.?|estrada|est\.?|ladeira|praça|pça?\.?|via |viela|beco|setor|conjunto|cj\.?|loteamento|lot\.?|quadra|q\.?)\b/i;
+      const reCidadeCep = /\b(feira de santana|fsa|salvador|camacari|lauro de freitas|bahia|ba|brasil|cep|\d{5}-?\d{3})\b/i;
+      const reComplementoIndicadores = /\b(casa|apto|ap|apartamento|bloco|condominio|cond\.?|residencial|res\.?|sala|loja|fundos|frente|terreo|térreo|altos)\b/i;
 
-        // Número junto com rua (Nº 123 / n° 45 / no. 8)
-        const mNum = linha.match(/^n[º°o]\.?\s*[:\-]?\s*(\d[\w\/\-]*)/i);
-        if (mNum && rua && !/\d/.test(rua)) rua += ', ' + mNum[1].trim();
-
-        // Bairro
-        const mBairro = linha.match(/^(?:bairro|bairro\/cidade|setor)\s*[:\-]?\s*(.+)/i);
-        if (mBairro && !bairro) bairro = mBairro[1].replace(/,.*$/, '').trim();
-
-        // Complemento
-        const mComp = linha.match(/^(?:complemento|comp\.?|ap(?:to)?\.?|apto\.?|bloco|ref(?:er[êe]ncia)?)\s*[:\-]?\s*(.+)/i);
-        if (mComp && !comp) comp = mComp[1].trim();
+      let ruaIdx = -1;
+      for (let i = 0; i < linhas.length; i++) {
+        if (reLogradouro.test(linhas[i])) {
+          ruaIdx = i;
+          break;
+        }
       }
 
-      // ── Padrão 2: Inline WhatsApp / Google Maps / iFood ──────────────────────
-      // Ex: "Rua das Flores, 123, Bairro Centro, Feira de Santana - BA"
-      // Ex: "Av. Getúlio Vargas, 500 - SIM, Feira de Santana"
-      if (!rua) {
-        const reLogradouro = /\b(rua|r\.|av(?:enida)?\.?|travessa|tv\.?|alameda|al\.?|rodovia|rod\.?|estrada|est\.?|ladeira|praça|pça?\.?|via |viela|beco|setor|conjunto|cj\.?|loteamento|lot\.?|quadra|q\.?)\s+\w/i;
+      // If no logradouro keyword, but first line has a number
+      if (ruaIdx === -1 && linhas.length > 0 && /\d/.test(linhas[0])) {
+        ruaIdx = 0;
+      }
 
-        // Tentar linha com logradouro
-        let candidata = linhas.find(l => reLogradouro.test(l));
+      if (ruaIdx !== -1 && linhas.length >= 2) {
+        rua = linhas[ruaIdx];
 
-        // Se não achou, tentar o texto completo como uma linha só
-        if (!candidata) {
-          const textoUmaLinha = textoNorm.replace(/\n/g, ', ').replace(/,{2,}/g, ',');
-          if (reLogradouro.test(textoUmaLinha)) candidata = textoUmaLinha;
+        // Find city/state/cep line
+        let cidadeIdx = -1;
+        for (let i = ruaIdx + 1; i < linhas.length; i++) {
+          if (reCidadeCep.test(linhas[i])) {
+            cidadeIdx = i;
+            break;
+          }
         }
 
-        if (candidata) {
-          // Remover prefixos descritivos
-          candidata = candidata
-            .replace(/^(?:endere[çc]o|entregar em|entrega|cliente|local|destino|entregar para|endere[çc]o de entrega)\s*[:\-]?\s*/i, '')
-            .replace(/^(?:localiza[çc][aã]o|ponto de refer[êe]ncia)\s*[:\-]?\s*/i, '')
-            .trim();
+        if (cidadeIdx === -1 && linhas.length > ruaIdx + 1) {
+          cidadeIdx = linhas.length - 1;
+        }
 
-          // Separar por vírgula ou travessão
-          const partes = candidata.split(/[,–\-]/).map(p => p.trim()).filter(p => p.length > 0);
-
-          if (partes.length > 0) {
-            // Parte 0 → logradouro base
-            rua = partes[0];
-
-            if (partes.length > 1) {
-              const p1 = partes[1];
-              const p1TemNumero = /^\d/.test(p1) || /^n[º°]?\s*\d/i.test(p1);
-              const ruaSemNumero = !/\d/.test(rua);
-
-              if (ruaSemNumero && p1TemNumero) {
-                // Ex: "Rua das Flores" + "123" → "Rua das Flores, 123"
-                rua += ', ' + p1;
-                if (partes.length > 2) {
-                  const p2 = partes[2];
-                  // p2 pode ser bairro ou cidade — checar
-                  const cidadesIgnorar = /\b(feira|fsa|salvador|bahia|ba|sp|rj|mg|camacari|lauro)\b/i;
-                  if (!cidadesIgnorar.test(p2)) {
-                    bairro = p2;
-                    comp = partes.slice(3).filter(p => !/\b(feira|fsa|salvador|bahia|ba|sp|rj|mg|cep|[0-9]{5}-[0-9]{3})\b/i.test(p)).join(', ');
-                  }
-                }
-              } else {
-                // p1 não é número → pode ser bairro direto
-                const cidadesIgnorar = /\b(feira|fsa|salvador|bahia|ba|sp|rj|mg|camacari|lauro|brasil|cep)\b/i;
-                if (!cidadesIgnorar.test(p1)) {
-                  bairro = p1;
-                }
-                comp = partes.slice(2).filter(p => !/\b(feira|fsa|salvador|bahia|ba|sp|rj|mg|cep|[0-9]{5}-[0-9]{3})\b/i.test(p)).join(', ');
+        if (cidadeIdx !== -1 && cidadeIdx > ruaIdx) {
+          const linhasMeio = linhas.slice(ruaIdx + 1, cidadeIdx);
+          
+          if (linhasMeio.length === 1) {
+            const linhaUnica = linhasMeio[0];
+            if (reComplementoIndicadores.test(linhaUnica) || linhaUnica.length < 10) {
+              comp = linhaUnica;
+            } else {
+              bairro = linhaUnica;
+            }
+          } else if (linhasMeio.length >= 2) {
+            comp = linhasMeio[0];
+            bairro = linhasMeio[linhasMeio.length - 1];
+            if (linhasMeio.length > 2) {
+              comp = linhasMeio.slice(0, -1).join(', ');
+            }
+          }
+        } else {
+          if (linhas.length > ruaIdx + 1) {
+            const prox1 = linhas[ruaIdx + 1];
+            if (reComplementoIndicadores.test(prox1)) {
+              comp = prox1;
+              if (linhas.length > ruaIdx + 2) {
+                bairro = linhas[ruaIdx + 2];
+              }
+            } else {
+              bairro = prox1;
+              if (linhas.length > ruaIdx + 2 && reComplementoIndicadores.test(linhas[ruaIdx + 2])) {
+                comp = linhas[ruaIdx + 2];
               }
             }
           }
         }
       }
 
-      // ── Padrão 3: Texto livre — buscar padrão "Rua X, nº Y, Bairro Z" em substring ──
+      // --- FALLBACK INLINE PARSER (if multi-line failed or single-line text) ---
       if (!rua) {
-        const reInline = /\b((?:rua|av(?:enida)?|travessa|alameda|estrada|rodovia|ladeira|praça|setor)\s+[A-ZÀ-Ú][a-zA-ZÀ-Ú\s\.]+?)(?:[,\s]+n[º°]?\s*\.?\s*(\d[\w\/]*))?(?:[,\s]+([A-ZÀ-Ú][a-zA-ZÀ-Ú\s]+?))?(?:[,\s]+(Feira|Salvador|Bahia|[A-ZÀ-Ú]{2}))?/i;
-        const mInline = textoNorm.match(reInline);
-        if (mInline) {
-          rua = mInline[1].trim();
-          if (mInline[2]) rua += ', ' + mInline[2].trim();
-          if (mInline[3] && !/\b(feira|fsa|salvador|bahia|ba)\b/i.test(mInline[3])) bairro = mInline[3].trim();
+        // Padrão 1: Explicit labels with required separator (colon or dash)
+        for (const linha of linhas) {
+          const mRua = linha.match(/^(?:rua|r\.|av(?:enida)?\.?|logradouro|endere[çc]o|local|local de entrega)\s*[:\-]\s*(.+)/i);
+          if (mRua && !rua) rua = mRua[1].trim();
+
+          const mNum = linha.match(/^n[º°o]\.?\s*[:\-]?\s*(\d[\w\/\-]*)/i);
+          if (mNum && rua && !/\d/.test(rua)) rua += ', ' + mNum[1].trim();
+
+          const mBairro = linha.match(/^(?:bairro|bairro\/cidade|setor)\s*[:\-]\s*(.+)/i);
+          if (mBairro && !bairro) bairro = mBairro[1].replace(/,.*$/, '').trim();
+
+          const mComp = linha.match(/^(?:complemento|comp\.?|ap(?:to)?\.?|apto\.?|bloco|ref(?:er[êe]ncia)?)\s*[:\-]\s*(.+)/i);
+          if (mComp && !comp) comp = mComp[1].trim();
+        }
+
+        // Padrão 2: Inline search (e.g. from Google Maps/iFood)
+        if (!rua) {
+          const textoUmaLinha = textoNorm.replace(/\n/g, ', ').replace(/,{2,}/g, ',');
+          if (reLogradouro.test(textoUmaLinha)) {
+            let candidata = textoUmaLinha
+              .replace(/^(?:endere[çc]o|entregar em|entrega|cliente|local|destino|entregar para|endere[çc]o de entrega)\s*[:\-]?\s*/i, '')
+              .replace(/^(?:localiza[çc][aã]o|ponto de refer[êe]ncia)\s*[:\-]?\s*/i, '')
+              .trim();
+
+            const partes = candidata.split(/[,–\-]/).map(p => p.trim()).filter(p => p.length > 0);
+            if (partes.length > 0) {
+              rua = partes[0];
+              if (partes.length > 1) {
+                const p1 = partes[1];
+                const p1TemNumero = /^\d/.test(p1) || /^n[º°]?\s*\d/i.test(p1);
+                const ruaSemNumero = !/\d/.test(rua);
+
+                if (ruaSemNumero && p1TemNumero) {
+                  rua += ', ' + p1;
+                  if (partes.length > 2) {
+                    const p2 = partes[2];
+                    const cidadesIgnorar = /\b(feira|fsa|salvador|bahia|ba|sp|rj|mg|camacari|lauro)\b/i;
+                    if (!cidadesIgnorar.test(p2)) {
+                      bairro = p2;
+                      comp = partes.slice(3).filter(p => !/\b(feira|fsa|salvador|bahia|ba|sp|rj|mg|cep|[0-9]{5}-[0-9]{3})\b/i.test(p)).join(', ');
+                    }
+                  }
+                } else {
+                  const cidadesIgnorar = /\b(feira|fsa|salvador|bahia|ba|sp|rj|mg|camacari|lauro|brasil|cep)\b/i;
+                  if (!cidadesIgnorar.test(p1)) {
+                    bairro = p1;
+                  }
+                  comp = partes.slice(2).filter(p => !/\b(feira|fsa|salvador|bahia|ba|sp|rj|mg|cep|[0-9]{5}-[0-9]{3})\b/i.test(p)).join(', ');
+                }
+              }
+            }
+          }
+        }
+
+        // Padrão 3: Regex match inline
+        if (!rua) {
+          const reInline = /\b((?:rua|av(?:enida)?|travessa|alameda|estrada|rodovia|ladeira|praça|setor)\s+[A-ZÀ-Ú][a-zA-ZÀ-Ú\s\.]+?)(?:[,\s]+n[º°]?\s*\.?\s*(\d[\w\/]*))?(?:[,\s]+([A-ZÀ-Ú][a-zA-ZÀ-Ú\s]+?))?(?:[,\s]+(Feira|Salvador|Bahia|[A-ZÀ-Ú]{2}))?/i;
+          const mInline = textoNorm.match(reInline);
+          if (mInline) {
+            rua = mInline[1].trim();
+            if (mInline[2]) rua += ', ' + mInline[2].trim();
+            if (mInline[3] && !/\b(feira|fsa|salvador|bahia|ba)\b/i.test(mInline[3])) bairro = mInline[3].trim();
+          }
         }
       }
 
-      // ── Buscar bairro por correspondência com bairros cadastrados ─────────────
+      // --- EXTRACT COMPLEMENT FROM OTHER LINES ---
+      if (!comp && linhas.length > 1) {
+        for (const linha of linhas) {
+          const mExtraComp = linha.match(/\b(ap(?:to)?\.?\s*\w+|bloco\s+\w+|casa\s+\d+|portão|fundos|lado\s+\w+|próximo|perto|em frente)\b/i);
+          if (mExtraComp && linha.toLowerCase() !== rua.toLowerCase() && linha.toLowerCase() !== bairro.toLowerCase()) {
+            comp = (comp ? comp + ', ' : '') + linha.trim();
+            break;
+          }
+        }
+      }
+
+      // --- MATCH NEIGHBORHOOD FROM DEFINED LISTS ---
       if (!bairro && state.bairros && state.bairros.length) {
-        const textoLower = textoNorm.toLowerCase();
-        // Tentar match exato primeiro, depois parcial
         const exactMatch = state.bairros.find(b => {
           const re = new RegExp('\\b' + b.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
           return re.test(textoNorm);
@@ -3727,22 +3841,10 @@
         if (exactMatch) bairro = exactMatch;
       }
 
-      // ── Buscar complemento em linhas restantes ─────────────────────────────
-      if (!comp) {
-        for (const linha of linhas) {
-          // Linhas com "apto", "bloco", "casa", "portão", "fundos"
-          const mExtraComp = linha.match(/\b(ap(?:to)?\.?\s*\w+|bloco\s+\w+|casa\s+\d+|portão|fundos|lado\s+\w+|próximo|perto|em frente)\b/i);
-          if (mExtraComp && linha !== rua && linha !== bairro) {
-            comp = (comp ? comp + ', ' : '') + linha.trim();
-            break;
-          }
-        }
-      }
-
       // ── Limpeza final ──────────────────────────────────────────────────────────
       const reCity = /,?\s*\b(feira de santana|fsa|salvador|camacari|lauro de freitas|bahia|ba|brasil)\b\s*,?/ig;
       const reCEP = /\s*CEP\s*:?\s*\d{5}-?\d{3}/gi;
-      const reEstado = /,?\s*-?\s*\b[A-Z]{2}\b\s*$/g; // remove sufixo de estado " - BA"
+      const reEstado = /,?\s*-?\s*\b[A-Z]{2}\b\s*$/g;
 
       const limpar = (s) => (s || '')
         .replace(reCity, '').replace(reCEP, '').replace(reEstado, '')
@@ -4035,8 +4137,11 @@
     async function carregarHistoricoServidor() {
       try {
         const res = await fetch('/api/orders');
-        if (res.ok) {
+        const ct = res.headers.get('content-type') || '';
+        if (res.ok && ct.includes('application/json')) {
           state.historico = await res.json();
+          save('mc_historico', state.historico);
+          _apiAvailable = true;
           renderHistorico();
           renderFavoritos();
           return;
@@ -4047,6 +4152,7 @@
       
       // Fallback
       state.historico = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      _apiAvailable = false;
       renderHistorico();
       renderFavoritos();
     }
@@ -4760,21 +4866,84 @@
       if (saved)  saved.style.display  = 'none';
     }
 
-    // Smart debounced auto-save: desativado para manter histórico limpo e evitar rascunhos duplicados
-    function agendarAutoSave() {}
+    // Smart debounced auto-save: salva o rascunho do formulário localmente
+    function agendarAutoSave() {
+      if (isMotoboyMode) return;
+      mostrarAutoSavando();
+      if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
+      _autoSaveTimer = setTimeout(() => {
+        salvarDraft();
+        mostrarAutoSalvo();
+      }, 1000);
+    }
 
-    ['end-rua', 'end-comp', 'obs', 'valor-custom'].forEach(id => {
+    function salvarDraft() {
+      if (isMotoboyMode) return;
+      const draft = {
+        rua: document.getElementById('end-rua')?.value || '',
+        comp: document.getElementById('end-comp')?.value || '',
+        bairro: document.getElementById('bairro-custom')?.value || '',
+        obs: document.getElementById('obs')?.value || '',
+        valorCustom: document.getElementById('valor-custom')?.value || '',
+        retorno: document.getElementById('retorno-toggle')?.checked || false,
+        destinos: state.destinos || []
+      };
+      localStorage.setItem('mc_form_draft', JSON.stringify(draft));
+    }
+
+    function carregarDraft() {
+      if (isMotoboyMode) return;
+      const draftStr = localStorage.getItem('mc_form_draft');
+      if (!draftStr) return;
+      try {
+        const draft = JSON.parse(draftStr);
+        if (draft.rua !== undefined) document.getElementById('end-rua').value = draft.rua;
+        if (draft.comp !== undefined) document.getElementById('end-comp').value = draft.comp;
+        if (draft.bairro !== undefined) document.getElementById('bairro-custom').value = draft.bairro;
+        if (draft.obs !== undefined) document.getElementById('obs').value = draft.obs;
+        if (draft.valorCustom !== undefined) document.getElementById('valor-custom').value = draft.valorCustom;
+        if (draft.retorno !== undefined) document.getElementById('retorno-toggle').checked = draft.retorno;
+        if (draft.destinos !== undefined) state.destinos = draft.destinos;
+        
+        state.bairroSel = document.getElementById('bairro-custom').value;
+        const matched = state.bairros.find(b => b.toLowerCase() === state.bairroSel.toLowerCase());
+        if (matched) {
+          detectarPrecoPorBairro(matched);
+        } else if (state.destinos.length === 0) {
+          if (draft.valorCustom) {
+            state.areaSel = null;
+            document.getElementById('valor-custom').value = draft.valorCustom;
+          }
+        }
+        
+        renderRoteiro();
+        renderAreas();
+      } catch (e) {
+        console.warn('Erro ao carregar rascunho:', e);
+      }
+    }
+
+    ['end-rua', 'end-comp', 'obs'].forEach(id => {
       document.getElementById(id)?.addEventListener('input', () => {
         resetCurrentOrderState();
         gerarPreview();
+        agendarAutoSave();
       });
+    });
+
+    document.getElementById('valor-custom')?.addEventListener('input', () => {
+      state.areaSel = null;
+      const select = document.getElementById('areas-select');
+      if (select) select.value = '';
+      resetCurrentOrderState();
+      gerarPreview();
+      agendarAutoSave();
     });
 
     document.getElementById('bairro-custom')?.addEventListener('input', (e) => {
       const val = e.target.value.trim();
       state.bairroSel = val;
       
-      // Detecção automática de preço com base no histórico
       const matched = state.bairros.find(b => b.toLowerCase() === val.toLowerCase());
       if (matched) {
         detectarPrecoPorBairro(matched);
@@ -4782,11 +4951,13 @@
       
       resetCurrentOrderState();
       gerarPreview();
+      agendarAutoSave();
     });
 
     document.getElementById('retorno-toggle').addEventListener('change', () => {
       resetCurrentOrderState();
       gerarPreview();
+      agendarAutoSave();
     });
 
     // ─── INIT ────────────────────────────────────────────────────────────────────
@@ -4815,6 +4986,7 @@
     if (!isMotoboyMode) {
       renderColeta();
       renderBairros();
+      carregarDraft();
       renderAreas();
       gerarPreview();
       carregarHistoricoServidor();
