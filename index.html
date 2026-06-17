@@ -3524,32 +3524,18 @@
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Confirmar
             </button>
             <button class="hist-btn hist-btn-concluido" onclick="updateStatus('${item.id}','concluido')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Concluído
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Concluída
             </button>
             <button class="hist-btn hist-btn-cancelado" onclick="updateStatus('${item.id}','cancelado')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Cancelado
-            </button>
-            ${item.status === 'pendente' ? `
-            <button class="hist-btn hist-btn-despachar" onclick="toggleQuickDispatch('${item.id}')" title="Despachar rápido">
-              ⚡ Despachar
-            </button>` : ''}
-            ${(item.status === 'aceito' || item.status === 'concluido') ? `
-            <button class="hist-btn hist-btn-rate" onclick="abrirAvaliacao('${item.id}')" title="Avaliar motoboy">
-              ⭐ Avaliar
-            </button>` : ''}
-            <button class="hist-btn hist-btn-fav" onclick="salvarFavorito('${item.id}')" title="Salvar endereço">
-              ⭐ Favorito
-            </button>
-            <button class="hist-btn" onclick="repetirPedido('${item.id}')" style="border-color:var(--primary);color:var(--primary);" title="Repetir Pedido">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> Repetir
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Cancelada
             </button>
             <button class="hist-btn hist-btn-copiar" onclick="copiarHist('${item.id}')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar
             </button>
-            <button class="hist-btn" onclick="copiarLinkHistorico('${item.id}')" title="Copiar Link (Corrida Concluída)" style="border-color:#a855f7;color:#a855f7;">
+            <button class="hist-btn" onclick="copiarLinkHistorico('${item.id}')" style="border-color:#a855f7;color:#a855f7;">
               🔗 Link
             </button>
-            <button class="hist-btn" onclick="deletarPedido('${item.id}')" title="Excluir Corrida" style="border-color:var(--accent);color:var(--accent);">
+            <button class="hist-btn" onclick="deletarPedido('${item.id}')" style="border-color:var(--accent);color:var(--accent);">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg> Excluir
             </button>
           </div>
@@ -4498,23 +4484,25 @@
           `;
         } else if (order.status === 'concluido') {
           acceptFormCard.innerHTML = `
-            <div class="card-title" style="color:#3b82f6; font-size:20px;">🏁 Corrida Concluída!</div>
-            <div style="text-align:center; padding: 8px 0 16px;">
-              <div style="font-size:48px; margin-bottom:8px;">🎉</div>
-              <div style="font-size:14px; font-weight:700; margin-bottom:4px;">Esta corrida já foi confirmada e concluída!</div>
-              <div style="font-size:13px; color:var(--text-muted); line-height:1.6;">
-                Por: <b>${order.motoboy_nome || 'Entregador'}</b><br>
-                WhatsApp: ${order.motoboy_telefone || '—'}<br>
-                ${order.completed_at ? `Concluída em: ${new Date(order.completed_at).toLocaleString('pt-BR')}` : ''}
+            <div style="text-align:center; padding:16px 0 10px;">
+              <div style="font-size:52px; margin-bottom:6px;">\ud83c\udf89</div>
+              <div style="font-size:19px; font-weight:900; color:#3b82f6; margin-bottom:4px;">\ud83c\udfc1 Corrida Conclu\u00edda!</div>
+              <div style="font-size:13px; color:var(--text-muted); line-height:1.7;">
+                Por: <b style="color:var(--text-main);">${order.motoboy_nome || 'Entregador'}</b><br>
+                WhatsApp: ${order.motoboy_telefone || '\u2014'}<br>
+                ${order.completed_at ? `<span style="font-size:11px;">\ud83d\udd50 ${new Date(order.completed_at).toLocaleString('pt-BR')}</span>` : ''}
               </div>
             </div>
-            <div style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.25); color:#2563eb; padding:12px; border-radius:10px; text-align:center; font-weight:700; margin-bottom:12px;">
-              🏁 Entrega Finalizada! Obrigado pelo excelente trabalho.
+            <div style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.25); color:#2563eb; padding:10px 14px; border-radius:10px; text-align:center; font-weight:700; margin-bottom:20px; font-size:13px;">
+              Obrigado pelo excelente trabalho! \ud83d\ude4c
             </div>
-            <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
-              📊 Ver Meu Histórico de Corridas
-            </button>
+            <div style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.8px; color:var(--primary); margin-bottom:10px; border-top:1px dashed var(--border-color); padding-top:14px;">\ud83d\udcca Suas Corridas \u2014 \u00daltimos 7 dias</div>
+            <div id="inline-report-list">
+              <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:13px;">\u23f3 Carregando hist\u00f3rico...</div>
+            </div>
           `;
+          _carregarRelatorioInline(order.motoboy_telefone);
+
         } else {
           acceptFormCard.innerHTML = `
             <div class="card-title" style="color:var(--accent);">❌ Corrida Cancelada</div>
@@ -4852,8 +4840,61 @@
     }
 
     function abrirRelatorioMotoboyDireto() {
-      const telefone = document.getElementById('motoboy-telefone').value.replace(/\D/g, '') || localStorage.getItem('mc_motoboy_telefone') || '';
-      window.location.search = `?relatorio=true`;
+      window.location.search = '?relatorio=true';
+    }
+
+    async function _carregarRelatorioInline(telefone) {
+      const listEl = document.getElementById('inline-report-list');
+      if (!listEl) return;
+      const tel = (telefone || '').replace(/\D/g, '');
+      if (!tel || tel.length < 10) {
+        listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px;">\ud83d\udcde Telefone n\u00e3o identificado.</div>';
+        return;
+      }
+      let runs = [];
+      try {
+        const res = await fetch(`/api/motoboy-report?telefone=${tel}`);
+        if (res.ok) runs = await res.json();
+      } catch (e) {
+        // Fallback to lixeira + local merged history
+        const localAll = [
+          ...JSON.parse(localStorage.getItem('mc_historico') || '[]'),
+          ...JSON.parse(localStorage.getItem('mc_lixeira') || '[]')
+        ];
+        runs = localAll.filter(h => String(h.motoboy_telefone) === String(tel) && ['aceito','concluido'].includes(h.status));
+      }
+      if (!listEl) return; // card may have changed
+      if (runs.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">\ud83d\ude14 Nenhuma corrida encontrada para este n\u00famero.</div>';
+        return;
+      }
+      // Summary line
+      const total = runs.reduce((s, r) => s + Number(r.valor_total), 0);
+      let html = `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--primary-light);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-weight:800;">
+        <span>\ud83d\udcb0 Total Ganho:</span><span style="color:var(--primary);font-size:16px;">R$ ${total.toFixed(2).replace('.',',')}</span>
+      </div>`;
+      runs.forEach(run => {
+        const dt = new Date(run.created_at).toLocaleString('pt-BR');
+        const isConcluido = run.status === 'concluido';
+        const borderColor = isConcluido ? '#3b82f6' : '#10b981';
+        const statusBadge = isConcluido
+          ? '<span class="badge badge-concluido">\ud83c\udfc1 Conclu\u00edda</span>'
+          : '<span class="badge badge-aceito">\u2705 Ativa</span>';
+        let destinos = '';
+        (run.destinos || []).forEach((d, i) => {
+          destinos += `<div style="font-size:12px;color:var(--text-muted);">\ud83d\udccd ${d.rua} (${d.bairro})</div>`;
+        });
+        html += `<div class="hist-item" style="border-left-color:${borderColor};margin-bottom:10px;">
+          <div class="hist-header">
+            <div class="hist-bairro">\ud83c\udfe2 ${run.coleta_nome || '\u2014'}</div>
+            <div class="hist-valor">R$ ${Number(run.valor_total).toFixed(2).replace('.',',')}</div>
+          </div>
+          ${destinos}
+          <div class="hist-info" style="margin-top:4px;">\ud83d\udd50 ${dt}</div>
+          <div style="margin-top:6px;">${statusBadge}</div>
+        </div>`;
+      });
+      listEl.innerHTML = html;
     }
 
     async function consultarRelatorioMotoboy() {
