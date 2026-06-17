@@ -3846,10 +3846,22 @@
       const reCEP = /\s*CEP\s*:?\s*\d{5}-?\d{3}/gi;
       const reEstado = /,?\s*-?\s*\b[A-Z]{2}\b\s*$/g;
 
-      const limpar = (s) => (s || '')
-        .replace(reCity, '').replace(reCEP, '').replace(reEstado, '')
-        .replace(/[,\s]+$/, '').replace(/^[,\s]+/, '')
-        .replace(/\s{2,}/g, ' ').trim();
+      const limpar = (s) => {
+        let clean = (s || '')
+          .replace(reCity, '').replace(reCEP, '').replace(reEstado, '')
+          .replace(/[,\s]+$/, '').replace(/^[,\s]+/, '')
+          .replace(/\s{2,}/g, ' ').trim();
+          
+        let prev = '';
+        while (clean !== prev) {
+          prev = clean;
+          // Strip leading non-alphanumeric symbols/punctuation often hallucinated by OCR from icons
+          clean = clean.replace(/^[^a-zA-Z0-9À-ÿ\s]+/g, '').trim();
+          // Strip any single leading character followed by a space (like "ã Rua", "â Avenida")
+          clean = clean.replace(/^[a-zA-ZÀ-ÿ0-9]\s+/g, '').trim();
+        }
+        return clean;
+      };
 
       rua = limpar(rua);
       bairro = limpar(bairro);
@@ -4169,11 +4181,40 @@
       }
     }
 
-    // Ativa o event listener de paste no inline box
+    // Ativa o event listener de paste no inline box e também um ouvinte global
     const inlineBox = document.getElementById('ocr-inline-box');
     if (inlineBox) {
       inlineBox.addEventListener('paste', handleOcrInlinePaste);
     }
+
+    // Ouvinte global de paste para que o usuário não precise clicar ou focar no botão/caixa
+    document.addEventListener('paste', (ev) => {
+      const target = ev.target;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+      
+      const items = ev.clipboardData ? ev.clipboardData.items : [];
+      let foundImage = false;
+      
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
+          foundImage = true;
+          const file = items[i].getAsFile();
+          processarOcrInlineImagem(file);
+          ev.preventDefault();
+          break;
+        }
+      }
+      
+      // Se não for imagem e o foco NÃO estiver em um campo de entrada (input/textarea),
+      // processa o texto colado como um endereço de entrega.
+      if (!foundImage && !isInput) {
+        const textData = ev.clipboardData.getData('text/plain') || '';
+        if (textData.trim().length > 3) {
+          processarOcrInlineTexto(textData);
+          ev.preventDefault();
+        }
+      }
+    });
 
 
     function toast(msg) {
