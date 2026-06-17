@@ -49,9 +49,22 @@ if (process.env.DATABASE_URL) {
         // Motoboy report query
         if (text.includes('motoboy_telefone = $1')) {
           const tel = params[0];
-          filtered = filtered.filter(x => String(x.motoboy_telefone) === String(tel) && ['aceito', 'concluido'].includes(x.status));
+          const limitTime = Date.now() - 48 * 60 * 60 * 1000;
+          filtered = filtered.filter(x => {
+            const time = new Date(x.created_at || x.id).getTime();
+            return String(x.motoboy_telefone) === String(tel) && 
+                   ['aceito', 'concluido'].includes(x.status) &&
+                   !isNaN(time) && time > limitTime;
+          });
           return { rows: filtered };
         }
+        
+        // Filter out entries older than 48 hours for general queries
+        const limitTime = Date.now() - 48 * 60 * 60 * 1000;
+        filtered = filtered.filter(x => {
+          const time = new Date(x.created_at || x.id).getTime();
+          return !isNaN(time) && time > limitTime;
+        });
         
         // Status filter
         const statusIdx = text.indexOf('status = $');

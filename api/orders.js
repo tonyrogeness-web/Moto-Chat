@@ -23,15 +23,17 @@ module.exports = async (req, res) => {
       
       let queryText = 'SELECT * FROM entregas';
       let queryParams = [];
-      let whereClauses = [];
+      let whereClauses = [
+        "created_at > NOW() - INTERVAL '48 hours'"
+      ];
       
       if (status && status !== 'todos') {
-        whereClauses.push(`status = $${whereClauses.length + 1}`);
+        whereClauses.push(`status = $${queryParams.length + 1}`);
         queryParams.push(status);
       }
       
       if (search) {
-        whereClauses.push(`(coleta_nome ILIKE $${whereClauses.length + 1} OR obs ILIKE $${whereClauses.length + 1} OR destinos::text ILIKE $${whereClauses.length + 1})`);
+        whereClauses.push(`(coleta_nome ILIKE $${queryParams.length + 1} OR obs ILIKE $${queryParams.length + 1} OR destinos::text ILIKE $${queryParams.length + 1})`);
         queryParams.push(`%${search}%`);
       }
       

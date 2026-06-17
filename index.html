@@ -1572,10 +1572,13 @@
         </button>
       </div>
 
-      <div style="margin-bottom:32px">
-        <button class="btn btn-green" onclick="salvarSolicitacao()" style="background: var(--bg-card); color: var(--primary); border: 2px solid var(--primary); box-shadow: none;">
+      <div class="btn-row" style="margin-bottom:32px">
+        <button class="btn btn-green" onclick="salvarSolicitacao()" style="background: var(--bg-card); color: var(--primary); border: 2px solid var(--primary); box-shadow: none; flex: 1;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
           Salvar no Histórico
+        </button>
+        <button class="btn btn-outline" onclick="copiarLinkConfirmacaoAtual()" style="flex: 1; border-color: #a855f7; color: #a855f7;">
+          🔗 Copiar Link de Confirmação
         </button>
       </div>
 
@@ -1639,7 +1642,7 @@
             <select id="hist-filter-status" onchange="renderHistorico()">
               <option value="todos">Todos os Status</option>
               <option value="pendente">Pendentes</option>
-              <option value="aceito">Aceitos</option>
+              <option value="aceito">Confirmados</option>
               <option value="concluido">Concluídos</option>
               <option value="cancelado">Cancelados</option>
             </select>
@@ -1808,6 +1811,8 @@
           <button class="btn btn-green" onclick="salvarColeta()">Salvar Coleta</button>
         </div>
       </div>
+    </div>
+  </div>
   <!-- MODAL FILA DESPACHO ("QUEM DISSE EU") -->
   <div class="modal-overlay" id="modal-fila" onclick="if(event.target === this) closeModal('modal-fila')">
     <div class="modal" style="max-width: 540px;">
@@ -1888,8 +1893,8 @@
           <path d="M19 15c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-14 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12.5-6H14V5h-3c-.55 0-1 .45-1 1v3H5c-1.1 0-2 .9-2 2v3h2c0-1.66 1.34-3 3-3s3 1.34 3 3h4c0-1.66 1.34-3 3-3s3 1.34 3 3h2v-5c0-1.1-.9-2-2-2zM12 7h2v2h-2V7z"/>
         </svg>
       </div>
-      <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">Moto-Chat • Aceitar Corrida</h2>
-      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Confirme os dados abaixo e aceite a corrida</p>
+      <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">Moto-Chat • Confirmar Corrida</h2>
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Confirme os dados abaixo para validar a entrega</p>
     </div>
 
     <!-- Order Info Card -->
@@ -1899,7 +1904,7 @@
 
     <!-- Motoboy Registry Card -->
     <div class="card" id="accept-form-card" style="display: none;">
-      <div class="card-title">✍️ Seus Dados para Aceite</div>
+      <div class="card-title">✍️ Seus Dados para Confirmação</div>
       <div class="field">
         <label for="motoboy-nome">Seu Nome Completo</label>
         <input type="text" id="motoboy-nome" placeholder="Ex: João Silva">
@@ -1909,7 +1914,7 @@
         <input type="tel" id="motoboy-telefone" placeholder="Ex: 75999990000">
       </div>
       <button class="btn btn-green" onclick="confirmarAceiteCorrida()" style="margin-top: 10px; font-size:17px; padding:16px;">
-        🏍️ Confirmar e Aceitar Corrida
+        🏍️ Confirmar Corrida
       </button>
       <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
         📊 Ver Minhas Corridas (Relatório)
@@ -2603,24 +2608,6 @@
       msg += '🔄 *Tem retorno?* ' + (retorno ? 'Sim' : 'Não');
       if (obs) msg += '\n💬 *Obs:* ' + obs;
 
-      if (dbId) {
-        const isLocal = String(dbId).startsWith('local_');
-        let link = `${window.location.origin}${window.location.pathname}?aceitar=true&id=${dbId}`;
-        
-        if (isLocal) {
-          const orderData = _montarOrderData();
-          if (orderData) {
-            orderData.id = dbId;
-            orderData.created_at = new Date().toISOString();
-            orderData.status = 'pendente';
-            const orderJson = JSON.stringify(orderData);
-            const base64Data = btoa(unescape(encodeURIComponent(orderJson)));
-            link += `&data=${encodeURIComponent(base64Data)}`;
-          }
-        }
-        msg += `\n\n🤝 *Complementar histórico / Aceitar corrida:*\n${link}`;
-      }
-
       return msg.trimEnd();
     }
 
@@ -2806,6 +2793,52 @@
       }
     }
 
+    async function obterLinkConfirmacao(dbId) {
+      if (!dbId) return '';
+      const isLocal = String(dbId).startsWith('local_');
+      let link = `${window.location.origin}${window.location.pathname}?aceitar=true&id=${dbId}`;
+      
+      if (isLocal) {
+        const order = state.historico.find(h => String(h.id) === String(dbId));
+        if (order) {
+          const orderJson = JSON.stringify(order);
+          const base64Data = btoa(unescape(encodeURIComponent(orderJson)));
+          link += `&data=${encodeURIComponent(base64Data)}`;
+        }
+      }
+      return link;
+    }
+
+    async function copiarLinkConfirmacaoAtual() {
+      try {
+        const dbId = await garantirPedidoSalvo();
+        if (!dbId) {
+          toast('⚠️ Preencha endereço, bairro e valor');
+          playSound('warning');
+          return;
+        }
+        const link = await obterLinkConfirmacao(dbId);
+        await navigator.clipboard.writeText(link);
+        toast('📋 Link de confirmação copiado com sucesso!');
+        playSound('success');
+      } catch (e) {
+        toast('⚠️ ' + e.message);
+        playSound('warning');
+      }
+    }
+
+    async function copiarLinkHistorico(itemId) {
+      try {
+        const link = await obterLinkConfirmacao(itemId);
+        await navigator.clipboard.writeText(link);
+        toast('📋 Link de confirmação copiado com sucesso!');
+        playSound('success');
+      } catch (e) {
+        toast('⚠️ Falha ao copiar o link');
+        playSound('warning');
+      }
+    }
+
     async function salvarSolicitacao() {
       try {
         const dbId = await garantirPedidoSalvo();
@@ -2890,15 +2923,6 @@
       msg += `🔄 *Tem retorno?* ${item.retorno ? 'Sim' : 'Não'}`;
       if (item.obs) msg += `\n💬 *Obs:* ${item.obs}`;
       
-      const isLocal = String(item.id).startsWith('local_');
-      let link = `${window.location.origin}${window.location.pathname}?aceitar=true&id=${item.id}`;
-      if (isLocal) {
-        const orderJson = JSON.stringify(item);
-        const base64Data = btoa(unescape(encodeURIComponent(orderJson)));
-        link += `&data=${encodeURIComponent(base64Data)}`;
-      }
-      msg += `\n\n🤝 *Complementar histórico / Aceitar corrida:*\n${link}`;
-
       return msg.trimEnd();
     }
 
@@ -2969,8 +2993,8 @@
       const hoje = new Date();
       const startOfDay = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
       const todayItems = state.historico.filter(h => {
-        const d = new Date(h.created_at || h.id);
-        return d >= startOfDay;
+        const time = parseOrderTime(h);
+        return !isNaN(time) && time >= startOfDay.getTime();
       });
       const faturado = todayItems.filter(h => h.status === 'concluido').reduce((a, b) => a + Number(b.valor_total), 0);
       const elDate = document.getElementById('day-panel-date');
@@ -3190,7 +3214,11 @@
 
       // Apply period filter
       const [rangeStart, rangeEnd] = getPeriodoRange(_periodoFilter);
-      let listToShow = state.historico;
+      const threshold48h = Date.now() - 48 * 60 * 60 * 1000;
+      let listToShow = state.historico.filter(h => {
+        const time = parseOrderTime(h);
+        return !isNaN(time) && time > threshold48h;
+      });
       if (rangeStart) {
         listToShow = listToShow.filter(h => {
           const d = new Date(h.created_at || h.id);
@@ -3221,7 +3249,7 @@
       lista.innerHTML = '';
       listToShow.forEach(item => {
         const badges = { pendente: 'badge-pendente', aceito: 'badge-aceito', concluido: 'badge-concluido', cancelado: 'badge-cancelado' };
-        const labels = { pendente: '⏳ Aguardando', aceito: '✅ Aceito', concluido: '🏁 Concluído', cancelado: '✕ Cancelado' };
+        const labels = { pendente: '⏳ Aguardando', aceito: '✅ Confirmado', concluido: '🏁 Concluído', cancelado: '✕ Cancelado' };
         
         const destinos = item.destinos || [];
         const isMulti = destinos.length > 1;
@@ -3264,7 +3292,7 @@
         
         let motoboyInfo = '';
         if (item.motoboy_nome) {
-          motoboyInfo = `<div style="margin-top:6px; padding:8px 10px; background:rgba(16,185,129,0.08); border-radius:8px; border:1px solid rgba(16,185,129,0.2); font-size:12px;">🏍️ <b>Assumida por:</b> ${item.motoboy_nome}${ratingHtml} <span style="color:var(--text-muted)">(${item.motoboy_telefone})</span></div>`;
+          motoboyInfo = `<div style="margin-top:6px; padding:8px 10px; background:rgba(16,185,129,0.08); border-radius:8px; border:1px solid rgba(16,185,129,0.2); font-size:12px;">🏍️ <b>Confirmada por:</b> ${item.motoboy_nome}${ratingHtml} <span style="color:var(--text-muted)">(${item.motoboy_telefone})</span></div>`;
         }
 
         div.innerHTML = `
@@ -3285,7 +3313,7 @@
           <div style="margin-top:8px;"><span class="badge ${badges[item.status]}">${labels[item.status]}</span></div>
           <div class="hist-actions">
             <button class="hist-btn hist-btn-aceito" onclick="updateStatus('${item.id}','aceito')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Aceito
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Confirmar
             </button>
             <button class="hist-btn hist-btn-concluido" onclick="updateStatus('${item.id}','concluido')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Concluído
@@ -3309,6 +3337,9 @@
             </button>
             <button class="hist-btn hist-btn-copiar" onclick="copiarHist('${item.id}')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar
+            </button>
+            <button class="hist-btn" onclick="copiarLinkHistorico('${item.id}')" title="Copiar Link de Confirmação" style="border-color:#a855f7;color:#a855f7;">
+              🔗 Link
             </button>
             <button class="hist-btn" onclick="deletarPedido('${item.id}')" title="Excluir Corrida" style="border-color:var(--accent);color:var(--accent);">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg> Excluir
@@ -3689,6 +3720,15 @@
     }
 
     // ─── UTILS ───────────────────────────────────────────────────────────────────
+    function parseOrderTime(h) {
+      let time = new Date(h.created_at).getTime();
+      if (isNaN(time)) {
+        const match = String(h.id).match(/\d+/);
+        if (match) time = Number(match[0]);
+      }
+      return time;
+    }
+
     function openModal(id) { 
       const overlay = document.getElementById(id);
       if (!overlay) return;
@@ -3742,10 +3782,6 @@
             cidadeIdx = i;
             break;
           }
-        }
-
-        if (cidadeIdx === -1 && linhas.length > ruaIdx + 1) {
-          cidadeIdx = linhas.length - 1;
         }
 
         if (cidadeIdx !== -1 && cidadeIdx > ruaIdx) {
@@ -3887,11 +3923,17 @@
           prev = clean;
           // Strip leading non-alphanumeric symbols/punctuation often hallucinated by OCR from icons
           clean = clean.replace(/^[^a-zA-Z0-9À-ÿ\s]+/g, '').trim();
+          // Strip trailing non-alphanumeric symbols/punctuation (like !, ?, ., -, etc.)
+          clean = clean.replace(/[^a-zA-Z0-9À-ÿ\s()]+$/g, '').trim();
           // Strip any single leading character followed by a space (like "ã Rua", "â Avenida")
           clean = clean.replace(/^[a-zA-ZÀ-ÿ0-9]\s+/g, '').trim();
         }
         return clean;
       };
+
+      if (!rua && linhas.length > 0) {
+        rua = linhas[0];
+      }
 
       rua = limpar(rua);
       bairro = limpar(bairro);
@@ -4323,7 +4365,7 @@
       }
       // Show prominent toast
       const names = orders.map(o => o.motoboy_nome).join(', ');
-      toast(`🔔 CORRIDA ACEITA por ${names}!`);
+      toast(`🔔 CORRIDA CONFIRMADA por ${names}!`);
       // Pulse the tab badge
       const histTab = document.querySelector('.tab:nth-child(2)');
       if (histTab) {
@@ -4371,7 +4413,7 @@
         
         if (order.status === 'pendente') {
           acceptFormCard.innerHTML = `
-            <div class="card-title">✍️ Seus Dados para Aceite</div>
+            <div class="card-title">✍️ Seus Dados para Confirmação</div>
             <div class="field">
               <label for="motoboy-nome">Seu Nome Completo</label>
               <input type="text" id="motoboy-nome" placeholder="Ex: João Silva">
@@ -4381,7 +4423,7 @@
               <input type="tel" id="motoboy-telefone" placeholder="Ex: 75999990000">
             </div>
             <button class="btn btn-green" onclick="confirmarAceiteCorrida()" style="margin-top: 10px; font-size:17px; padding:16px;">
-              🏍️ Confirmar e Aceitar Corrida
+              🏍️ Confirmar Corrida
             </button>
             <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
               📊 Ver Minhas Corridas (Relatório)
@@ -4395,7 +4437,7 @@
             const btn = acceptFormCard.querySelector('button');
             if (btn) {
               btn.disabled = true;
-              btn.innerHTML = '⚙️ Aceitando corrida automaticamente...';
+              btn.innerHTML = '⚙️ Confirmando corrida automaticamente...';
             }
             setTimeout(() => {
               confirmarAceiteCorrida();
@@ -4403,9 +4445,9 @@
           }
         } else if (order.status === 'aceito') {
           acceptFormCard.innerHTML = `
-            <div class="card-title" style="color:#10b981;">✅ Corrida Aceita!</div>
+            <div class="card-title" style="color:#10b981;">✅ Corrida Confirmada!</div>
             <div style="font-size:13.5px; margin-bottom:16px; line-height:1.5;">
-              Esta corrida foi assumida por: <br>
+              Esta corrida foi confirmada por: <br>
               <b>👤 Nome:</b> ${order.motoboy_nome} <br>
               <b>📞 WhatsApp:</b> ${order.motoboy_telefone}
             </div>
@@ -4573,6 +4615,7 @@
       const orderId = urlParams.get('id');
       const nome = document.getElementById('motoboy-nome').value.trim();
       const telefone = document.getElementById('motoboy-telefone').value.replace(/\D/g, '');
+      const dataParam = urlParams.get('data');
       
       if (!nome) { toast('⚠️ Por favor, digite seu nome completo'); playSound('warning'); return; }
       if (telefone.length < 10) { toast('⚠️ Digite um telefone WhatsApp com DDD'); playSound('warning'); return; }
@@ -4583,7 +4626,7 @@
       const btn = document.querySelector('#accept-form-card button');
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '⚙️ Processando aceite...';
+        btn.innerHTML = '⚙️ Processando confirmação...';
       }
       
       const redirecionar = (whatsappMsg) => {
@@ -4610,21 +4653,21 @@
         
         if (res.ok) {
           const data = await res.json();
-          toast('✅ Corrida aceita com sucesso!');
+          toast('✅ Corrida confirmada com sucesso!');
           playSound('success');
           
           carregarDetalhesCorrida(orderId);
           
-          const msg = `✅ *CORRIDA ASSUMIDA POR MOTOBOY!*\n\n🏍️ *Motoboy:* ${nome}\n📞 *Contato:* ${telefone}\n📍 *Destino:* Rota para ${data.order.coleta_nome} (Valor R$ ${Number(data.order.valor_total).toFixed(2).replace('.', ',')})\n🆔 *ID:* ${orderId}`;
+          const msg = `✅ *CORRIDA CONFIRMADA POR MOTOBOY!*\n\n🏍️ *Motoboy:* ${nome}\n📞 *Contato:* ${telefone}\n📍 *Destino:* Rota para ${data.order.coleta_nome} (Valor R$ ${Number(data.order.valor_total).toFixed(2).replace('.', ',')})\n🆔 *ID:* ${orderId}`;
           setTimeout(() => redirecionar(msg), 600);
           return;
         } else {
           const data = await res.json();
-          toast('⚠️ ' + (data.message || 'Erro ao aceitar corrida'));
+          toast('⚠️ ' + (data.message || 'Erro ao confirmar corrida'));
           playSound('warning');
           if (btn) {
             btn.disabled = false;
-            btn.innerHTML = '🏍️ Confirmar e Aceitar Corrida';
+            btn.innerHTML = '🏍️ Confirmar Corrida';
           }
           if (data.alreadyAccepted) {
             carregarDetalhesCorrida(orderId);
@@ -4637,14 +4680,26 @@
       
       // Fallback
       const localHistory = JSON.parse(localStorage.getItem('mc_historico') || '[]');
-      const idx = localHistory.findIndex(h => String(h.id) === String(orderId));
+      let idx = localHistory.findIndex(h => String(h.id) === String(orderId));
+      
+      if (idx === -1 && dataParam) {
+        try {
+          const order = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(dataParam)))));
+          order.id = orderId;
+          localHistory.unshift(order);
+          idx = 0;
+        } catch(e) {
+          console.warn('Erro ao decodificar dados do link para salvamento local:', e);
+        }
+      }
+      
       if (idx !== -1) {
         if (localHistory[idx].status !== 'pendente') {
-          toast(`⚠️ Esta corrida já foi aceita por ${localHistory[idx].motoboy_nome || 'outro motoboy'}`);
+          toast(`⚠️ Esta corrida já foi confirmada por ${localHistory[idx].motoboy_nome || 'outro motoboy'}`);
           playSound('warning');
           if (btn) {
             btn.disabled = false;
-            btn.innerHTML = '🏍️ Confirmar e Aceitar Corrida';
+            btn.innerHTML = '🏍️ Confirmar Corrida';
           }
           carregarDetalhesCorrida(orderId);
           return;
@@ -4656,12 +4711,18 @@
         localHistory[idx].accepted_at = new Date().toISOString();
         localStorage.setItem('mc_historico', JSON.stringify(localHistory));
         
-        toast('✅ Corrida aceita (Local)!');
+        toast('✅ Corrida confirmada (Local)!');
         playSound('success');
         carregarDetalhesCorrida(orderId);
         
-        const msg = `✅ *CORRIDA ASSUMIDA POR MOTOBOY (LOCAL)!*\n\n🏍️ *Motoboy:* ${nome}\n📞 *Contato:* ${telefone}\n📍 *Destino:* Rota para ${localHistory[idx].coleta_nome} (Valor R$ ${Number(localHistory[idx].valor_total).toFixed(2).replace('.', ',')})\n🆔 *ID:* ${orderId}`;
+        const msg = `✅ *CORRIDA CONFIRMADA POR MOTOBOY (LOCAL)!*\n\n🏍️ *Motoboy:* ${nome}\n📞 *Contato:* ${telefone}\n📍 *Destino:* Rota para ${localHistory[idx].coleta_nome} (Valor R$ ${Number(localHistory[idx].valor_total).toFixed(2).replace('.', ',')})\n🆔 *ID:* ${orderId}`;
         setTimeout(() => redirecionar(msg), 600);
+      } else {
+        toast('⚠️ Corrida não encontrada para confirmar');
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '🏍️ Confirmar Corrida';
+        }
       }
     }
 
@@ -5232,23 +5293,40 @@
     
     if (urlParams.has('aceitar') && urlParams.has('id')) {
       isMotoboyMode = true;
-      document.querySelector('.sticky-header-container').style.display = 'none';
-      document.querySelector('.content').style.display = 'none';
-      document.getElementById('motoboy-accept-view').style.display = 'block';
+      const header = document.querySelector('.sticky-header-container');
+      const content = document.querySelector('.content');
+      if (header) header.style.display = 'none';
+      if (content) content.style.display = 'none';
+      const acceptView = document.getElementById('motoboy-accept-view');
+      if (acceptView) acceptView.style.display = 'block';
       carregarDetalhesCorrida(urlParams.get('id'));
     } else if (urlParams.has('relatorio')) {
       isMotoboyMode = true;
-      document.querySelector('.sticky-header-container').style.display = 'none';
-      document.querySelector('.content').style.display = 'none';
-      document.getElementById('motoboy-report-view').style.display = 'block';
+      const header = document.querySelector('.sticky-header-container');
+      const content = document.querySelector('.content');
+      if (header) header.style.display = 'none';
+      if (content) content.style.display = 'none';
+      const reportView = document.getElementById('motoboy-report-view');
+      if (reportView) reportView.style.display = 'block';
       const savedPhone = localStorage.getItem('mc_motoboy_telefone') || '';
       if (savedPhone) {
-        document.getElementById('report-telefone').value = savedPhone;
+        const reportTel = document.getElementById('report-telefone');
+        if (reportTel) reportTel.value = savedPhone;
         consultarRelatorioMotoboy();
       }
     }
 
     initTheme();
+    // Limpar histórico local com mais de 48 horas
+    const thresholdStartup = Date.now() - 48 * 60 * 60 * 1000;
+    const localHist = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+    const cleanHist = localHist.filter(h => {
+      const time = parseOrderTime(h);
+      return !isNaN(time) && time > thresholdStartup;
+    });
+    localStorage.setItem('mc_historico', JSON.stringify(cleanHist));
+    state.historico = cleanHist;
+
     if (!isMotoboyMode) {
       renderColeta();
       renderBairros();

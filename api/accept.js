@@ -34,7 +34,7 @@ module.exports = async (req, res) => {
     if (order.status !== 'pendente') {
       return res.status(400).json({ 
         alreadyAccepted: true, 
-        message: `Esta corrida já foi aceita pelo motoboy ${order.motoboy_nome}!` 
+        message: `Esta corrida já foi confirmada pelo motoboy ${order.motoboy_nome}!` 
       });
     }
     

@@ -29,6 +29,7 @@ module.exports = async (req, res) => {
       SELECT * FROM entregas 
       WHERE motoboy_telefone = $1 
         AND status IN ('aceito', 'concluido')
+        AND created_at > NOW() - INTERVAL '48 hours'
       ORDER BY created_at DESC 
       LIMIT 100
     `;
