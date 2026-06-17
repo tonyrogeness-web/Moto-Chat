@@ -1574,7 +1574,7 @@
 
       <div class="btn-row" style="margin-bottom:12px">
         <button class="btn btn-outline" onclick="copiarLinkConfirmacaoAtual()" style="border-color: #a855f7; color: #a855f7;">
-          🔗 Copiar Link
+          🏁 Link do Moto Boy
         </button>
         <button class="btn btn-outline" onclick="limparFormEntrega()" style="border-color: #f59e0b; color: #f59e0b;">
           🧹 Nova Corrida
@@ -1915,8 +1915,8 @@
           <path d="M19 15c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-14 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12.5-6H14V5h-3c-.55 0-1 .45-1 1v3H5c-1.1 0-2 .9-2 2v3h2c0-1.66 1.34-3 3-3s3 1.34 3 3h4c0-1.66 1.34-3 3-3s3 1.34 3 3h2v-5c0-1.1-.9-2-2-2zM12 7h2v2h-2V7z"/>
         </svg>
       </div>
-      <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">Moto-Chat • Corrida Concluída</h2>
-      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Confirme os dados abaixo para finalizar a entrega</p>
+      <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">Moto-Chat • Aceitar Corrida</h2>
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Toque abaixo para aceitar e confirmar a entrega</p>
     </div>
 
     <!-- Order Info Card -->
@@ -2540,7 +2540,7 @@
 
     // ─── PREVIEW ─────────────────────────────────────────────────────────────────
     // ─── PREVIEW ─────────────────────────────────────────────────────────────────
-    function getMensagem(dbId = null) {
+    async function getMensagem(dbId = null) {
       const c = state.coletas.find(x => x.id === state.coletaAtivaId) || state.coletas[0];
       let items = [];
       let totalVal = 0;
@@ -2630,6 +2630,16 @@
       msg += '🔄 *Tem retorno?* ' + (retorno ? 'Sim' : 'Não');
       if (obs) msg += '\n💬 *Obs:* ' + obs;
 
+      // Acrescentar link do motoboy ao final da mensagem (se já salvo)
+      if (dbId) {
+        try {
+          const link = await obterLinkConfirmacao(dbId);
+          msg += '\n\n――――――――――――――――――――';
+          msg += '\n📲 Após a confirmação no grupo, por favor confirme a corrida no link abaixo!!!';
+          msg += '\n' + link;
+        } catch(_) {}
+      }
+
       return msg.trimEnd();
     }
 
@@ -2641,8 +2651,9 @@
       if(el) el.textContent = `${hrs}:${mins}`;
     }
 
-    function gerarPreview() {
-      document.getElementById('preview-msg').textContent = getMensagem(currentOrderState.id);
+    async function gerarPreview() {
+      const msg = await getMensagem(currentOrderState.id);
+      document.getElementById('preview-msg').textContent = msg;
       updatePreviewTime();
     }
 
@@ -2748,7 +2759,7 @@
           currentOrderState.id = savedOrder.id;
           currentOrderState.saved = true;
           _apiAvailable = true;
-          document.getElementById('preview-msg').textContent = getMensagem(savedOrder.id);
+          getMensagem(savedOrder.id).then(m => { const el = document.getElementById('preview-msg'); if(el) el.textContent = m; });
           await carregarHistoricoServidor();
           return savedOrder.id;
         }
@@ -2760,7 +2771,7 @@
       const localId = _salvarLocalFallback(orderData);
       currentOrderState.id = localId;
       currentOrderState.saved = true;
-      document.getElementById('preview-msg').textContent = getMensagem(localId);
+      getMensagem(localId).then(m => { const el = document.getElementById('preview-msg'); if(el) el.textContent = m; });
       renderHistorico();
       return localId;
     }
@@ -2773,7 +2784,7 @@
           playSound('warning');
           return;
         }
-        const msg = getMensagem(dbId);
+        const msg = await getMensagem(dbId);
         await navigator.clipboard.writeText(msg);
         toast('📋 Mensagem copiada! Salva no histórico como pendente.');
         playSound('success');
@@ -2791,7 +2802,7 @@
           playSound('warning');
           return;
         }
-        const msg = getMensagem(dbId);
+        const msg = await getMensagem(dbId);
         const num = state.numero || '';
         const url = num
           ? `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
