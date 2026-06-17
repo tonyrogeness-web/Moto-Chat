@@ -10,6 +10,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tesseract.js for offline local OCR address scanner -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
 
   <style>
     /* ─── DESIGN TOKENS & SYSTEM ────────────────────────────────────────────── */
@@ -251,6 +254,12 @@
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
 
     /* ─── CARDS ─────────────────────────────────────────────────────────────── */
     .card {
@@ -1396,6 +1405,15 @@
           </span>
         </div>
 
+        <!-- OCR SCAN BUTTON -->
+        <div style="margin-bottom: 12px;">
+          <button id="btn-scan-ocr" onclick="abrirModalOCR()" type="button" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; font-weight: 700; font-size: 13px; border-radius: 8px; cursor: pointer; border: 1.5px dashed var(--primary); background: var(--primary-glow); color: var(--primary); transition: all 0.2s;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            <span>Preencher por Print ou Foto (OCR)</span>
+          </button>
+        </div>
+
+
         <!-- RUA - primeiro -->
         <div class="field">
           <label for="end-rua">Rua / Avenida e Número</label>
@@ -1801,6 +1819,70 @@
       </div>
       <div class="modal-actions" style="margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 12px;">
         <button class="btn btn-outline" onclick="closeModal('modal-avaliacao')">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL OCR (Ler endereço por imagem/print) -->
+  <div class="modal-overlay" id="modal-ocr" onclick="if(event.target === this) closeModal('modal-ocr')">
+    <div class="modal" style="max-width: 500px;">
+      <div class="modal-title" style="color: var(--primary); display: flex; align-items: center; gap: 8px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+        Ler Endereço (Print ou Foto)
+      </div>
+
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:16px;">
+        <p style="font-size:13px; color:var(--text-muted); line-height:1.4; margin-bottom: 0;">
+          Tire um print (captura) do endereço ou escolha uma imagem. Arraste-a para a caixa abaixo, selecione o arquivo ou apenas clique na modal e cole com <strong>Ctrl + V</strong>.
+        </p>
+
+        <!-- Area de Drop/Paste -->
+        <div id="ocr-dropzone" style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 32px 16px; text-align: center; cursor: pointer; transition: all 0.2s; background: rgba(0,0,0,0.02); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+          <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">Clique, arraste ou Cole (Ctrl+V)</span>
+          <span style="font-size: 12px; color: var(--text-muted);">Formatos suportados: PNG, JPG, JPEG</span>
+          <input type="file" id="ocr-file-input" accept="image/*" style="display:none;">
+        </div>
+
+        <!-- Preview da Imagem Selecionada -->
+        <div id="ocr-preview-container" style="display:none; text-align:center;">
+          <img id="ocr-preview-img" style="max-height: 150px; max-width: 100%; border-radius: 8px; border: 1px solid var(--border-color); object-fit: contain;">
+        </div>
+
+        <!-- Status do Processamento -->
+        <div id="ocr-status-container" style="display:none; align-items:center; justify-content:center; gap:10px; font-weight:700; color:var(--primary); font-size:14px;">
+          <svg class="loading-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+          <span id="ocr-status-text">Lendo imagem (OCR)...</span>
+        </div>
+
+        <!-- Resultado do Parse -->
+        <div id="ocr-result-container" style="display:none; flex-direction:column; gap:12px; border-top:1px solid var(--border-color); padding-top:16px;">
+          <div style="font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted);">Dados Detectados (Revise se necessário)</div>
+          
+          <div class="field" style="margin-bottom: 8px;">
+            <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Rua / Avenida e Número</label>
+            <input type="text" id="ocr-res-rua" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-input); color:var(--text-main); font-size:14px;">
+          </div>
+          <div class="field" style="margin-bottom: 8px;">
+            <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Bairro</label>
+            <input type="text" id="ocr-res-bairro" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-input); color:var(--text-main); font-size:14px;">
+          </div>
+          <div class="field" style="margin-bottom: 8px;">
+            <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Complemento / Referência (opcional)</label>
+            <input type="text" id="ocr-res-comp" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-input); color:var(--text-main); font-size:14px;">
+          </div>
+
+          <!-- Raw text expando -->
+          <details style="margin-top:4px;">
+            <summary style="font-size:11px; cursor:pointer; color:var(--text-muted); outline:none;">Ver texto bruto extraído</summary>
+            <pre id="ocr-raw-text" style="font-family:monospace; font-size:11px; padding:8px; background:rgba(0,0,0,0.1); border-radius:4px; max-height:80px; overflow-y:auto; margin-top:4px; white-space:pre-wrap; border: 1px solid var(--border-color); color: var(--text-muted);"></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 12px; display:flex; justify-content:flex-end; gap:8px;">
+        <button class="btn btn-outline" onclick="closeModal('modal-ocr')" type="button">Cancelar</button>
+        <button class="btn btn-green" id="ocr-confirm-btn" onclick="confirmarOCR()" type="button" style="display:none;">Confirmar e Preencher</button>
       </div>
     </div>
   </div>
@@ -2466,7 +2548,7 @@
       const retorno = document.getElementById('retorno-toggle').checked;
       const obs = document.getElementById('obs').value.trim();
 
-      let msg = '🏍️ *MOTO-CHAT • SOLICITAÇÃO DE CORRIDA* 🏍️\n\n';
+      let msg = '🏍️ *SOLICITAÇÃO DE CORRIDA* 🏍️\n\n';
       
       if (c) {
         msg += '*Ponto de Coleta:*\n';
@@ -2752,7 +2834,7 @@
 
     // Helper: rebuild WhatsApp message from a saved order object
     function buildMsgFromOrder(item) {
-      let msg = '🏍️ *MOTO-CHAT • SOLICITAÇÃO DE CORRIDA* 🏍️\n\n';
+      let msg = '🏍️ *SOLICITAÇÃO DE CORRIDA* 🏍️\n\n';
       msg += '*Ponto de Coleta:*\n';
       msg += `🏢 *${item.coleta_nome}*\n`;
       if (item.coleta_endereco) {
@@ -3549,6 +3631,269 @@
         }
       }, 250); // Match transition duration
     }
+
+    // ─── OCR ADDRESS SCANNER (TESSERACT.JS) ──────────────────────────────────────────
+    function abrirModalOCR() {
+      // Reset UI state
+      document.getElementById('ocr-preview-container').style.display = 'none';
+      document.getElementById('ocr-status-container').style.display = 'none';
+      document.getElementById('ocr-result-container').style.display = 'none';
+      document.getElementById('ocr-confirm-btn').style.display = 'none';
+      document.getElementById('ocr-preview-img').src = '';
+      document.getElementById('ocr-res-rua').value = '';
+      document.getElementById('ocr-res-bairro').value = '';
+      document.getElementById('ocr-res-comp').value = '';
+      document.getElementById('ocr-raw-text').textContent = '';
+      
+      openModal('modal-ocr');
+      
+      // Setup dropzone events only once
+      const dropzone = document.getElementById('ocr-dropzone');
+      const fileInput = document.getElementById('ocr-file-input');
+      
+      if (!dropzone.dataset.initialized) {
+        dropzone.dataset.initialized = 'true';
+        
+        dropzone.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', (e) => {
+          if (e.target.files.length > 0) {
+            processarImagemOCR(e.target.files[0]);
+          }
+        });
+        
+        dropzone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropzone.style.borderColor = 'var(--primary)';
+          dropzone.style.background = 'rgba(16, 185, 129, 0.05)';
+        });
+        
+        dropzone.addEventListener('dragleave', () => {
+          dropzone.style.borderColor = 'var(--border-color)';
+          dropzone.style.background = 'rgba(0,0,0,0.02)';
+        });
+        
+        dropzone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropzone.style.borderColor = 'var(--border-color)';
+          dropzone.style.background = 'rgba(0,0,0,0.02)';
+          if (e.dataTransfer.files.length > 0) {
+            processarImagemOCR(e.dataTransfer.files[0]);
+          }
+        });
+      }
+    }
+
+    // Global listener for Ctrl+V when OCR modal is open
+    window.addEventListener('paste', (e) => {
+      const modal = document.getElementById('modal-ocr');
+      if (modal && modal.classList.contains('open')) {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let item of items) {
+          if (item.kind === 'file' && item.type.startsWith('image/')) {
+            const file = item.getAsFile();
+            processarImagemOCR(file);
+            break;
+          }
+        }
+      }
+    });
+
+    function processarImagemOCR(file) {
+      if (!file) return;
+      
+      if (!file.type.startsWith('image/')) {
+        toast('⚠️ Por favor, selecione apenas arquivos de imagem.');
+        return;
+      }
+      
+      playSound('click');
+      
+      // Show preview
+      const previewImg = document.getElementById('ocr-preview-img');
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        previewImg.src = e.target.result;
+        document.getElementById('ocr-preview-container').style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+      
+      // Update OCR status
+      const statusContainer = document.getElementById('ocr-status-container');
+      const statusText = document.getElementById('ocr-status-text');
+      statusContainer.style.display = 'flex';
+      statusText.textContent = 'Inicializando leitor (Tesseract)...';
+      
+      document.getElementById('ocr-result-container').style.display = 'none';
+      document.getElementById('ocr-confirm-btn').style.display = 'none';
+      
+      // Perform OCR
+      Tesseract.recognize(
+        file,
+        'por', // Portuguese pack
+        {
+          logger: m => {
+            if (m.status === 'recognizing text') {
+              statusText.textContent = `Lendo imagem... ${Math.round(m.progress * 100)}%`;
+            } else if (m.status === 'loading por traineddata') {
+              statusText.textContent = 'Baixando dados do idioma (por)...';
+            } else {
+              statusText.textContent = 'Processando...';
+            }
+          }
+        }
+      ).then(({ data: { text } }) => {
+        statusContainer.style.display = 'none';
+        playSound('success');
+        
+        // Populate Raw Text
+        document.getElementById('ocr-raw-text').textContent = text;
+        
+        // Parse the text
+        const parsed = extrairEnderecoDoTexto(text);
+        
+        // Populate inputs
+        document.getElementById('ocr-res-rua').value = parsed.rua;
+        document.getElementById('ocr-res-bairro').value = parsed.bairro;
+        document.getElementById('ocr-res-comp').value = parsed.comp;
+        
+        // Show result area & confirm button
+        document.getElementById('ocr-result-container').style.display = 'flex';
+        document.getElementById('ocr-confirm-btn').style.display = 'block';
+      }).catch(err => {
+        console.error(err);
+        statusContainer.style.display = 'none';
+        toast('❌ Erro ao ler a imagem. Tente outra imagem ou digite manualmente.');
+        playSound('error');
+      });
+    }
+
+    function extrairEnderecoDoTexto(texto) {
+      let rua = '';
+      let bairro = '';
+      let comp = '';
+
+      // Split lines and trim
+      const linhas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+      // Palavras chaves de rua em português
+      const keywordsEndereco = /\b(rua|r\.|av\.|avenida|travessa|tv\.|alameda|al\.|rodovia|rod\.|estrada|est\.)\b/i;
+
+      // 1. Encontrar a linha com palavra-chave de logradouro
+      let linhaEndereco = '';
+      for (let i = 0; i < linhas.length; i++) {
+        if (keywordsEndereco.test(linhas[i])) {
+          linhaEndereco = linhas[i];
+          break;
+        }
+      }
+
+      // Fallback: se não achar a palavra-chave, pegar a primeira linha
+      if (!linhaEndereco && linhas.length > 0) {
+        linhaEndereco = linhas[0];
+      }
+
+      if (linhaEndereco) {
+        // Remover prefixos comuns do WhatsApp ou do sistema (ex: "Endereço: ", "Entregar em: ")
+        linhaEndereco = linhaEndereco.replace(/^(endereço|endereco|entregar em|entrega|destinatário|destinatario|destin|cliente|local|entregas?|casa|localizacao|localização):/i, '').trim();
+
+        // Tentar quebrar por separadores comuns
+        const partes = linhaEndereco.split(/[,–-]/).map(p => p.trim()).filter(p => p.length > 0);
+
+        if (partes.length > 0) {
+          rua = partes[0];
+          
+          // Se a rua não tiver número nela e a próxima parte parecer um número, junta
+          if (partes.length > 1) {
+            const proximaParte = partes[1];
+            if (!/\d+/.test(rua) && /^\d+/.test(proximaParte)) {
+              rua += ', ' + proximaParte;
+              
+              if (partes.length > 2) {
+                bairro = partes[2];
+              }
+              if (partes.length > 3) {
+                comp = partes.slice(3).join(', ');
+              }
+            } else {
+              // Bairro é a segunda parte
+              bairro = partes[1];
+              if (partes.length > 2) {
+                comp = partes.slice(2).join(', ');
+              }
+            }
+          }
+        } else {
+          rua = linhaEndereco;
+        }
+      }
+
+      // Procurar se bairro ou complemento estão em linhas dedicadas (ex: "Bairro: Centro")
+      for (let linha of linhas) {
+        const matchBairro = linha.match(/(?:bairro|b\.):\s*([^,\n]+)/i);
+        if (matchBairro) {
+          bairro = matchBairro[1].trim();
+        }
+        const matchComp = linha.match(/(?:comp|complemento|ref|referencia|referência|casa|apto|apartamento|obs|bloco|bl):\s*([^,\n]+)/i);
+        if (matchComp) {
+          comp = matchComp[1].trim();
+        }
+      }
+
+      // Detectar se alguma das linhas contém um bairro do histórico cadastrado (se não detectou bairro ainda)
+      if (!bairro && state.bairros && state.bairros.length > 0) {
+        for (let linha of linhas) {
+          for (let b of state.bairros) {
+            if (linha.toLowerCase().includes(b.toLowerCase())) {
+              bairro = b;
+              break;
+            }
+          }
+          if (bairro) break;
+        }
+      }
+
+      // Limpar cidades e estados comuns que poluem o input da rua ou bairro
+      const removerCidades = /\b(feira de santana|fsa|salvador|camacari|lauro de freitas|bahia|ba)\b/i;
+      if (rua) rua = rua.replace(removerCidades, '').replace(/,\s*$/, '').trim();
+      if (bairro) bairro = bairro.replace(removerCidades, '').replace(/,\s*$/, '').trim();
+
+      // Ajustes de pontuação e strings remanescentes
+      if (rua) rua = rua.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9)]+$/g, '').trim();
+      if (bairro) bairro = bairro.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9)]+$/g, '').trim();
+
+      return { rua, bairro, comp };
+    }
+
+    function confirmarOCR() {
+      const rua = document.getElementById('ocr-res-rua').value.trim();
+      const bairro = document.getElementById('ocr-res-bairro').value.trim();
+      const comp = document.getElementById('ocr-res-comp').value.trim();
+      
+      if (!rua) {
+        toast('⚠️ Preencha pelo menos a rua.');
+        return;
+      }
+      
+      document.getElementById('end-rua').value = rua;
+      document.getElementById('bairro-custom').value = bairro;
+      document.getElementById('end-comp').value = comp;
+      
+      state.bairroSel = bairro;
+      
+      const matched = state.bairros.find(b => b.toLowerCase() === bairro.toLowerCase());
+      if (matched) {
+        detectarPrecoPorBairro(matched);
+      }
+      
+      closeModal('modal-ocr');
+      toast('✅ Dados do OCR importados com sucesso!');
+      playSound('success');
+      
+      resetCurrentOrderState();
+      gerarPreview();
+    }
+
 
     function toast(msg) {
       const el = document.getElementById('toast');
