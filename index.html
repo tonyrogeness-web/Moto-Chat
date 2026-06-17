@@ -1373,9 +1373,15 @@
       
       <!-- PONTO DE COLETA -->
       <div class="card">
-        <div class="card-title">
-          <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-          Ponto de Coleta
+        <div class="card-title" style="justify-content: space-between; align-items: center;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            Ponto de Coleta
+          </div>
+          <button onclick="limparFormEntrega()" style="background:none; border:1px solid #f59e0b; color:#f59e0b; border-radius:8px; padding:3px 10px; font-size:11px; font-weight:700; cursor:pointer; letter-spacing:0.3px; white-space:nowrap;"
+            title="Limpar todos os campos e iniciar nova corrida">
+            🧹 Nova Corrida
+          </button>
         </div>
         <div class="field" style="margin-bottom: 12px;">
           <select id="select-coleta" onchange="selecionarColetaAtiva(this.value)"></select>
@@ -1575,9 +1581,6 @@
       <div class="btn-row" style="margin-bottom:12px">
         <button class="btn btn-outline" onclick="copiarLinkConfirmacaoAtual()" style="border-color: #a855f7; color: #a855f7;">
           🏁 Link do Moto Boy
-        </button>
-        <button class="btn btn-outline" onclick="limparFormEntrega()" style="border-color: #f59e0b; color: #f59e0b;">
-          🧹 Nova Corrida
         </button>
       </div>
 
@@ -1936,7 +1939,7 @@
         <input type="tel" id="motoboy-telefone" placeholder="Ex: 75999990000">
       </div>
       <button class="btn btn-green" onclick="confirmarAceiteCorrida()" style="margin-top: 10px; font-size:17px; padding:16px;">
-        🏍️ Corrida Concluída
+        🏍️ Aceitar Corrida
       </button>
       <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
         📊 Ver Minhas Corridas (Relatório)
@@ -2523,7 +2526,7 @@
       
       const temp = state.destinos[index];
       state.destinos[index] = state.destinos[target];
-      state.destinos[target] = temp;
+        state.destinos[target] = temp;
       
       playSound('click');
       renderRoteiro();
@@ -2538,7 +2541,6 @@
       toast('✕ Destino removido');
     }
 
-    // ─── PREVIEW ─────────────────────────────────────────────────────────────────
     // ─── PREVIEW ─────────────────────────────────────────────────────────────────
     async function getMensagem(dbId = null) {
       const c = state.coletas.find(x => x.id === state.coletaAtivaId) || state.coletas[0];
@@ -2635,7 +2637,7 @@
         try {
           const link = await obterLinkConfirmacao(dbId);
           msg += '\n\n――――――――――――――――――――';
-          msg += '\n📲 Após a confirmação no grupo, por favor confirme a corrida no link abaixo!!!';
+          msg += '\n📲 Para fins de controle interno entre a loja e o motoboy, após a confirmação no grupo, por favor, confirme também a corrida no link abaixo:';
           msg += '\n' + link;
         } catch(_) {}
       }
@@ -2844,8 +2846,19 @@
         }
       }
       
-      const message = `Após a conclusão da entrega, por favor, confirme no link abaixo!!!\n\n${link}`;
-      return message;
+      // Tentar encurtar o link via TinyURL (sem chave de API, fallback silencioso)
+      async function _encurtarLink(url) {
+        try {
+          const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(4000) });
+          if (res.ok) {
+            const short = (await res.text()).trim();
+            if (short.startsWith('http')) return short;
+          }
+        } catch(_) {}
+        return url; // fallback: retorna o original
+      }
+
+      return await _encurtarLink(link);
     }
 
     async function copiarLinkConfirmacaoAtual() {
@@ -3331,7 +3344,7 @@
         const createdTime = parseOrderTime(item);
         const expiresAt = createdTime + 7 * 24 * 60 * 60 * 1000;
         const daysLeft = Math.max(0, Math.ceil((expiresAt - now) / (24 * 60 * 60 * 1000)));
-        const statusLabels = { pendente: '⏳ Pendente', aceito: '✅ Confirmado', concluido: '🏁 Concluído', cancelado: '✕ Cancelado' };
+        const statusLabels = { pendente: '⏳ Aguardando', aceito: '✅ Confirmado', concluido: '🏁 Corrida Aceita', cancelado: '✕ Cancelado' };
         const div = document.createElement('div');
         div.style.cssText = 'margin-bottom:10px; padding:12px; background:var(--bg-card); border-radius:10px; border:1px solid var(--border-color); border-left:3px solid ' + color + ';';
         div.innerHTML = `
@@ -3474,7 +3487,7 @@
 
       const renderItem = (item) => {
         const badges = { pendente: 'badge-pendente', aceito: 'badge-aceito', concluido: 'badge-concluido', cancelado: 'badge-cancelado' };
-        const labels = { pendente: '⏳ Aguardando', aceito: '✅ Confirmado', concluido: '🏁 Concluído', cancelado: '✕ Cancelado' };
+        const labels = { pendente: '⏳ Aguardando', aceito: '✅ Confirmado', concluido: '🏁 Corrida Aceita', cancelado: '✕ Cancelado' };
         
         const destinos = item.destinos || [];
         const isMulti = destinos.length > 1;
@@ -4480,7 +4493,7 @@
               <input type="tel" id="motoboy-telefone" placeholder="Ex: 75999990000">
             </div>
             <button class="btn btn-green" onclick="confirmarAceiteCorrida()" style="margin-top: 10px; font-size:17px; padding:16px;">
-              🏍️ Corrida Concluída
+              🏍️ Aceitar Corrida
             </button>
             <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
               📊 Ver Minhas Corridas (Relatório)
@@ -4581,7 +4594,7 @@
       
       let statusBadgeClass = 'badge-pendente', statusLabel = 'Pendente';
       if (order.status === 'aceito') { statusBadgeClass = 'badge-aceito'; statusLabel = `Aceita por ${order.motoboy_nome}`; }
-      else if (order.status === 'concluido') { statusBadgeClass = 'badge-concluido'; statusLabel = 'Concluída'; }
+      else if (order.status === 'concluido') { statusBadgeClass = 'badge-concluido'; statusLabel = 'Corrida Aceita'; }
       else if (order.status === 'cancelado') { statusBadgeClass = 'badge-cancelado'; statusLabel = 'Cancelada'; }
       
       let destinosHtml = '';
@@ -4903,7 +4916,7 @@
         const isConcluido = run.status === 'concluido';
         const borderColor = isConcluido ? '#3b82f6' : '#10b981';
         const statusBadge = isConcluido
-          ? '<span class="badge badge-concluido">\ud83c\udfc1 Conclu\u00edda</span>'
+          ? '<span class="badge badge-concluido">\ud83c\udfc1 Corrida Aceita</span>'
           : '<span class="badge badge-aceito">\u2705 Ativa</span>';
         let destinos = '';
         (run.destinos || []).forEach((d, i) => {
