@@ -258,6 +258,17 @@
       to { transform: rotate(360deg); }
     }
 
+    @keyframes ocrPulseRing {
+      0% { opacity: 0.15; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.02); }
+      100% { opacity: 0.15; transform: scale(1); }
+    }
+
+    @keyframes ocrFlash {
+      0% { background: var(--primary-glow); }
+      30% { background: rgba(16,185,129,0.35); border-color: #10b981; }
+      100% { background: var(--primary-glow); }
+    }
 
     /* ─── CARDS ─────────────────────────────────────────────────────────────── */
     .card {
@@ -1826,64 +1837,170 @@
 
   <!-- MODAL OCR (Ler endereço por imagem/print) -->
   <div class="modal-overlay" id="modal-ocr" onclick="if(event.target === this) closeModal('modal-ocr')">
-    <div class="modal" style="max-width: 500px;">
-      <div class="modal-title" style="color: var(--primary); display: flex; align-items: center; gap: 8px;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-        Ler Endereço (Print ou Foto)
+    <div class="modal" style="max-width: 520px; padding: 0; overflow: hidden;">
+
+      <!-- Header -->
+      <div style="background: linear-gradient(135deg, var(--primary) 0%, #059669 100%); padding: 20px 24px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+          </div>
+          <div>
+            <div style="font-weight: 800; font-size: 16px; color: white;">Ler Endereço por Print</div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 1px;">Cole um print ou imagem do endereço</div>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-ocr')" type="button" style="background: rgba(255,255,255,0.15); border: none; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; transition: background 0.2s;">×</button>
       </div>
 
-      <div class="modal-body" style="display:flex; flex-direction:column; gap:16px;">
-        <p style="font-size:13px; color:var(--text-muted); line-height:1.4; margin-bottom: 0;">
-          Tire um print (captura) do endereço ou escolha uma imagem. Arraste-a para a caixa abaixo, selecione o arquivo ou apenas clique na modal e cole com <strong>Ctrl + V</strong>.
-        </p>
+      <!-- Tabs -->
+      <div style="display: flex; border-bottom: 1px solid var(--border-color); background: var(--bg-card);">
+        <button id="ocr-tab-img" type="button" onclick="ocrMudarAba('img')" style="flex: 1; padding: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; background: none; border-bottom: 3px solid var(--primary); color: var(--primary); transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+          📸 Colar Print / Foto
+        </button>
+        <button id="ocr-tab-txt" type="button" onclick="ocrMudarAba('txt')" style="flex: 1; padding: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; background: none; border-bottom: 3px solid transparent; color: var(--text-muted); transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 17H4v2h10v-2zm6-8H4v2h16V9zM4 15h16v-2H4v2zM4 5v2h16V5H4z"/></svg>
+          📝 Colar Texto
+        </button>
+      </div>
 
-        <!-- Area de Drop/Paste -->
-        <div id="ocr-dropzone" style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 32px 16px; text-align: center; cursor: pointer; transition: all 0.2s; background: rgba(0,0,0,0.02); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-          <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">Clique, arraste ou Cole (Ctrl+V)</span>
-          <span style="font-size: 12px; color: var(--text-muted);">Formatos suportados: PNG, JPG, JPEG</span>
-          <input type="file" id="ocr-file-input" accept="image/*" style="display:none;">
-        </div>
+      <div style="padding: 20px 24px 24px; background: var(--bg-card);">
 
-        <!-- Preview da Imagem Selecionada -->
-        <div id="ocr-preview-container" style="display:none; text-align:center;">
-          <img id="ocr-preview-img" style="max-height: 150px; max-width: 100%; border-radius: 8px; border: 1px solid var(--border-color); object-fit: contain;">
-        </div>
+        <!-- === ABA IMAGEM === -->
+        <div id="ocr-panel-img">
+          <!-- Zona de Colagem Principal -->
+          <div id="ocr-paste-zone"
+            tabindex="0"
+            onclick="document.getElementById('ocr-file-input').click()"
+            style="
+              position: relative;
+              border: 3px dashed var(--primary);
+              border-radius: 16px;
+              min-height: 180px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 12px;
+              cursor: pointer;
+              transition: all 0.25s;
+              background: var(--primary-glow);
+              outline: none;
+              overflow: hidden;
+            "
+            ondragover="event.preventDefault(); this.style.borderColor='#10b981'; this.style.background='rgba(16,185,129,0.15)';"
+            ondragleave="this.style.borderColor='var(--primary)'; this.style.background='var(--primary-glow)';"
+            ondrop="event.preventDefault(); this.style.borderColor='var(--primary)'; this.style.background='var(--primary-glow)'; const f=event.dataTransfer.files[0]; if(f && f.type.startsWith('image/')) processarImagemOCR(f);"
+          >
+            <!-- Anel pulsante animado -->
+            <div style="position: absolute; inset: 0; border-radius: 13px; border: 2px solid var(--primary); opacity: 0.3; animation: ocrPulseRing 2s ease-in-out infinite;"></div>
 
-        <!-- Status do Processamento -->
-        <div id="ocr-status-container" style="display:none; align-items:center; justify-content:center; gap:10px; font-weight:700; color:var(--primary); font-size:14px;">
-          <svg class="loading-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
-          <span id="ocr-status-text">Lendo imagem (OCR)...</span>
-        </div>
+            <!-- Ícone grande -->
+            <div style="background: rgba(16,185,129,0.15); border-radius: 50%; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
 
-        <!-- Resultado do Parse -->
-        <div id="ocr-result-container" style="display:none; flex-direction:column; gap:12px; border-top:1px solid var(--border-color); padding-top:16px;">
-          <div style="font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted);">Dados Detectados (Revise se necessário)</div>
-          
-          <div class="field" style="margin-bottom: 8px;">
-            <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Rua / Avenida e Número</label>
-            <input type="text" id="ocr-res-rua" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-input); color:var(--text-main); font-size:14px;">
+            <!-- Instrução principal -->
+            <div style="text-align: center; position: relative; z-index: 1;">
+              <div style="font-size: 16px; font-weight: 800; color: var(--primary); margin-bottom: 4px;">Cole aqui seu Print</div>
+              <div style="font-size: 22px; font-weight: 900; color: var(--primary); background: rgba(16,185,129,0.12); border-radius: 8px; padding: 4px 16px; display: inline-block; letter-spacing: 2px;">Ctrl + V</div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">ou clique para escolher arquivo</div>
+            </div>
+
+            <input type="file" id="ocr-file-input" accept="image/*" style="display:none;" onchange="if(this.files[0]) processarImagemOCR(this.files[0])">
           </div>
-          <div class="field" style="margin-bottom: 8px;">
-            <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Bairro</label>
-            <input type="text" id="ocr-res-bairro" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-input); color:var(--text-main); font-size:14px;">
+
+          <!-- Dica de uso -->
+          <div style="display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); border-radius: 10px; padding: 10px 12px;">
+            <span style="font-size: 16px; flex-shrink: 0;">💡</span>
+            <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+              <strong style="color: var(--text-main);">Como usar:</strong> Tire um print do endereço no WhatsApp, Google Maps ou qualquer lugar. Abra esta tela e pressione <strong>Ctrl + V</strong>. O sistema detecta o endereço automaticamente!
+            </div>
           </div>
-          <div class="field" style="margin-bottom: 8px;">
-            <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Complemento / Referência (opcional)</label>
-            <input type="text" id="ocr-res-comp" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-input); color:var(--text-main); font-size:14px;">
+
+          <!-- Preview da Imagem + Status -->
+          <div id="ocr-preview-container" style="display:none; margin-top: 14px; text-align:center; position: relative;">
+            <img id="ocr-preview-img" style="max-height: 160px; max-width: 100%; border-radius: 10px; border: 2px solid var(--primary); object-fit: contain; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">📷 Imagem recebida — aguardando leitura...</div>
+          </div>
+        </div>
+
+        <!-- === ABA TEXTO === -->
+        <div id="ocr-panel-txt" style="display:none;">
+          <div style="margin-bottom: 10px;">
+            <div style="font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Cole ou digite o endereço abaixo:</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Ex: Rua das Flores, 123, Bairro Centro, Feira de Santana</div>
+          </div>
+          <textarea
+            id="ocr-text-input"
+            placeholder="Cole aqui o endereço copiado do WhatsApp, Google Maps, iFood, ou qualquer outro lugar..."
+            style="
+              width: 100%;
+              min-height: 120px;
+              padding: 14px;
+              border: 2px solid var(--border-color);
+              border-radius: 12px;
+              font-size: 14px;
+              line-height: 1.6;
+              background: var(--bg-input);
+              color: var(--text-main);
+              resize: vertical;
+              font-family: inherit;
+              transition: border-color 0.2s;
+              outline: none;
+            "
+            oninput="ocrTextChange()"
+            onfocus="this.style.borderColor='var(--primary)'"
+            onblur="this.style.borderColor='var(--border-color)'"
+          ></textarea>
+          <button type="button" onclick="ocrLerTexto()" id="ocr-read-text-btn" style="margin-top: 10px; width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; opacity: 0.5; pointer-events: none;">
+            🔍 Detectar Endereço no Texto
+          </button>
+        </div>
+
+        <!-- Status do Processamento (compartilhado) -->
+        <div id="ocr-status-container" style="display:none; align-items:center; justify-content:center; gap:10px; font-weight:700; color:var(--primary); font-size:14px; margin-top: 16px; background: var(--primary-glow); border-radius: 10px; padding: 14px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite; flex-shrink:0;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+          <span id="ocr-status-text">Lendo imagem...</span>
+        </div>
+
+        <!-- Resultado do Parse (compartilhado) -->
+        <div id="ocr-result-container" style="display:none; flex-direction:column; gap:10px; margin-top: 16px; border-top: 2px solid var(--primary); padding-top: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <span style="font-size: 18px;">✅</span>
+            <div style="font-weight: 800; font-size: 14px; color: var(--primary);">Endereço Detectado! Revise e confirme:</div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div>
+              <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">📍 Rua / Avenida e Número</label>
+              <input type="text" id="ocr-res-rua" style="width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid var(--border-color); background:var(--bg-input); color:var(--text-main); font-size:14px; font-weight:600; outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border-color)'">
+            </div>
+            <div>
+              <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">🏘️ Bairro</label>
+              <input type="text" id="ocr-res-bairro" style="width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid var(--border-color); background:var(--bg-input); color:var(--text-main); font-size:14px; font-weight:600; outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border-color)'">
+            </div>
+            <div>
+              <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">🏠 Complemento (opcional)</label>
+              <input type="text" id="ocr-res-comp" style="width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid var(--border-color); background:var(--bg-input); color:var(--text-main); font-size:14px; outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border-color)'">
+            </div>
           </div>
 
           <!-- Raw text expando -->
-          <details style="margin-top:4px;">
-            <summary style="font-size:11px; cursor:pointer; color:var(--text-muted); outline:none;">Ver texto bruto extraído</summary>
-            <pre id="ocr-raw-text" style="font-family:monospace; font-size:11px; padding:8px; background:rgba(0,0,0,0.1); border-radius:4px; max-height:80px; overflow-y:auto; margin-top:4px; white-space:pre-wrap; border: 1px solid var(--border-color); color: var(--text-muted);"></pre>
+          <details style="margin-top:2px;">
+            <summary style="font-size:11px; cursor:pointer; color:var(--text-muted); outline:none; user-select:none;">▶ Ver texto bruto extraído</summary>
+            <pre id="ocr-raw-text" style="font-family:monospace; font-size:11px; padding:8px; background:rgba(0,0,0,0.08); border-radius:6px; max-height:80px; overflow-y:auto; margin-top:6px; white-space:pre-wrap; border: 1px solid var(--border-color); color: var(--text-muted);"></pre>
           </details>
         </div>
-      </div>
 
-      <div class="modal-actions" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 12px; display:flex; justify-content:flex-end; gap:8px;">
-        <button class="btn btn-outline" onclick="closeModal('modal-ocr')" type="button">Cancelar</button>
-        <button class="btn btn-green" id="ocr-confirm-btn" onclick="confirmarOCR()" type="button" style="display:none;">Confirmar e Preencher</button>
+        <!-- Ações -->
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button class="btn btn-outline" onclick="closeModal('modal-ocr')" type="button" style="flex: 1;">Cancelar</button>
+          <button class="btn btn-green" id="ocr-confirm-btn" onclick="confirmarOCR()" type="button" style="flex: 2; display:none;">
+            ✅ Confirmar e Preencher
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -3773,7 +3890,6 @@
     let _ocrLoadingScript = false;
 
     function abrirModalOCR() {
-      // Abre modal imediatamente — sem depender de script externo ainda
       const el = document.getElementById('modal-ocr');
       if (!el) { alert('Modal OCR não encontrada.'); return; }
 
@@ -3787,48 +3903,149 @@
       document.getElementById('ocr-res-bairro').value = '';
       document.getElementById('ocr-res-comp').value = '';
       document.getElementById('ocr-raw-text').textContent = '';
+      const txtInput = document.getElementById('ocr-text-input');
+      if (txtInput) txtInput.value = '';
+      const readBtn = document.getElementById('ocr-read-text-btn');
+      if (readBtn) { readBtn.style.opacity = '0.5'; readBtn.style.pointerEvents = 'none'; }
+
+      // Voltar para aba imagem
+      ocrMudarAba('img');
 
       openModal('modal-ocr');
 
-      // Setup dropzone once
-      const dropzone = document.getElementById('ocr-dropzone');
-      const fileInput = document.getElementById('ocr-file-input');
-      if (!dropzone._ocr_init) {
-        dropzone._ocr_init = true;
-        dropzone.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', (ev) => {
-          if (ev.target.files.length > 0) processarImagemOCR(ev.target.files[0]);
-        });
-        dropzone.addEventListener('dragover', (ev) => {
-          ev.preventDefault();
-          dropzone.style.borderColor = 'var(--primary)';
-          dropzone.style.background = 'var(--primary-glow)';
-        });
-        dropzone.addEventListener('dragleave', () => {
-          dropzone.style.borderColor = 'var(--border-color)';
-          dropzone.style.background = 'rgba(0,0,0,0.02)';
-        });
-        dropzone.addEventListener('drop', (ev) => {
-          ev.preventDefault();
-          dropzone.style.borderColor = 'var(--border-color)';
-          dropzone.style.background = 'rgba(0,0,0,0.02)';
-          if (ev.dataTransfer.files.length > 0) processarImagemOCR(ev.dataTransfer.files[0]);
-        });
+      // Focus na zona de colagem para capturar Ctrl+V
+      setTimeout(() => {
+        const pz = document.getElementById('ocr-paste-zone');
+        if (pz) pz.focus();
+      }, 150);
+    }
+
+    function ocrMudarAba(aba) {
+      const panelImg = document.getElementById('ocr-panel-img');
+      const panelTxt = document.getElementById('ocr-panel-txt');
+      const tabImg = document.getElementById('ocr-tab-img');
+      const tabTxt = document.getElementById('ocr-tab-txt');
+      if (!panelImg || !panelTxt) return;
+
+      if (aba === 'img') {
+        panelImg.style.display = 'block';
+        panelTxt.style.display = 'none';
+        tabImg.style.borderBottomColor = 'var(--primary)';
+        tabImg.style.color = 'var(--primary)';
+        tabTxt.style.borderBottomColor = 'transparent';
+        tabTxt.style.color = 'var(--text-muted)';
+        // Focus na zona de colagem
+        setTimeout(() => {
+          const pz = document.getElementById('ocr-paste-zone');
+          if (pz) pz.focus();
+        }, 50);
+      } else {
+        panelImg.style.display = 'none';
+        panelTxt.style.display = 'block';
+        tabImg.style.borderBottomColor = 'transparent';
+        tabImg.style.color = 'var(--text-muted)';
+        tabTxt.style.borderBottomColor = 'var(--primary)';
+        tabTxt.style.color = 'var(--primary)';
+        setTimeout(() => {
+          const ti = document.getElementById('ocr-text-input');
+          if (ti) ti.focus();
+        }, 50);
       }
     }
+
+    function ocrTextChange() {
+      const txt = (document.getElementById('ocr-text-input').value || '').trim();
+      const btn = document.getElementById('ocr-read-text-btn');
+      if (!btn) return;
+      if (txt.length > 5) {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+      } else {
+        btn.style.opacity = '0.5';
+        btn.style.pointerEvents = 'none';
+      }
+    }
+
+    function ocrLerTexto() {
+      const txt = (document.getElementById('ocr-text-input').value || '').trim();
+      if (!txt) { toast('⚠️ Digite ou cole um endereço primeiro.'); return; }
+
+      document.getElementById('ocr-status-container').style.display = 'flex';
+      document.getElementById('ocr-status-text').textContent = 'Analisando texto...';
+      document.getElementById('ocr-result-container').style.display = 'none';
+      document.getElementById('ocr-confirm-btn').style.display = 'none';
+
+      // Processar o texto (sem OCR, direto no parser)
+      setTimeout(() => {
+        document.getElementById('ocr-raw-text').textContent = txt;
+        const parsed = extrairEnderecoDoTexto(txt);
+        document.getElementById('ocr-res-rua').value = parsed.rua;
+        document.getElementById('ocr-res-bairro').value = parsed.bairro;
+        document.getElementById('ocr-res-comp').value = parsed.comp;
+
+        document.getElementById('ocr-status-container').style.display = 'none';
+        document.getElementById('ocr-result-container').style.display = 'flex';
+        document.getElementById('ocr-confirm-btn').style.display = 'block';
+
+        if (parsed.rua || parsed.bairro) {
+          toast('✅ Endereço detectado no texto!');
+        } else {
+          toast('⚠️ Não identificamos endereço. Preencha manualmente.');
+        }
+      }, 300);
+    }
+
 
     // Ctrl+V / clipboard paste quando modal está aberta
     document.addEventListener('paste', (ev) => {
       const modal = document.getElementById('modal-ocr');
       if (!modal || !modal.classList.contains('open')) return;
+
       const items = ev.clipboardData ? ev.clipboardData.items : [];
+      let foundImage = false;
+
       for (let i = 0; i < items.length; i++) {
         if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
+          foundImage = true;
+          // Flash visual na zona de colagem
+          const zone = document.getElementById('ocr-paste-zone');
+          if (zone) {
+            zone.style.animation = 'ocrFlash 0.6s ease';
+            zone.style.borderColor = '#10b981';
+            setTimeout(() => {
+              zone.style.animation = '';
+              zone.style.borderColor = 'var(--primary)';
+            }, 700);
+          }
+          // Mudar para aba de imagem se estiver em outra
+          ocrMudarAba('img');
           processarImagemOCR(items[i].getAsFile());
           break;
         }
       }
+
+      // Se não achou imagem, tentar texto
+      if (!foundImage) {
+        const textData = ev.clipboardData.getData('text/plain') || '';
+        if (textData.length > 3) {
+          // Mudar para aba de texto e preencher
+          ocrMudarAba('txt');
+          const ti = document.getElementById('ocr-text-input');
+          if (ti) {
+            ti.value = textData;
+            ocrTextChange();
+            // Auto-processar se parecer endereço
+            const temRua = /\b(rua|av\.|avenida|travessa|alameda|estrada)\b/i.test(textData);
+            if (temRua) {
+              setTimeout(() => ocrLerTexto(), 300);
+            } else {
+              toast('📝 Texto colado! Clique em "Detectar Endereço".');
+            }
+          }
+        }
+      }
     });
+
 
     function _ocrSetStatus(msg) {
       document.getElementById('ocr-status-text').textContent = msg;
