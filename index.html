@@ -3918,6 +3918,24 @@
         const pz = document.getElementById('ocr-paste-zone');
         if (pz) pz.focus();
       }, 150);
+
+      // ★ PRÉ-CARREGA TESSERACT SILENCIOSAMENTE ao abrir modal
+      // (não bloqueia, não mostra status — só baixa em background)
+      if (typeof Tesseract === 'undefined' && !_ocrLoadingScript) {
+        _ocrLoadingScript = true;
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js';
+        s.onload = () => { _ocrScriptLoaded = true; _ocrLoadingScript = false; };
+        s.onerror = () => {
+          _ocrLoadingScript = false;
+          // Tentar CDN alternativa (unpkg)
+          const s2 = document.createElement('script');
+          s2.src = 'https://unpkg.com/tesseract.js@4/dist/tesseract.min.js';
+          s2.onload = () => { _ocrScriptLoaded = true; };
+          document.head.appendChild(s2);
+        };
+        document.head.appendChild(s);
+      }
     }
 
     function ocrMudarAba(aba) {
@@ -4052,36 +4070,70 @@
       document.getElementById('ocr-status-container').style.display = 'flex';
     }
 
+    // ── Carregamento do Tesseract com CDN principal + fallback ───────────────
+    const _OCR_CDNS = [
+      'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js',
+      'https://unpkg.com/tesseract.js@4/dist/tesseract.min.js'
+    ];
+
     function _carregarTesseract(callback) {
       if (typeof Tesseract !== 'undefined') { callback(); return; }
       if (_ocrLoadingScript) {
+        // Já está carregando — aguardar (máx 30s)
+        let waited = 0;
         const t = setInterval(() => {
+          waited += 300;
           if (typeof Tesseract !== 'undefined') { clearInterval(t); callback(); }
+          else if (waited > 30000) {
+            clearInterval(t);
+            _ocrFallbackManual('Tempo esgotado ao carregar o leitor OCR.');
+          }
         }, 300);
         return;
       }
+      _ocrCarregarComRetry(0, callback);
+    }
+
+    function _ocrCarregarComRetry(idx, callback) {
+      if (idx >= _OCR_CDNS.length) {
+        _ocrFallbackManual('Não foi possível carregar o leitor OCR. Verifique sua internet.');
+        return;
+      }
       _ocrLoadingScript = true;
-      _ocrSetStatus('Carregando leitor de imagem... (aguarde)');
+      _ocrSetStatus(`Carregando leitor (${idx === 0 ? 'CDN principal' : 'CDN alternativa'})...`);
       const s = document.createElement('script');
-      // Tesseract.js v4 - API mais estável e compatível
-      s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js';
-      s.onload = () => { _ocrScriptLoaded = true; _ocrLoadingScript = false; callback(); };
+      s.src = _OCR_CDNS[idx];
+      s.onload = () => {
+        _ocrScriptLoaded = true;
+        _ocrLoadingScript = false;
+        _ocrSetStatus('Leitor carregado! Preparando...');
+        callback();
+      };
       s.onerror = () => {
         _ocrLoadingScript = false;
-        document.getElementById('ocr-status-container').style.display = 'none';
-        toast('❌ Falha ao carregar leitor OCR. Verifique sua conexão com a internet.');
+        console.warn('[OCR] CDN falhou:', _OCR_CDNS[idx], '— tentando próxima...');
+        _ocrCarregarComRetry(idx + 1, callback);
       };
       document.head.appendChild(s);
+    }
+
+    function _ocrFallbackManual(motivo) {
+      document.getElementById('ocr-status-container').style.display = 'none';
+      // Mostrar campos para preenchimento manual mesmo sem OCR
+      document.getElementById('ocr-result-container').style.display = 'flex';
+      document.getElementById('ocr-confirm-btn').style.display = 'block';
+      document.getElementById('ocr-raw-text').textContent = '(OCR indisponível: ' + motivo + ')';
+      toast('⚠️ OCR indisponível. Preencha o endereço manualmente nos campos abaixo.');
     }
 
     async function processarImagemOCR(file) {
       if (!file) return;
       if (!file.type.startsWith('image/')) {
-        toast('⚠️ Selecione apenas arquivos de imagem (PNG, JPG).');
+        toast('⚠️ Selecione apenas arquivos de imagem (PNG, JPG, JPEG).');
         return;
       }
 
-      // Mostrar preview imediatamente
+      // ── 1. Preview imediato da imagem ────────────────────────────────────────
       const previewImg = document.getElementById('ocr-preview-img');
       const reader = new FileReader();
       reader.onload = (ev) => {
@@ -4092,44 +4144,80 @@
 
       document.getElementById('ocr-result-container').style.display = 'none';
       document.getElementById('ocr-confirm-btn').style.display = 'none';
-      _ocrSetStatus('Iniciando leitura...');
+      _ocrSetStatus('Preparando leitura...');
 
+      // ── 2. Carregar Tesseract (com retry) ───────────────────────────────────
       _carregarTesseract(async () => {
+        let worker = null;
         try {
-          _ocrSetStatus('Criando leitor de texto...');
-          // Tesseract.js v4 API
-          const worker = await Tesseract.createWorker({
-            logger: m => {
+          // ── 3. Criar worker (Tesseract v4 API correta) ──────────────────────
+          _ocrSetStatus('Iniciando leitor de texto...');
+          worker = await Tesseract.createWorker({
+            logger: (m) => {
+              if (!m || !m.status) return;
               if (m.status === 'recognizing text') {
-                _ocrSetStatus(`Lendo imagem... ${Math.round(m.progress * 100)}%`);
-              } else if (m.status && m.status.length > 0) {
-                _ocrSetStatus(m.status.includes('load') ? 'Carregando dados de idioma...' : m.status);
+                const pct = Math.round((m.progress || 0) * 100);
+                _ocrSetStatus(`🔍 Lendo imagem... ${pct}%`);
+              } else if (m.status.includes('loading tesseract')) {
+                _ocrSetStatus('Carregando motor OCR...');
+              } else if (m.status.includes('loading language')) {
+                _ocrSetStatus('Carregando idioma (português)...');
+              } else if (m.status.includes('initializing')) {
+                _ocrSetStatus('Inicializando...');
               }
             }
           });
+
+          // ── 4. Carregar idioma português ────────────────────────────────────
+          _ocrSetStatus('Carregando dados do idioma...');
           await worker.loadLanguage('por');
+
+          // ── 5. Inicializar com português ────────────────────────────────────
+          _ocrSetStatus('Configurando idioma...');
           await worker.initialize('por');
-          const { data: { text } } = await worker.recognize(file);
+
+          // ── 6. Reconhecer texto na imagem ───────────────────────────────────
+          _ocrSetStatus('🔍 Lendo imagem...');
+          const result = await worker.recognize(file);
+          const text = result && result.data ? (result.data.text || '') : '';
+
+          // ── 7. Liberar worker ────────────────────────────────────────────────
           await worker.terminate();
+          worker = null;
 
+          // ── 8. Mostrar resultado ────────────────────────────────────────────
           document.getElementById('ocr-status-container').style.display = 'none';
-          document.getElementById('ocr-raw-text').textContent = text || '(nenhum texto detectado)';
+          document.getElementById('ocr-raw-text').textContent = text || '(nenhum texto detectado na imagem)';
 
-          const parsed = extrairEnderecoDoTexto(text || '');
+          if (!text.trim()) {
+            toast('⚠️ Nenhum texto detectado. Tente uma imagem mais clara ou preencha manualmente.');
+            document.getElementById('ocr-result-container').style.display = 'flex';
+            document.getElementById('ocr-confirm-btn').style.display = 'block';
+            return;
+          }
+
+          // ── 9. Parser de endereço ────────────────────────────────────────────
+          const parsed = extrairEnderecoDoTexto(text);
           document.getElementById('ocr-res-rua').value = parsed.rua;
           document.getElementById('ocr-res-bairro').value = parsed.bairro;
           document.getElementById('ocr-res-comp').value = parsed.comp;
 
           document.getElementById('ocr-result-container').style.display = 'flex';
           document.getElementById('ocr-confirm-btn').style.display = 'block';
-          toast('✅ Imagem lida com sucesso!');
+
+          if (parsed.rua || parsed.bairro) {
+            toast('✅ Endereço detectado! Revise e confirme.');
+          } else {
+            toast('⚠️ Texto lido mas endereço não identificado. Revise os campos.');
+          }
+
         } catch (err) {
-          console.error('[OCR error]', err);
+          console.error('[OCR] Erro no processamento:', err);
+          if (worker) { try { await worker.terminate(); } catch(e) {} }
           document.getElementById('ocr-status-container').style.display = 'none';
-          // Mostrar campos mesmo com erro para preenchimento manual
           document.getElementById('ocr-result-container').style.display = 'flex';
           document.getElementById('ocr-confirm-btn').style.display = 'block';
-          toast('⚠️ Erro na leitura automática. Preencha os campos manualmente.');
+          toast('⚠️ Erro ao ler imagem. Preencha os campos manualmente ou tente outra imagem.');
         }
       });
     }
