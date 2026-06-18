@@ -1545,6 +1545,19 @@
           <label for="obs">Observações (opcional)</label>
           <textarea id="obs" placeholder="Ex: Aguardar confirmação do cliente, produto frágil..."></textarea>
         </div>
+
+        <div class="field" style="margin-top:14px">
+          <div class="toggle-row">
+            <label class="toggle">
+              <input type="checkbox" id="incluir-link-motoboy">
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label" style="display:flex; flex-direction:column; gap:2px;">
+              <span>📲 Mandar link para o Moto Boy</span>
+              <span style="font-size:11px; color:var(--text-muted); font-weight:400;">Inclui link de confirmação na mensagem do WhatsApp</span>
+            </span>
+          </div>
+        </div>
       </div>
 
       <!-- PRÉVIA ESTILO WHATSAPP -->
@@ -2670,8 +2683,9 @@
       msg += '🔄 *Tem retorno?* ' + (retorno ? 'Sim' : 'Não');
       if (obs) msg += '\n💬 *Obs:* ' + obs;
 
-      // Acrescentar link do motoboy ao final da mensagem (se já salvo)
-      if (dbId) {
+      // Acrescentar link do motoboy ao final da mensagem (somente se checkbox marcado)
+      const incluirLink = document.getElementById('incluir-link-motoboy');
+      if (dbId && incluirLink && incluirLink.checked) {
         try {
           const link = await obterLinkConfirmacao(dbId);
           msg += '\n\n――――――――――――――――――――';
@@ -5486,6 +5500,10 @@
       resetCurrentOrderState();
       gerarPreview();
       agendarAutoSave();
+    });
+
+    document.getElementById('incluir-link-motoboy').addEventListener('change', () => {
+      gerarPreview();
     });
 
     // ─── INIT ────────────────────────────────────────────────────────────────────
