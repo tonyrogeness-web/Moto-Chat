@@ -5,6 +5,7 @@
     { "src": "/api/orders",   "dest": "/api/orders.js"   },
     { "src": "/api/accept",   "dest": "/api/accept.js"   },
     { "src": "/api/motoboy-report", "dest": "/api/motoboy-report.js" },
+    { "src": "/api/_utils",   "status": 404, "headers": { "x-blocked": "internal" } },
     { "src": "/(.*)",         "dest": "/index.html"      }
   ]
 }

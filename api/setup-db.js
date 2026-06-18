@@ -1,10 +1,14 @@
 const pool = require('./db');
 
 module.exports = async (req, res) => {
+  const secret = req.headers['x-setup-secret'] || req.query.secret;
+  if (!process.env.SETUP_SECRET || secret !== process.env.SETUP_SECRET) {
+    return res.status(403).json({ error: 'Não autorizado. Informe o header x-setup-secret correto.' });
+  }
+
   try {
     const client = await pool.connect();
-    
-    // Create Table Schema
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS entregas (
         id SERIAL PRIMARY KEY,
@@ -23,10 +27,9 @@ module.exports = async (req, res) => {
         accepted_at TIMESTAMP WITH TIME ZONE,
         completed_at TIMESTAMP WITH TIME ZONE
       );
-      -- add tags column to existing tables that don't have it
       ALTER TABLE entregas ADD COLUMN IF NOT EXISTS tags JSONB DEFAULT '[]';
     `);
-    
+
     client.release();
     res.status(200).json({ success: true, message: 'Tabela entregas configurada com sucesso!' });
   } catch (error) {

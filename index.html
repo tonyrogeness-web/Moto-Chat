@@ -2062,6 +2062,34 @@
 
     function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
+    // ─── SEGURANÇA: ESCAPE HTML ───────────────────────────────────────────────────
+    function escapeHtml(str) {
+      if (!str && str !== 0) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // ─── SEGURANÇA: DECODE BASE64 UTF-8 SEGURO ───────────────────────────────────
+    function safeBase64Decode(b64) {
+      try {
+        const bytes = Uint8Array.from(atob(decodeURIComponent(b64)), c => c.charCodeAt(0));
+        return JSON.parse(new TextDecoder().decode(bytes));
+      } catch (e) {
+        console.warn('safeBase64Decode falhou:', e);
+        return null;
+      }
+    }
+
+    // ─── API KEY HEADER ───────────────────────────────────────────────────────────
+    const _apiHeaders = () => {
+      const h = { 'Content-Type': 'application/json' };
+      return h;
+    };
+
     // ─── AUDIO SYNTHESIZER ────────────────────────────────────────────────────────
     let audioCtx = null;
     function playSound(type) {
@@ -3055,7 +3083,7 @@
         msg += `\n💰 *Total das corridas:* R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n`;
       }
       msg += `🔄 *Tem retorno?* ${item.retorno ? 'Sim' : 'Não'}`;
-      if (item.obs) msg += `\n💬 *Obs:* ${item.obs}`;
+      if (item.obs) msg += `\n💬 *Obs:* ${escapeHtml(item.obs)}`;
       
       return msg.trimEnd();
     }
@@ -3287,7 +3315,7 @@
       });
       msg += `\n💰 *Total:* R$ ${Number(order.valor_total).toFixed(2).replace('.', ',')}\n`;
       msg += `🔄 Retorno: ${order.retorno ? 'Sim' : 'Não'}`;
-      if (order.obs) msg += `\n💬 Obs: ${order.obs}`;
+      if (order.obs) msg += `\n💬 Obs: ${escapeHtml(order.obs)}`;
       
       window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`, '_blank');
       playSound('success');
@@ -3340,7 +3368,7 @@
             <div style="font-size:11px; color:var(--accent); font-weight:700;">⏳ ${daysLeft}d restantes</div>
           </div>
           <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">📍 ${info.rua}</div>
-          <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">🏢 ${item.coleta_nome || '—'} &nbsp;•&nbsp; 🕐 ${formatData}</div>
+          <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">🏢 ${escapeHtml(item.coleta_nome) || '—'} &nbsp;•&nbsp; 🕐 ${formatData}</div>
           <div style="font-size:11px; margin-bottom:8px;"><span style="font-size:10px; background:rgba(0,0,0,0.15); padding:2px 8px; border-radius:8px;">${statusLabels[item.status] || item.status}</span> &nbsp; R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}</div>
           <div style="display:flex; gap:6px;">
             <button onclick="restaurarDaLixeira('${item.id}')" style="flex:1; padding:7px; background:var(--primary-glow); border:1px solid var(--primary); border-radius:7px; color:var(--primary); font-size:12px; font-weight:700; cursor:pointer;">♻️ Restaurar</button>
@@ -3526,12 +3554,12 @@
               <div class="hist-valor">R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}</div>
             </div>
           </div>
-          <div class="hist-info" style="font-size:12px; color:var(--text-muted); margin-bottom:2px;">🏢 ${item.coleta_nome || 'Estabelecimento'}</div>
+          <div class="hist-info" style="font-size:12px; color:var(--text-muted); margin-bottom:2px;">🏢 ${escapeHtml(item.coleta_nome) || 'Estabelecimento'}</div>
           <div class="hist-info">📍 ${info.rua}</div>
           ${destHtml}
           ${motoboyInfo}
           <div class="hist-info" style="margin-top:8px;">🕐 ${formatData} &nbsp;•&nbsp; Retorno: ${item.retorno ? 'Sim' : 'Não'}</div>
-          ${item.obs ? `<div class="hist-obs">💬 ${item.obs}</div>` : ''}
+          ${item.obs ? `<div class="hist-obs">💬 ${escapeHtml(item.obs)}</div>` : ''}
           <div style="margin-top:8px;"><span class="badge ${badges[item.status]}">${labels[item.status]}</span></div>
           <div class="hist-actions">
             <button class="hist-btn hist-btn-aceito" onclick="updateStatus('${item.id}','aceito')">
@@ -4423,29 +4451,40 @@
 
     let dispatcherPollInterval = null;
     let _lastKnownStatuses = {};
+    let _pollVisibilityBound = false;
+
+    async function _executarPollDespachante() {
+      try {
+        const res = await fetch('/api/orders');
+        if (!res.ok) return;
+        const orders = await res.json();
+        let newAccepts = [];
+        orders.forEach(o => {
+          const prevStatus = _lastKnownStatuses[o.id];
+          if (prevStatus === 'pendente' && (o.status === 'concluido' || o.status === 'aceito')) {
+            newAccepts.push(o);
+          }
+        });
+        _lastKnownStatuses = {};
+        orders.forEach(o => { _lastKnownStatuses[o.id] = o.status; });
+        state.historico = orders;
+        save('mc_historico', state.historico);
+        renderHistorico();
+        if (newAccepts.length > 0) mostrarNotificacaoAceite(newAccepts);
+      } catch (e) {}
+    }
 
     function iniciarPollingDespachante() {
       if (dispatcherPollInterval) clearInterval(dispatcherPollInterval);
-      dispatcherPollInterval = setInterval(async () => {
-        try {
-          const res = await fetch('/api/orders');
-          if (!res.ok) return;
-          const orders = await res.json();
-          let newAccepts = [];
-          orders.forEach(o => {
-            const prevStatus = _lastKnownStatuses[o.id];
-            if (prevStatus === 'pendente' && (o.status === 'concluido' || o.status === 'aceito')) {
-              newAccepts.push(o);
-            }
-          });
-          _lastKnownStatuses = {};
-          orders.forEach(o => { _lastKnownStatuses[o.id] = o.status; });
-          state.historico = orders;
-          save('mc_historico', state.historico);
-          renderHistorico();
-          if (newAccepts.length > 0) mostrarNotificacaoAceite(newAccepts);
-        } catch (e) {}
-      }, 12000);
+      const intervalo = document.visibilityState === 'visible' ? 12000 : 60000;
+      dispatcherPollInterval = setInterval(_executarPollDespachante, intervalo);
+      if (!_pollVisibilityBound) {
+        _pollVisibilityBound = true;
+        document.addEventListener('visibilitychange', () => {
+          iniciarPollingDespachante();
+          if (document.visibilityState === 'visible') _executarPollDespachante();
+        });
+      }
     }
 
     async function carregarDetalhesCorrida(orderId) {
@@ -4499,8 +4538,8 @@
           acceptFormCard.innerHTML = `
             <div class="card-title" style="color:#10b981;">✅ Corrida Confirmada!</div>
             <div style="font-size:13.5px; margin-bottom:16px; line-height:1.5;">
-              Confirmada por: <b>${order.motoboy_nome}</b><br>
-              WhatsApp: ${order.motoboy_telefone}
+              Confirmada por: <b>${escapeHtml(order.motoboy_nome)}</b><br>
+              WhatsApp: ${escapeHtml(order.motoboy_telefone)}
             </div>
             <button class="btn btn-green" onclick="finalizarCorridaMotoboy('${order.id}')" style="background:var(--primary); border-color:var(--primary); font-size:16px; padding:14px; margin-top:8px;">
               🏁 Marcar como Concluída
@@ -4515,7 +4554,7 @@
               <div style="font-size:52px; margin-bottom:6px;">\ud83c\udf89</div>
               <div style="font-size:19px; font-weight:900; color:#3b82f6; margin-bottom:4px;">\ud83c\udfc1 Corrida Conclu\u00edda!</div>
               <div style="font-size:13px; color:var(--text-muted); line-height:1.7;">
-                Por: <b style="color:var(--text-main);">${order.motoboy_nome || 'Entregador'}</b><br>
+                Por: <b style="color:var(--text-main);">${escapeHtml(order.motoboy_nome) || 'Entregador'}</b><br>
                 WhatsApp: ${order.motoboy_telefone || '\u2014'}<br>
                 ${order.completed_at ? `<span style="font-size:11px;">\ud83d\udd50 ${new Date(order.completed_at).toLocaleString('pt-BR')}</span>` : ''}
               </div>
@@ -4558,7 +4597,7 @@
       
       if (dataParam) {
         try {
-          const raw = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(dataParam)))));
+          const raw = safeBase64Decode(dataParam);
           let order = raw.cn !== undefined ? { id: orderId, status: raw.st || 'pendente', coleta_nome: raw.cn, coleta_endereco: raw.ce, coleta_complemento: raw.cc, valor_total: raw.vt, retorno: !!raw.rt, obs: raw.ob, destinos: (raw.d || []).map(dest => ({ rua: dest.r, bairro: dest.b, valor: dest.v, comp: dest.c })) } : { ...raw, id: orderId, status: raw.st || raw.status || 'pendente' };
           renderDetalhesCorridaHtml(order);
           preencherForm(order);
@@ -4594,7 +4633,7 @@
       const formatData = createdAt.toLocaleString('pt-BR');
       
       let statusBadgeClass = 'badge-pendente', statusLabel = 'Pendente';
-      if (order.status === 'aceito') { statusBadgeClass = 'badge-aceito'; statusLabel = `Aceita por ${order.motoboy_nome}`; }
+      if (order.status === 'aceito') { statusBadgeClass = 'badge-aceito'; statusLabel = `Aceita por ${escapeHtml(order.motoboy_nome)}`; }
       else if (order.status === 'concluido') { statusBadgeClass = 'badge-concluido'; statusLabel = 'Corrida Aceita'; }
       else if (order.status === 'cancelado') { statusBadgeClass = 'badge-cancelado'; statusLabel = 'Cancelada'; }
       
@@ -4626,9 +4665,9 @@
         </div>
         <div style="background: var(--bg-input); padding: 12px; border-radius: 10px; margin-bottom: 16px; border: 1px solid var(--border-color);">
           <div style="font-size: 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">🏢 Ponto de Coleta</div>
-          <div style="font-weight: 800; font-size: 15px; color: var(--primary); margin-top: 4px;">${order.coleta_nome || '—'}</div>
-          <div style="font-size: 13px; color: var(--text-main); margin-top: 2px;">${order.coleta_endereco || ''}</div>
-          ${order.coleta_complemento ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">ℹ️ ${order.coleta_complemento}</div>` : ''}
+          <div style="font-weight: 800; font-size: 15px; color: var(--primary); margin-top: 4px;">${escapeHtml(order.coleta_nome) || '—'}</div>
+          <div style="font-size: 13px; color: var(--text-main); margin-top: 2px;">${escapeHtml(order.coleta_endereco) || ''}</div>
+          ${order.coleta_complemento ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">ℹ️ ${escapeHtml(order.coleta_complemento)}</div>` : ''}
           ${coletaMapsUrl ? `
           <div style="margin-top: 10px;">
             <a href="${coletaMapsUrl}" target="_blank" style="display:inline-flex; align-items:center; gap:5px; font-size:12px; color:#fff; font-weight:700; text-decoration:none; background:#10b981; padding:6px 14px; border-radius:20px; box-shadow: 0 2px 8px rgba(16,185,129,0.3);">🗺️ Ver coleta no mapa</a>
@@ -4646,7 +4685,7 @@
         <div style="margin-top: 10px; font-size: 13px; color: var(--text-muted);">
           🔄 <b>Retorno?</b> ${order.retorno ? 'Sim' : 'Não'}
         </div>
-        ${order.obs ? `<div class="hist-obs" style="margin-top: 10px;">💬 <b>Obs:</b> ${order.obs}</div>` : ''}
+        ${order.obs ? `<div class="hist-obs" style="margin-top: 10px;">💬 <b>Obs:</b> ${escapeHtml(order.obs)}</div>` : ''}
       `;
     }
 
@@ -4728,7 +4767,7 @@
       
       if (idx === -1 && dataParam) {
         try {
-          const raw = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(dataParam)))));
+          const raw = safeBase64Decode(dataParam);
           let order;
           if (raw.cn !== undefined) {
             order = {
@@ -4838,7 +4877,7 @@
         const dataParam = new URLSearchParams(window.location.search).get('data');
         if (dataParam) {
           try {
-            const order = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(dataParam)))));
+            const order = safeBase64Decode(dataParam);
             order.id = orderId;
             order.status = 'concluido';
             order.completed_at = new Date().toISOString();
@@ -5083,7 +5122,7 @@
         }
         
         summaryEl.innerHTML = `
-          <div><b>🏢 Coleta:</b> ${order.coleta_nome}</div>
+          <div><b>🏢 Coleta:</b> ${escapeHtml(order.coleta_nome)}</div>
           <div style="margin-top: 4px;"><b>🗺️ Destino(s):</b><br>${destText}</div>
           <div style="margin-top: 4px; display:flex; justify-content:space-between; font-weight:800; color:var(--primary);">
             <span>💵 Valor Total:</span>
@@ -5278,7 +5317,7 @@
       
       msg += `\n💵 *Valor total:* R$ ${Number(order.valor_total).toFixed(2).replace('.', ',')}\n`;
       msg += `🔄 *Tem retorno?* ${order.retorno ? 'Sim' : 'Não'}`;
-      if (order.obs) msg += `\n💬 *Obs:* ${order.obs}`;
+      if (order.obs) msg += `\n💬 *Obs:* ${escapeHtml(order.obs)}`;
       
       const waUrl = `https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`;
       window.open(waUrl, '_blank');

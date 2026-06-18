@@ -1,0 +1,7 @@
+.env
+.env.local
+.env.production
+mock-db.json
+node_modules/
+.vercel/
+*.log
