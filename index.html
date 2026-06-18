@@ -2820,30 +2820,29 @@
 
     async function obterLinkConfirmacao(dbId) {
       if (!dbId) return '';
-      const isLocal = String(dbId).startsWith('local_');
       let link = `${window.location.origin}${window.location.pathname}?aceitar=true&id=${dbId}`;
       
-      if (isLocal) {
-        const order = state.historico.find(h => String(h.id) === String(dbId));
-        if (order) {
-          const mini = {
-            cn: order.coleta_nome,
-            ce: order.coleta_endereco || '',
-            cc: order.coleta_complemento || '',
-            vt: order.valor_total,
-            rt: order.retorno ? 1 : 0,
-            ob: order.obs || '',
-            d: (order.destinos || []).map(dest => ({
-              r: dest.rua,
-              b: dest.bairro,
-              v: dest.valor,
-              c: dest.comp || ''
-            }))
-          };
-          const orderJson = JSON.stringify(mini);
-          const base64Data = btoa(unescape(encodeURIComponent(orderJson)));
-          link += `&data=${encodeURIComponent(base64Data)}`;
-        }
+      // Sempre embute os dados da corrida no link (funciona mesmo sem banco)
+      const order = state.historico.find(h => String(h.id) === String(dbId));
+      if (order) {
+        const mini = {
+          cn: order.coleta_nome,
+          ce: order.coleta_endereco || '',
+          cc: order.coleta_complemento || '',
+          vt: order.valor_total,
+          rt: order.retorno ? 1 : 0,
+          ob: order.obs || '',
+          st: order.status || 'pendente',
+          d: (order.destinos || []).map(dest => ({
+            r: dest.rua,
+            b: dest.bairro,
+            v: dest.valor,
+            c: dest.comp || ''
+          }))
+        };
+        const orderJson = JSON.stringify(mini);
+        const base64Data = btoa(unescape(encodeURIComponent(orderJson)));
+        link += `&data=${encodeURIComponent(base64Data)}`;
       }
       
       return link;
@@ -4463,14 +4462,9 @@
         if (!acceptFormCard) return;
         acceptFormCard.style.display = 'block';
 
-        // Ocultar detalhes da corrida se já estiver concluída (Opção A)
         const orderCard = document.getElementById('accept-order-card');
         if (orderCard) {
-          if (order.status === 'concluido') {
-            orderCard.style.display = 'none';
-          } else {
-            orderCard.style.display = 'block';
-          }
+          orderCard.style.display = (order.status === 'concluido') ? 'none' : 'block';
         }
 
         if (order.status === 'pendente') {
@@ -4562,19 +4556,35 @@
       if (dataParam) {
         try {
           const raw = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(dataParam)))));
-          let order = raw.cn !== undefined ? { id: orderId, status: 'pendente', coleta_nome: raw.cn, coleta_endereco: raw.ce, coleta_complemento: raw.cc, valor_total: raw.vt, retorno: !!raw.rt, obs: raw.ob, destinos: (raw.d || []).map(dest => ({ rua: dest.r, bairro: dest.b, valor: dest.v, comp: dest.c })) } : { ...raw, id: orderId, status: raw.status || 'pendente' };
+          let order = raw.cn !== undefined ? { id: orderId, status: raw.st || 'pendente', coleta_nome: raw.cn, coleta_endereco: raw.ce, coleta_complemento: raw.cc, valor_total: raw.vt, retorno: !!raw.rt, obs: raw.ob, destinos: (raw.d || []).map(dest => ({ rua: dest.r, bairro: dest.b, valor: dest.v, comp: dest.c })) } : { ...raw, id: orderId, status: raw.st || raw.status || 'pendente' };
           renderDetalhesCorridaHtml(order);
           preencherForm(order);
           return;
         } catch(e) { console.warn(e); }
       }
 
+      // Último recurso: localStorage do despachante (mesmo dispositivo)
       const localHistory = JSON.parse(localStorage.getItem('mc_historico') || '[]');
-      const order = localHistory.find(h => String(h.id) === String(orderId));
-      if (order) {
-        renderDetalhesCorridaHtml(order);
-        preencherForm(order);
+      const localOrder = localHistory.find(h => String(h.id) === String(orderId));
+      if (localOrder) {
+        renderDetalhesCorridaHtml(localOrder);
+        preencherForm(localOrder);
         return;
+      }
+
+      // Nada encontrado — mostrar erro claro ao motoboy
+      const card = document.getElementById('accept-order-card');
+      if (card) {
+        card.innerHTML = `
+          <div style="text-align:center; padding:24px 16px;">
+            <div style="font-size:48px; margin-bottom:12px;">⚠️</div>
+            <div style="font-size:17px; font-weight:800; color:var(--accent); margin-bottom:8px;">Corrida não encontrada</div>
+            <div style="font-size:13px; color:var(--text-muted); line-height:1.6;">
+              Esta corrida pode ter expirado ou o link está incorreto.<br>
+              Peça ao despachante um novo link.
+            </div>
+          </div>
+        `;
       }
     }
 
