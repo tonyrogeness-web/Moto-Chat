@@ -3456,8 +3456,8 @@
           badge.style.cssText = 'width:8px;height:8px;background:#ef4444;border-radius:50%;display:inline-block;margin-left:4px;animation:livePulse 1s infinite;';
           tabBadge.appendChild(badge);
         }
-        if (!_pendingAlertTimer) {
-          _pendingAlertTimer = setTimeout(() => { playSound('warning'); _pendingAlertTimer = null; }, 1000);
+        if (!verificarPendentesAlerta._timer) {
+          verificarPendentesAlerta._timer = setTimeout(() => { playSound('warning'); verificarPendentesAlerta._timer = null; }, 1000);
         }
       } else {
         tabBadge?.querySelector('.overdue-alert')?.remove();

@@ -6,8 +6,9 @@ module.exports = async (req, res) => {
     return res.status(403).json({ error: 'Não autorizado. Informe o header x-setup-secret correto.' });
   }
 
+  let client;
   try {
-    const client = await pool.connect();
+    client = await pool.connect();
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS entregas (
@@ -30,10 +31,19 @@ module.exports = async (req, res) => {
       ALTER TABLE entregas ADD COLUMN IF NOT EXISTS tags JSONB DEFAULT '[]';
     `);
 
-    client.release();
     res.status(200).json({ success: true, message: 'Tabela entregas configurada com sucesso!' });
   } catch (error) {
     console.error('Database setup error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      hint: error.message.includes('channel_binding')
+        ? 'Remova channel_binding=require da DATABASE_URL ou use a connection string sem pooling.'
+        : error.message.includes('SSL')
+        ? 'Erro SSL. Verifique se a DATABASE_URL contém ?sslmode=require'
+        : 'Verifique se DATABASE_URL está correta nas Environment Variables da Vercel.'
+    });
+  } finally {
+    if (client) client.release();
   }
 };

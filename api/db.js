@@ -5,11 +5,18 @@ const path = require('path');
 let pool;
 
 if (process.env.DATABASE_URL) {
+  // Neon usa channel_binding=require na connection string de pooling
+  // A lib pg não suporta esse parâmetro nativamente — removemos e configuramos SSL manualmente
+  const connStr = process.env.DATABASE_URL
+    .replace(/[?&]channel_binding=require/g, '')
+    .replace(/[?&]channel_binding=[^&]*/g, '');
+
   pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false
-    }
+    connectionString: connStr,
+    ssl: { rejectUnauthorized: false },
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
   });
 } else {
   const isProduction = process.env.VERCEL || process.env.NODE_ENV === 'production';
