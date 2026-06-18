@@ -2872,32 +2872,7 @@
 
     async function obterLinkConfirmacao(dbId) {
       if (!dbId) return '';
-      let link = `${window.location.origin}${window.location.pathname}?aceitar=true&id=${dbId}`;
-      
-      // Embute dados da corrida no link (funciona mesmo sem banco)
-      const order = state.historico.find(h => String(h.id) === String(dbId));
-      if (order) {
-        const mini = {
-          cn: order.coleta_nome,
-          ce: order.coleta_endereco || '',
-          cc: order.coleta_complemento || '',
-          vt: order.valor_total,
-          rt: order.retorno ? 1 : 0,
-          ob: order.obs || '',
-          st: order.status || 'pendente',
-          d: (order.destinos || []).map(dest => ({
-            r: dest.rua,
-            b: dest.bairro,
-            v: dest.valor,
-            c: dest.comp || ''
-          }))
-        };
-        const orderJson = JSON.stringify(mini);
-        const base64Data = btoa(unescape(encodeURIComponent(orderJson)));
-        link += `&data=${encodeURIComponent(base64Data)}`;
-      }
-      
-      return link;
+      return `${window.location.origin}${window.location.pathname}?aceitar=true&id=${dbId}`;
     }
 
     async function copiarLinkConfirmacaoAtual() {
@@ -3339,8 +3314,12 @@
       });
       msg += `\n💰 *Total:* R$ ${Number(order.valor_total).toFixed(2).replace('.', ',')}\n`;
       msg += `🔄 Retorno: ${order.retorno ? 'Sim' : 'Não'}`;
-      if (order.obs) msg += `\n💬 Obs: ${escapeHtml(order.obs)}`;
-      
+      if (order.obs) msg += `\n💬 Obs: ${order.obs}`;
+
+      const link = `${window.location.origin}${window.location.pathname}?aceitar=true&id=${order.id}`;
+      msg += `\n\n――――――――――――――――――――`;
+      msg += `\n📲 Confirme a corrida no link abaixo:\n${link}`;
+
       window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`, '_blank');
       playSound('success');
     }
@@ -4603,48 +4582,7 @@
         }
       };
 
-      // PRIORIDADE 1: ?data= embutido no link — sempre disponível em qualquer aparelho
-      if (dataParam) {
-        try {
-          const raw = safeBase64Decode(dataParam);
-          if (raw) {
-            let orderFromData = raw.cn !== undefined
-              ? {
-                  id: orderId,
-                  status: raw.st || 'pendente',
-                  coleta_nome: raw.cn,
-                  coleta_endereco: raw.ce,
-                  coleta_complemento: raw.cc,
-                  valor_total: raw.vt,
-                  retorno: !!raw.rt,
-                  obs: raw.ob,
-                  destinos: (raw.d || []).map(dest => ({ rua: dest.r, bairro: dest.b, valor: dest.v, comp: dest.c }))
-                }
-              : { ...raw, id: orderId, status: raw.st || raw.status || 'pendente' };
-
-            renderDetalhesCorridaHtml(orderFromData);
-            preencherForm(orderFromData);
-
-            // Em paralelo, busca status atualizado da API para refletir se já foi aceita
-            const isLocalId = String(orderId).startsWith('local_');
-            if (!isLocalId) {
-              fetch(`/api/orders?id=${orderId}`)
-                .then(r => r.ok ? r.json() : [])
-                .then(orders => {
-                  if (orders.length > 0) {
-                    const fresh = orders[0];
-                    renderDetalhesCorridaHtml(fresh);
-                    preencherForm(fresh);
-                  }
-                })
-                .catch(() => {});
-            }
-            return;
-          }
-        } catch(e) { console.warn('Erro ao decodificar ?data=:', e); }
-      }
-
-      // PRIORIDADE 2: busca na API pelo ID (aparelho sem ?data= ou link antigo)
+      // PRIORIDADE 1: busca na API pelo ID — fonte principal e confiável
       const isLocalId = String(orderId).startsWith('local_');
       if (!isLocalId) {
         try {
@@ -4652,16 +4590,15 @@
           if (res.ok) {
             const orders = await res.json();
             if (orders.length > 0) {
-              const order = orders[0];
-              renderDetalhesCorridaHtml(order);
-              preencherForm(order);
+              renderDetalhesCorridaHtml(orders[0]);
+              preencherForm(orders[0]);
               return;
             }
           }
-        } catch (e) { console.warn(e); }
+        } catch (e) { console.warn('Erro ao buscar corrida na API:', e); }
       }
 
-      // PRIORIDADE 3: localStorage (mesmo aparelho do despachante)
+      // PRIORIDADE 2: localStorage (mesmo aparelho do despachante)
       const localHistory = JSON.parse(localStorage.getItem('mc_historico') || '[]');
       const order = localHistory.find(h => String(h.id) === String(orderId));
       if (order) {
@@ -4766,17 +4703,21 @@
       }
       
       const redirecionar = (whatsappMsg) => {
-        const url = `https://wa.me/?text=${encodeURIComponent(whatsappMsg)}`;
+        // Tenta usar o número do logista/grupo salvo pelo despachante
+        const numLogista = (localStorage.getItem('mc_numero') || '').replace(/\D/g, '');
+        const url = numLogista.length >= 10
+          ? `https://wa.me/${numLogista}?text=${encodeURIComponent(whatsappMsg)}`
+          : `https://wa.me/?text=${encodeURIComponent(whatsappMsg)}`;
         if (btn) {
           btn.disabled = false;
           btn.style.background = '#059669';
           btn.style.borderColor = '#059669';
-          btn.innerHTML = '💬 Notificar no WhatsApp';
+          btn.innerHTML = '💬 Avisar Logista no WhatsApp';
           btn.onclick = () => { window.open(url, '_blank'); };
         }
         const newWin = window.open(url, '_blank');
         if (!newWin) {
-          toast('⚠️ Redirecionamento bloqueado. Clique no botão de WhatsApp para notificar.');
+          toast('⚠️ Redirecionamento bloqueado. Clique no botão para avisar o logista.');
         }
       };
 
@@ -4797,7 +4738,15 @@
             
             carregarDetalhesCorrida(orderId);
             
-            const msg = `🏁 *CORRIDA CONCLUÍDA POR MOTOBOY!*\n\n🏍️ *Entregador:* ${nome}\n📞 *Contato:* ${telefone}\n📍 *Destino:* Rota para ${data.order.coleta_nome} (Valor R$ ${Number(data.order.valor_total).toFixed(2).replace('.', ',')})\n🆔 *ID:* ${orderId}`;
+            const o = data.order || {};
+            const destinos = o.destinos || [];
+            let msgDestinos = '';
+            if (destinos.length > 0) {
+              destinos.forEach((d, i) => {
+                msgDestinos += `\n📍 ${destinos.length > 1 ? `#${i+1}: ` : ''}${d.rua || ''} — ${d.bairro || ''} (R$ ${Number(d.valor||0).toFixed(2).replace('.', ',')})`;
+              });
+            }
+            const msg = `✅ *CORRIDA ACEITA!*\n\n🏍️ *Entregador:* ${nome}\n📞 *WhatsApp:* ${telefone}\n🏢 *Coleta:* ${o.coleta_nome || ''}${msgDestinos}\n💰 *Total:* R$ ${Number(o.valor_total||0).toFixed(2).replace('.', ',')}\n🔄 *Retorno:* ${o.retorno ? 'Sim' : 'Não'}${o.obs ? '\n💬 *Obs:* ' + o.obs : ''}\n🆔 *ID:* ${orderId}`;
             setTimeout(() => redirecionar(msg), 600);
             return;
           } else {
