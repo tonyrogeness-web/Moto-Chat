@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Moto-Chat: O gerador premium de mensagens de entrega para grupos do WhatsApp. Organize e envie solicitações de motoboys de forma rápida e eficiente.">
+  <meta name="theme-color" content="#10b981">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MotoChat">
+  <link rel="manifest" href="/manifest.json">
   <title>Moto-Chat • Gerador de Mensagem para WhatsApp</title>
   
   <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono for preview -->
@@ -1800,14 +1806,16 @@
         </div>
       </div>
 
-      <!-- LIMPAR HISTÓRICO -->
-      <div class="card" style="border-color: rgba(239, 68, 68, 0.2)">
-        <div class="card-title" style="color: var(--accent)">
-          <svg viewBox="0 0 24 24" style="fill: var(--accent)"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-          Limpeza de Dados
+      <!-- RESTAURAR CONFIGURAÇÕES -->
+      <div class="card" style="border-color: rgba(245,158,11,0.25)">
+        <div class="card-title" style="color:#d97706;">
+          <svg viewBox="0 0 24 24" style="fill:#d97706; width:18px; height:18px;"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+          Restaurar Configurações
         </div>
-        <p style="font-size:13px; color: var(--text-muted); margin-bottom:16px">Isso apagará permanentemente todos os registros salvos no histórico local.</p>
-        <button class="btn btn-red" onclick="limparHistorico()">Limpar Todo o Histórico</button>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Apaga apenas as configurações (bairros, áreas, motoboys, número do grupo) e restaura os padrões. O histórico de corridas é mantido.</p>
+        <button class="btn" onclick="restaurarConfiguracoes()" style="background:rgba(245,158,11,0.1); border:2px solid #d97706; color:#d97706; font-weight:800;">
+          ♻️ Restaurar Configurações
+        </button>
       </div>
 
     </div>
@@ -2972,7 +2980,8 @@
           <div style="font-size:48px; margin-bottom:12px;">&#x26A0;&#xFE0F;</div>
           <div style="font-size:17px; font-weight:900; color:#ef4444; margin-bottom:8px;">Limpar Hist&#243;rico?</div>
           <div style="font-size:13px; color:var(--text-muted); line-height:1.6; margin-bottom:20px;">
-            Isso ir&#225; apagar <b style="color:var(--text-main);">TODO</b> o hist&#243;rico de corridas, lixeira e dados salvos.<br>
+            Isso ir&#225; apagar o <b style="color:var(--text-main);">hist&#243;rico de corridas</b>, lixeira e favoritos.<br>
+            As <b>configura&#231;&#245;es</b> (bairros, motoboys, &#225;reas) <b style="color:#10b981;">ser&#227;o mantidas</b>.<br>
             <b style="color:#ef4444;">Esta a&#231;&#227;o n&#227;o pode ser desfeita!</b>
           </div>
           <div style="display:flex; gap:10px;">
@@ -3005,26 +3014,21 @@
 
       document.getElementById('limpar-confirm-btn').onclick = () => {
         // Clear all local storage keys
+        // Limpa apenas histórico, lixeira e favoritos — configurações são mantidas
         const keysToRemove = [
-          'mc_historico', 'mc_lixeira', 'mc_favoritos',
-          'mc_bairros', 'mc_areas', 'mc_coleta',
-          'mc_motoboys_frequentes', 'mc_numero_whatsapp',
-          'mc_form_draft', 'mc_tema', 'mc_motoboy_nome', 'mc_motoboy_telefone'
+          'mc_historico', 'mc_lixeira', 'mc_favoritos', 'mc_form_draft'
         ];
         keysToRemove.forEach(k => localStorage.removeItem(k));
 
-        // Also try to clear via API if available
+        // Limpar banco via API
         if (_apiAvailable) {
           fetch('/api/orders', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clearAll: true }) })
             .catch(() => {});
         }
 
-        // Reset in-memory state
+        // Reset in-memory state — mantém configurações
         state.historico = [];
-        state.bairros = [];
-        state.areas = [];
         state.destinos = [];
-        state.motoboysFrequentes = [];
         currentOrderState.saved = false;
         currentOrderState.id = null;
 
@@ -3806,6 +3810,25 @@
       renderHistorico(); 
       playSound('warning');
       toast('🗑️ Histórico local ocultado!');
+    }
+
+    function restaurarConfiguracoes() {
+      if (!confirm('Isso irá apagar bairros, áreas, motoboys cadastrados e número do grupo.\nO histórico de corridas será mantido.\n\nDeseja continuar?')) return;
+      const keysConfig = [
+        'mc_coletas', 'mc_coleta_ativa_id', 'mc_bairros',
+        'mc_areas', 'mc_motoboys_frequentes', 'mc_numero',
+        'mc_sound', 'mc_theme', 'mc_coleta'
+      ];
+      keysConfig.forEach(k => localStorage.removeItem(k));
+      state.coletas = [];
+      state.coletaAtivaId = null;
+      state.bairros = [];
+      state.areas = [];
+      state.motoboysFrequentes = [];
+      state.numero = '';
+      renderConfig();
+      toast('♻️ Configurações restauradas!');
+      playSound('success');
     }
 
     // ─── CONFIG ──────────────────────────────────────────────────────────────────
@@ -5565,11 +5588,15 @@
       gerarPreview();
       carregarHistoricoServidor();
       iniciarPollingDespachante();
-      // Auto-atualiza badges de cronômetro a cada 60s se a aba histórico estiver ativa
       setInterval(() => {
         const histTab = document.getElementById('sec-historico');
         if (histTab && histTab.style.display !== 'none') renderHistorico();
       }, 60000);
+
+      // Registrar Service Worker para instalação PWA
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      }
     }
   </script>
 </body>

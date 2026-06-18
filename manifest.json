@@ -1,0 +1,26 @@
+{
+  "name": "Moto-Chat",
+  "short_name": "MotoChat",
+  "description": "Sistema de despacho de corridas para motoboys",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#10b981",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='24' fill='%230f172a'/><path d='M160 96c0 35.35-28.65 64-64 64S32 131.35 32 96s28.65-64 64-64 64 28.65 64 64z' fill='%2310b981' opacity='.15'/><path d='M148 100l-16-28h-28V56h-16v16H68l-16 28H32v12h20l4 28h80l4-28h20v-12h-12zm-52 28c-8.84 0-16-7.16-16-16s7.16-16 16-16 16 7.16 16 16-7.16 16-16 16z' fill='%2310b981'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='64' fill='%230f172a'/><path d='M400 264l-44-76H280v-44h-44v44H168l-44 76H80v32h56l12 76h216l12-76h56v-32h-32zm-144 76c-24 0-44-20-44-44s20-44 44-44 44 20 44 44-20 44-44 44z' fill='%2310b981'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "pt-BR"
+}
