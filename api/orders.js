@@ -23,9 +23,22 @@ module.exports = async (req, res) => {
 
       if (id) {
         if (!/^\d+$/.test(String(id))) return res.status(200).json([]);
+        // Auto-completa corridas aceitas há mais de 1h20 antes de retornar
+        await pool.query(
+          `UPDATE entregas SET status='concluido', completed_at=CURRENT_TIMESTAMP
+           WHERE id=$1 AND status='aceito'
+           AND accepted_at < NOW() - INTERVAL '80 minutes'`,
+          [id]
+        ).catch(() => {});
         const { rows } = await pool.query('SELECT * FROM entregas WHERE id = $1', [id]);
         return res.status(200).json(rows);
       }
+
+      // Auto-completa em lote todas as corridas aceitas há mais de 1h20
+      await pool.query(
+        `UPDATE entregas SET status='concluido', completed_at=CURRENT_TIMESTAMP
+         WHERE status='aceito' AND accepted_at < NOW() - INTERVAL '80 minutes'`
+      ).catch(() => {});
 
       let queryText = 'SELECT * FROM entregas';
       let queryParams = [];

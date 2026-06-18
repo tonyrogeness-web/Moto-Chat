@@ -3378,7 +3378,7 @@
         const createdTime = parseOrderTime(item);
         const expiresAt = createdTime + 7 * 24 * 60 * 60 * 1000;
         const daysLeft = Math.max(0, Math.ceil((expiresAt - now) / (24 * 60 * 60 * 1000)));
-        const statusLabels = { pendente: '⏳ Aguardando', aceito: '✅ Confirmado', concluido: '🏁 Concluída', cancelado: '✕ Cancelado' };
+        const statusLabels = { pendente: '⏳ Aguardando', aceito: '✅ Confirmado', concluido: '✅ Confirmada', cancelado: '✕ Cancelado' };
         const div = document.createElement('div');
         div.style.cssText = 'margin-bottom:10px; padding:12px; background:var(--bg-card); border-radius:10px; border:1px solid var(--border-color); border-left:3px solid ' + color + ';';
         div.innerHTML = `
@@ -3521,7 +3521,7 @@
 
       const renderItem = (item) => {
         const badges = { pendente: 'badge-pendente', aceito: 'badge-aceito', concluido: 'badge-concluido', cancelado: 'badge-cancelado' };
-        const labels = { pendente: '⏳ Aguardando', aceito: '✅ Confirmado', concluido: '🏁 Concluída', cancelado: '✕ Cancelado' };
+        const labels = { pendente: '⏳ Aguardando', aceito: '✅ Confirmado', concluido: '✅ Confirmada', cancelado: '✕ Cancelado' };
         
         const destinos = item.destinos || [];
         const isMulti = destinos.length > 1;
@@ -3624,7 +3624,7 @@
         } else if (filterStatus === 'todos') {
           const hdr = document.createElement('div');
           hdr.style.cssText = 'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:#10b981;padding:8px 4px 4px;opacity:0.85;';
-          hdr.textContent = `🏁 Concluídas (${concluidas_lista.length})`;
+          hdr.textContent = `✅ Confirmadas (${concluidas_lista.length})`;
           lista.appendChild(hdr);
         }
         concluidas_lista.forEach(renderItem);
@@ -3775,7 +3775,7 @@
       const itensHoje = state.historico.filter(h => h.status === 'concluido' && new Date(h.created_at).toLocaleDateString('pt-BR') === hoje);
       
       if (itensHoje.length === 0) {
-        toast('⚠️ Nenhuma entrega concluída hoje!');
+        toast('⚠️ Nenhuma entrega confirmada hoje!');
         playSound('warning');
         return;
       }
@@ -4525,7 +4525,7 @@
         // Ocultar detalhes da corrida se já estiver concluída (Opção A)
         const orderCard = document.getElementById('accept-order-card');
         if (orderCard) {
-          if (order.status === 'concluido') {
+          if (order.status === 'aceito' || order.status === 'concluido') {
             orderCard.style.display = 'none';
           } else {
             orderCard.style.display = 'block';
@@ -4554,19 +4554,22 @@
           document.getElementById('motoboy-telefone').value = autoTel || localStorage.getItem('mc_motoboy_telefone') || '';
           if (autoNome && autoTel) {
             const btn = acceptFormCard.querySelector('button');
-            if (btn) { btn.disabled = true; btn.innerHTML = '⚙️ Concluindo...'; }
+            if (btn) { btn.disabled = true; btn.innerHTML = '⚙️ Confirmando...'; }
             setTimeout(confirmarAceiteCorrida, 800);
           }
         } else if (order.status === 'aceito') {
           acceptFormCard.innerHTML = `
-            <div class="card-title" style="color:#10b981;">✅ Corrida Confirmada!</div>
-            <div style="font-size:13.5px; margin-bottom:16px; line-height:1.5;">
-              Confirmada por: <b>${escapeHtml(order.motoboy_nome)}</b><br>
-              WhatsApp: ${escapeHtml(order.motoboy_telefone)}
+            <div style="text-align:center; padding:20px 16px 10px;">
+              <div style="font-size:52px; margin-bottom:8px;">✅</div>
+              <div style="font-size:20px; font-weight:900; color:#10b981; margin-bottom:6px;">Corrida Confirmada!</div>
+              <div style="font-size:13px; color:var(--text-muted); line-height:1.8;">
+                Entregador: <b style="color:var(--text-main);">${escapeHtml(order.motoboy_nome)}</b><br>
+                WhatsApp: ${escapeHtml(order.motoboy_telefone)}
+              </div>
             </div>
-            <button class="btn btn-green" onclick="finalizarCorridaMotoboy('${order.id}')" style="background:var(--primary); border-color:var(--primary); font-size:16px; padding:14px; margin-top:8px;">
-              🏁 Marcar como Concluída
-            </button>
+            <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); color:#059669; padding:10px 14px; border-radius:10px; text-align:center; font-weight:700; margin:12px 0; font-size:13px;">
+              🏍️ O motoboy está a caminho!
+            </div>
             <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
               📊 Ver Minhas Corridas
             </button>
@@ -4575,7 +4578,7 @@
           acceptFormCard.innerHTML = `
             <div style="text-align:center; padding:16px 0 10px;">
               <div style="font-size:52px; margin-bottom:6px;">\ud83c\udf89</div>
-              <div style="font-size:19px; font-weight:900; color:#3b82f6; margin-bottom:4px;">\ud83c\udfc1 Corrida Conclu\u00edda!</div>
+              <div style="font-size:19px; font-weight:900; color:#10b981; margin-bottom:4px;">✅ Corrida Confirmada!</div>
               <div style="font-size:13px; color:var(--text-muted); line-height:1.7;">
                 Por: <b style="color:var(--text-main);">${escapeHtml(order.motoboy_nome) || 'Entregador'}</b><br>
                 WhatsApp: ${order.motoboy_telefone || '\u2014'}<br>
@@ -4647,8 +4650,8 @@
       const formatData = createdAt.toLocaleString('pt-BR');
       
       let statusBadgeClass = 'badge-pendente', statusLabel = 'Pendente';
-      if (order.status === 'aceito') { statusBadgeClass = 'badge-aceito'; statusLabel = `Aceita por ${escapeHtml(order.motoboy_nome)}`; }
-      else if (order.status === 'concluido') { statusBadgeClass = 'badge-concluido'; statusLabel = 'Concluída'; }
+      if (order.status === 'aceito') { statusBadgeClass = 'badge-aceito'; statusLabel = `✅ Confirmada por ${escapeHtml(order.motoboy_nome)}`; }
+      else if (order.status === 'concluido') { statusBadgeClass = 'badge-concluido'; statusLabel = '✅ Confirmada'; }
       else if (order.status === 'cancelado') { statusBadgeClass = 'badge-cancelado'; statusLabel = 'Cancelada'; }
       
       let destinosHtml = '';
@@ -4719,7 +4722,7 @@
       const btn = document.querySelector('#accept-form-card button');
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '⚙️ Concluindo corrida...';
+        btn.innerHTML = '⚙️ Confirmando...';
       }
       
       const redirecionar = (whatsappMsg) => {
@@ -4753,7 +4756,7 @@
           
           if (res.ok) {
             const data = await res.json();
-            toast('🏁 Corrida concluída com sucesso!');
+            toast('✅ Corrida Confirmada com sucesso!');
             playSound('success');
             
             carregarDetalhesCorrida(orderId);
@@ -4766,7 +4769,7 @@
                 msgDestinos += `\n📍 ${destinos.length > 1 ? `#${i+1}: ` : ''}${d.rua || ''} — ${d.bairro || ''} (R$ ${Number(d.valor||0).toFixed(2).replace('.', ',')})`;
               });
             }
-            const msg = `✅ *CORRIDA ACEITA!*\n\n🏍️ *Entregador:* ${nome}\n📞 *WhatsApp:* ${telefone}\n🏢 *Coleta:* ${o.coleta_nome || ''}${msgDestinos}\n💰 *Total:* R$ ${Number(o.valor_total||0).toFixed(2).replace('.', ',')}\n🔄 *Retorno:* ${o.retorno ? 'Sim' : 'Não'}${o.obs ? '\n💬 *Obs:* ' + o.obs : ''}\n🆔 *ID:* ${orderId}`;
+            const msg = `✅ *CORRIDA CONFIRMADA!*\n\n🏍️ *Entregador:* ${nome}\n📞 *WhatsApp:* ${telefone}\n🏢 *Coleta:* ${o.coleta_nome || ''}${msgDestinos}\n💰 *Total:* R$ ${Number(o.valor_total||0).toFixed(2).replace('.', ',')}\n🔄 *Retorno:* ${o.retorno ? 'Sim' : 'Não'}${o.obs ? '\n💬 *Obs:* ' + o.obs : ''}\n🆔 *ID:* ${orderId}`;
             setTimeout(() => redirecionar(msg), 600);
             return;
           } else {
@@ -4775,7 +4778,7 @@
             playSound('warning');
             if (btn) {
               btn.disabled = false;
-              btn.innerHTML = '🏍️ Corrida Concluída';
+              btn.innerHTML = '✅ Corrida Confirmada';
             }
             if (data.alreadyAccepted) {
               carregarDetalhesCorrida(orderId);
@@ -4825,11 +4828,11 @@
       
       if (idx !== -1) {
         if (localHistory[idx].status !== 'pendente') {
-          toast(`⚠️ Esta corrida já foi concluída por ${localHistory[idx].motoboy_nome || 'outro motoboy'}`);
+          toast(`⚠️ Esta corrida já foi confirmada por ${localHistory[idx].motoboy_nome || 'outro motoboy'}`);
           playSound('warning');
           if (btn) {
             btn.disabled = false;
-            btn.innerHTML = '🏍️ Corrida Concluída';
+            btn.innerHTML = '✅ Corrida Confirmada';
           }
           carregarDetalhesCorrida(orderId);
           return;
@@ -4842,7 +4845,7 @@
         localHistory[idx].completed_at = new Date().toISOString();
         localStorage.setItem('mc_historico', JSON.stringify(localHistory));
         
-        toast('🏁 Corrida concluída (Local)!');
+        toast('✅ Corrida Confirmada!');
         playSound('success');
         carregarDetalhesCorrida(orderId);
         
@@ -4852,19 +4855,19 @@
         toast('⚠️ Corrida não encontrada para concluir');
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = '🏍️ Corrida Concluída';
+          btn.innerHTML = '✅ Corrida Confirmada';
         }
       }
     }
 
     async function finalizarCorridaMotoboy(orderId) {
-      if (!confirm('Deseja realmente marcar esta corrida como Concluída?')) return;
+      // auto-confirm sem dialog
       const isLocal = String(orderId).startsWith('local_');
       
       const btn = document.querySelector('#accept-form-card button');
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '⚙️ Concluindo corrida...';
+        btn.innerHTML = '⚙️ Confirmando...';
       }
       
       if (!isLocal) {
@@ -4876,7 +4879,7 @@
           });
           
           if (res.ok) {
-            toast('🏁 Corrida concluída com sucesso!');
+            toast('✅ Corrida Confirmada com sucesso!');
             playSound('success');
             carregarDetalhesCorrida(orderId);
             return;
@@ -4896,7 +4899,7 @@
         localHistory[idx].completed_at = new Date().toISOString();
         localStorage.setItem('mc_historico', JSON.stringify(localHistory));
         
-        toast('🏁 Corrida concluída (Local)!');
+        toast('✅ Corrida Confirmada!');
         playSound('success');
         carregarDetalhesCorrida(orderId);
       } else {
@@ -4910,7 +4913,7 @@
             localHistory.unshift(order);
             localStorage.setItem('mc_historico', JSON.stringify(localHistory));
             
-            toast('🏁 Corrida concluída (Salva offline)!');
+            toast('✅ Corrida Confirmada!');
             playSound('success');
             carregarDetalhesCorrida(orderId);
           } catch(e) {
@@ -4923,7 +4926,7 @@
       
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '🏁 Marcar como Concluída (Finalizar Entrega)';
+        btn.innerHTML = '✅ Corrida Confirmada';
       }
     }
 
@@ -5040,7 +5043,7 @@
         listEl.innerHTML = `
           <div class="empty">
             <div class="empty-icon">🏍️</div>
-            <p>Nenhuma corrida aceita ou concluída encontrada para este telefone.</p>
+            <p>Nenhuma corrida aceita ou confirmada encontrada para este telefone.</p>
           </div>
         `;
         return;

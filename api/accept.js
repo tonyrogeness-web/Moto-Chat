@@ -21,8 +21,8 @@ module.exports = async (req, res) => {
       return res.status(400).json({ alreadyAccepted: true, message: `Esta corrida já foi concluída pelo motoboy ${order.motoboy_nome}!` });
 
     const { rows } = await pool.query(
-      `UPDATE entregas SET status='concluido', motoboy_nome=$1, motoboy_telefone=$2,
-       accepted_at=COALESCE(accepted_at,CURRENT_TIMESTAMP), completed_at=CURRENT_TIMESTAMP
+      `UPDATE entregas SET status='aceito', motoboy_nome=$1, motoboy_telefone=$2,
+       accepted_at=CURRENT_TIMESTAMP
        WHERE id=$3 RETURNING *`,
       [motoboy_nome, motoboy_telefone, orderId]
     );
