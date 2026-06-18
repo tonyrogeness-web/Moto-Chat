@@ -1555,7 +1555,7 @@
         <div class="field" style="margin-top:14px">
           <div class="toggle-row">
             <label class="toggle">
-              <input type="checkbox" id="incluir-link-motoboy">
+              <input type="checkbox" id="incluir-link-motoboy" checked>
               <span class="toggle-slider"></span>
             </label>
             <span class="toggle-label" style="display:flex; flex-direction:column; gap:2px;">
@@ -4543,6 +4543,10 @@
               <label for="motoboy-telefone">Seu WhatsApp (apenas números com DDD)</label>
               <input type="tel" id="motoboy-telefone" placeholder="Ex: 75999990000">
             </div>
+            <div class="field">
+              <label for="motoboy-pix">Chave Pix <span style="font-weight:400; color:var(--text-muted); font-size:12px;">(Opcional)</span></label>
+              <input type="text" id="motoboy-pix" placeholder="CPF, telefone, e-mail ou chave aleatória">
+            </div>
             <button class="btn btn-green" onclick="confirmarAceiteCorrida()" style="margin-top: 10px; font-size:17px; padding:16px;">
               🏍️ Aceitar Corrida
             </button>
@@ -4552,6 +4556,8 @@
           `;
           document.getElementById('motoboy-nome').value = autoNome || localStorage.getItem('mc_motoboy_nome') || '';
           document.getElementById('motoboy-telefone').value = autoTel || localStorage.getItem('mc_motoboy_telefone') || '';
+          const pixEl = document.getElementById('motoboy-pix');
+          if (pixEl) pixEl.value = localStorage.getItem('mc_motoboy_pix') || '';
           if (autoNome && autoTel) {
             const btn = acceptFormCard.querySelector('button');
             if (btn) { btn.disabled = true; btn.innerHTML = '⚙️ Confirmando...'; }
@@ -4711,6 +4717,7 @@
       const orderId = urlParams.get('id');
       const nome = document.getElementById('motoboy-nome').value.trim();
       const telefone = document.getElementById('motoboy-telefone').value.replace(/\D/g, '');
+      const pix = (document.getElementById('motoboy-pix')?.value || '').trim();
       const dataParam = urlParams.get('data');
       
       if (!nome) { toast('⚠️ Por favor, digite seu nome completo'); playSound('warning'); return; }
@@ -4718,6 +4725,7 @@
       
       localStorage.setItem('mc_motoboy_nome', nome);
       localStorage.setItem('mc_motoboy_telefone', telefone);
+      if (pix) localStorage.setItem('mc_motoboy_pix', pix);
       
       const btn = document.querySelector('#accept-form-card button');
       if (btn) {
@@ -4769,7 +4777,8 @@
                 msgDestinos += `\n📍 ${destinos.length > 1 ? `#${i+1}: ` : ''}${d.rua || ''} — ${d.bairro || ''} (R$ ${Number(d.valor||0).toFixed(2).replace('.', ',')})`;
               });
             }
-            const msg = `✅ *CORRIDA CONFIRMADA!*\n\n🏍️ *Entregador:* ${nome}\n📞 *WhatsApp:* ${telefone}\n🏢 *Coleta:* ${o.coleta_nome || ''}${msgDestinos}\n💰 *Total:* R$ ${Number(o.valor_total||0).toFixed(2).replace('.', ',')}\n🔄 *Retorno:* ${o.retorno ? 'Sim' : 'Não'}${o.obs ? '\n💬 *Obs:* ' + o.obs : ''}\n🆔 *ID:* ${orderId}`;
+            const pixSalvo = localStorage.getItem('mc_motoboy_pix') || pix || '';
+            const msg = `✅ *CORRIDA CONFIRMADA!*\n\n🏍️ *Entregador:* ${nome}\n📞 *WhatsApp:* ${telefone}${pixSalvo ? '\n💳 *Pix:* ' + pixSalvo : ''}\n🏢 *Coleta:* ${o.coleta_nome || ''}${msgDestinos}\n💰 *Total:* R$ ${Number(o.valor_total||0).toFixed(2).replace('.', ',')}\n🔄 *Retorno:* ${o.retorno ? 'Sim' : 'Não'}${o.obs ? '\n💬 *Obs:* ' + o.obs : ''}\n🆔 *ID:* ${orderId}`;
             setTimeout(() => redirecionar(msg), 600);
             return;
           } else {
