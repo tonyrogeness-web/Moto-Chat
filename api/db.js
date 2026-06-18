@@ -3,13 +3,47 @@ const fs = require('fs');
 const path = require('path');
 
 let pool;
+let _tableEnsured = false;
+
+const CREATE_SQL = `
+  CREATE TABLE IF NOT EXISTS entregas (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    coleta_nome VARCHAR(255) NOT NULL,
+    coleta_endereco TEXT,
+    coleta_complemento TEXT,
+    destinos JSONB NOT NULL,
+    valor_total NUMERIC(10,2) NOT NULL,
+    retorno BOOLEAN DEFAULT FALSE,
+    obs TEXT,
+    tags JSONB DEFAULT '[]',
+    status VARCHAR(50) DEFAULT 'pendente',
+    motoboy_nome VARCHAR(255),
+    motoboy_telefone VARCHAR(50),
+    accepted_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE
+  );
+  ALTER TABLE entregas ADD COLUMN IF NOT EXISTS tags JSONB DEFAULT '[]';
+`;
+
+async function ensureTable() {
+  if (_tableEnsured) return;
+  try {
+    await pool.query(CREATE_SQL);
+    _tableEnsured = true;
+    console.log('[DB] Tabela entregas verificada/criada com sucesso.');
+  } catch (e) {
+    console.error('[DB] Falha ao criar tabela:', e.message);
+    throw e;
+  }
+}
 
 if (process.env.DATABASE_URL) {
-  // Neon usa channel_binding=require na connection string de pooling
-  // A lib pg não suporta esse parâmetro nativamente — removemos e configuramos SSL manualmente
+  // Remove channel_binding que a lib pg não suporta (presente no pooling do Neon)
   const connStr = process.env.DATABASE_URL
-    .replace(/[?&]channel_binding=require/g, '')
-    .replace(/[?&]channel_binding=[^&]*/g, '');
+    .replace(/[?&]channel_binding=[^&]*/g, '')
+    .replace(/\?$/, '')
+    .replace(/&$/, '');
 
   pool = new Pool({
     connectionString: connStr,
@@ -18,159 +52,87 @@ if (process.env.DATABASE_URL) {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
   });
+
 } else {
   const isProduction = process.env.VERCEL || process.env.NODE_ENV === 'production';
 
   if (isProduction) {
-    console.error('[FATAL] DATABASE_URL não definida em produção. Configure a variável de ambiente na Vercel.');
-    throw new Error('DATABASE_URL é obrigatória em ambiente de produção.');
+    throw new Error('DATABASE_URL não configurada. Acesse Vercel > Settings > Environment Variables e adicione DATABASE_URL.');
   }
 
-  console.warn('[DEV] DATABASE_URL não definida. Usando mock database local (mock-db.json).');
+  console.warn('[DEV] DATABASE_URL ausente — usando mock local em /tmp/mock-db.json');
 
-  const mockDbPath = path.join(__dirname, '..', 'mock-db.json');
-
-  if (!fs.existsSync(mockDbPath)) {
-    fs.writeFileSync(mockDbPath, JSON.stringify([], null, 2));
-  }
+  const mockDbPath = path.join('/tmp', 'mock-db.json');
+  if (!fs.existsSync(mockDbPath)) fs.writeFileSync(mockDbPath, '[]');
 
   pool = {
     isMock: true,
-    async connect() {
-      return {
-        async query(text, params) {
-          return { rows: [] };
-        },
-        release() {}
-      };
-    },
-    async query(text, params) {
-      const dbData = JSON.parse(fs.readFileSync(mockDbPath, 'utf8'));
+    async query(text, params = []) {
+      let db = [];
+      try { db = JSON.parse(fs.readFileSync(mockDbPath, 'utf8')); } catch(e) {}
+      const save = () => fs.writeFileSync(mockDbPath, JSON.stringify(db, null, 2));
 
-      if (text.startsWith('SELECT * FROM entregas') || text.startsWith('SELECT status, motoboy_nome FROM entregas')) {
-        let filtered = [...dbData];
+      if (text.includes('CREATE TABLE') || text.includes('ALTER TABLE')) return { rows: [] };
 
-        if (text.includes('id = $1')) {
-          const id = params[0];
-          filtered = filtered.filter(x => String(x.id) === String(id));
-          return { rows: filtered };
-        }
-
-        if (text.includes('motoboy_telefone = $1')) {
-          const tel = params[0];
-          const limitTime = Date.now() - 7 * 24 * 60 * 60 * 1000;
-          filtered = filtered.filter(x => {
-            const time = new Date(x.created_at || x.id).getTime();
-            return String(x.motoboy_telefone) === String(tel) &&
-                   ['aceito', 'concluido'].includes(x.status) &&
-                   !isNaN(time) && time > limitTime;
-          });
-          filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-          return { rows: filtered.slice(0, 100) };
-        }
-
-        const limitTime = Date.now() - 48 * 60 * 60 * 1000;
-        filtered = filtered.filter(x => {
-          const time = new Date(x.created_at || x.id).getTime();
-          return !isNaN(time) && time > limitTime;
-        });
-
-        const statusIdx = text.indexOf('status = $');
-        if (statusIdx !== -1) {
-          const paramNum = parseInt(text.substr(statusIdx + 10, 1)) - 1;
-          const status = params[paramNum];
-          filtered = filtered.filter(x => x.status === status);
-        }
-
-        if (text.includes('ILIKE')) {
-          const searchVal = params[params.length - 1].replace(/%/g, '').toLowerCase();
-          filtered = filtered.filter(x =>
-            (x.coleta_nome && x.coleta_nome.toLowerCase().includes(searchVal)) ||
-            (x.obs && x.obs.toLowerCase().includes(searchVal)) ||
-            JSON.stringify(x.destinos).toLowerCase().includes(searchVal)
-          );
-        }
-
-        filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        return { rows: filtered.slice(0, 100) };
+      if (text.includes('WHERE id = $1') && text.startsWith('SELECT')) {
+        return { rows: db.filter(x => String(x.id) === String(params[0])) };
       }
-
-      if (text.startsWith('INSERT INTO entregas')) {
-        const [coleta_nome, coleta_endereco, coleta_complemento, destinosJson, valor_total, retorno, obs, tagsJson] = params;
-        const newRecord = {
-          id: Date.now(),
-          created_at: new Date().toISOString(),
-          coleta_nome,
-          coleta_endereco,
-          coleta_complemento,
-          destinos: JSON.parse(destinosJson),
-          valor_total: parseFloat(valor_total),
-          retorno: !!retorno,
-          obs,
-          tags: tagsJson ? JSON.parse(tagsJson) : [],
-          status: 'pendente',
-          motoboy_nome: null,
-          motoboy_telefone: null,
-          accepted_at: null,
-          completed_at: null
+      if (text.includes('motoboy_telefone = $1')) {
+        const cut = Date.now() - 7 * 24 * 3600000;
+        const rows = db.filter(x =>
+          String(x.motoboy_telefone) === String(params[0]) &&
+          ['aceito','concluido'].includes(x.status) &&
+          new Date(x.created_at||0).getTime() > cut
+        ).sort((a,b) => new Date(b.created_at)-new Date(a.created_at)).slice(0,100);
+        return { rows };
+      }
+      if (text.startsWith('SELECT')) {
+        const cut = Date.now() - 48 * 3600000;
+        let rows = db.filter(x => new Date(x.created_at||0).getTime() > cut);
+        rows.sort((a,b) => new Date(b.created_at)-new Date(a.created_at));
+        return { rows: rows.slice(0,100) };
+      }
+      if (text.startsWith('INSERT')) {
+        const [cn,ce,cc,dj,vt,rt,ob,tj] = params;
+        const rec = {
+          id: Date.now(), created_at: new Date().toISOString(),
+          coleta_nome: cn, coleta_endereco: ce, coleta_complemento: cc,
+          destinos: JSON.parse(dj), valor_total: parseFloat(vt),
+          retorno: !!rt, obs: ob, tags: tj ? JSON.parse(tj) : [],
+          status: 'pendente', motoboy_nome: null, motoboy_telefone: null,
+          accepted_at: null, completed_at: null
         };
-
-        dbData.unshift(newRecord);
-        fs.writeFileSync(mockDbPath, JSON.stringify(dbData, null, 2));
-        return { rows: [newRecord] };
+        db.unshift(rec); save();
+        return { rows: [rec] };
       }
-
-      if (text.startsWith('UPDATE entregas SET status = $1')) {
+      if (text.includes("status = 'concluido'") && text.includes('motoboy_nome')) {
+        const [mn, mt, id] = params;
+        const r = db.find(x => String(x.id) === String(id));
+        if (r) { Object.assign(r, { status:'concluido', motoboy_nome:mn, motoboy_telefone:mt, completed_at:new Date().toISOString() }); save(); return { rows:[r] }; }
+        return { rows:[] };
+      }
+      if (text.startsWith('UPDATE')) {
         const [status, id] = params;
-        const record = dbData.find(x => String(x.id) === String(id));
-        if (record) {
-          record.status = status;
-          if (status === 'concluido') {
-            record.completed_at = new Date().toISOString();
-          }
-          fs.writeFileSync(mockDbPath, JSON.stringify(dbData, null, 2));
-          return { rows: [record] };
-        }
-        return { rows: [] };
+        const r = db.find(x => String(x.id) === String(id));
+        if (r) { r.status=status; if(status==='concluido') r.completed_at=new Date().toISOString(); save(); return { rows:[r] }; }
+        return { rows:[] };
       }
-
-      if (text.includes("status = 'concluido'") && text.includes('motoboy_nome = $1')) {
-        const [motoboy_nome, motoboy_telefone, orderId] = params;
-        const record = dbData.find(x => String(x.id) === String(orderId));
-        if (record) {
-          record.status = 'concluido';
-          record.motoboy_nome = motoboy_nome;
-          record.motoboy_telefone = motoboy_telefone;
-          record.accepted_at = record.accepted_at || new Date().toISOString();
-          record.completed_at = new Date().toISOString();
-          fs.writeFileSync(mockDbPath, JSON.stringify(dbData, null, 2));
-          return { rows: [record] };
-        }
-        return { rows: [] };
+      if (text.includes('DELETE FROM entregas WHERE id')) {
+        const i = db.findIndex(x => String(x.id) === String(params[0]));
+        if (i!==-1) { const [d]=db.splice(i,1); save(); return { rows:[d] }; }
+        return { rows:[] };
       }
-
-      if (text.includes('DELETE FROM entregas WHERE id = $1')) {
-        const id = params[0];
-        const idx = dbData.findIndex(x => String(x.id) === String(id));
-        if (idx !== -1) {
-          const [deleted] = dbData.splice(idx, 1);
-          fs.writeFileSync(mockDbPath, JSON.stringify(dbData, null, 2));
-          return { rows: [deleted] };
-        }
-        return { rows: [] };
+      if (text.includes('DELETE FROM entregas WHERE created_at')) {
+        const cut = new Date(Date.now()-48*3600000).toISOString();
+        const rem = db.filter(x => x.created_at >= cut);
+        fs.writeFileSync(mockDbPath, JSON.stringify(rem, null, 2));
+        return { rows:[], rowCount: db.length - rem.length };
       }
-
-      if (text.includes("DELETE FROM entregas WHERE created_at <")) {
-        const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-        const before = dbData.length;
-        const remaining = dbData.filter(x => x.created_at >= cutoff);
-        fs.writeFileSync(mockDbPath, JSON.stringify(remaining, null, 2));
-        return { rows: [], rowCount: before - remaining.length };
-      }
-
-      return { rows: [] };
-    }
+      return { rows:[] };
+    },
+    async connect() { return { query: this.query.bind(this), release(){} }; }
   };
+  _tableEnsured = true;
 }
 
-module.exports = pool;
+module.exports = { pool, ensureTable };
