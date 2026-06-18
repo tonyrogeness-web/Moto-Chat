@@ -2075,13 +2075,23 @@
 
     // ─── SEGURANÇA: DECODE BASE64 UTF-8 SEGURO ───────────────────────────────────
     function safeBase64Decode(b64) {
+      if (!b64) return null;
+      const decoded = decodeURIComponent(b64);
+      // Tenta método moderno (TextDecoder — compatível com encode via TextEncoder)
       try {
-        const bytes = Uint8Array.from(atob(decodeURIComponent(b64)), c => c.charCodeAt(0));
+        const bytes = Uint8Array.from(atob(decoded), c => c.charCodeAt(0));
         return JSON.parse(new TextDecoder().decode(bytes));
-      } catch (e) {
-        console.warn('safeBase64Decode falhou:', e);
-        return null;
-      }
+      } catch (e1) {}
+      // Fallback: método legado (btoa + unescape — encode gerado pelo app atual)
+      try {
+        return JSON.parse(decodeURIComponent(escape(atob(decoded))));
+      } catch (e2) {}
+      // Fallback 2: tenta o Base64 sem decode URI primeiro
+      try {
+        return JSON.parse(decodeURIComponent(escape(atob(b64))));
+      } catch (e3) {}
+      console.warn('safeBase64Decode: todos os métodos falharam para:', b64.substring(0, 30));
+      return null;
     }
 
     // ─── API KEY HEADER ───────────────────────────────────────────────────────────
@@ -3359,7 +3369,7 @@
         const createdTime = parseOrderTime(item);
         const expiresAt = createdTime + 7 * 24 * 60 * 60 * 1000;
         const daysLeft = Math.max(0, Math.ceil((expiresAt - now) / (24 * 60 * 60 * 1000)));
-        const statusLabels = { pendente: '⏳ Aguardando', aceito: '✅ Confirmado', concluido: '🏁 Corrida Aceita', cancelado: '✕ Cancelado' };
+        const statusLabels = { pendente: '⏳ Aguardando', aceito: '✅ Confirmado', concluido: '🏁 Concluída', cancelado: '✕ Cancelado' };
         const div = document.createElement('div');
         div.style.cssText = 'margin-bottom:10px; padding:12px; background:var(--bg-card); border-radius:10px; border:1px solid var(--border-color); border-left:3px solid ' + color + ';';
         div.innerHTML = `
@@ -3502,7 +3512,7 @@
 
       const renderItem = (item) => {
         const badges = { pendente: 'badge-pendente', aceito: 'badge-aceito', concluido: 'badge-concluido', cancelado: 'badge-cancelado' };
-        const labels = { pendente: '⏳ Aguardando', aceito: '✅ Confirmado', concluido: '🏁 Corrida Aceita', cancelado: '✕ Cancelado' };
+        const labels = { pendente: '⏳ Aguardando', aceito: '✅ Confirmado', concluido: '🏁 Concluída', cancelado: '✕ Cancelado' };
         
         const destinos = item.destinos || [];
         const isMulti = destinos.length > 1;
@@ -4579,6 +4589,48 @@
         }
       };
 
+      // PRIORIDADE 1: ?data= embutido no link — sempre disponível em qualquer aparelho
+      if (dataParam) {
+        try {
+          const raw = safeBase64Decode(dataParam);
+          if (raw) {
+            let orderFromData = raw.cn !== undefined
+              ? {
+                  id: orderId,
+                  status: raw.st || 'pendente',
+                  coleta_nome: raw.cn,
+                  coleta_endereco: raw.ce,
+                  coleta_complemento: raw.cc,
+                  valor_total: raw.vt,
+                  retorno: !!raw.rt,
+                  obs: raw.ob,
+                  destinos: (raw.d || []).map(dest => ({ rua: dest.r, bairro: dest.b, valor: dest.v, comp: dest.c }))
+                }
+              : { ...raw, id: orderId, status: raw.st || raw.status || 'pendente' };
+
+            renderDetalhesCorridaHtml(orderFromData);
+            preencherForm(orderFromData);
+
+            // Em paralelo, busca status atualizado da API para refletir se já foi aceita
+            const isLocalId = String(orderId).startsWith('local_');
+            if (!isLocalId) {
+              fetch(`/api/orders?id=${orderId}`)
+                .then(r => r.ok ? r.json() : [])
+                .then(orders => {
+                  if (orders.length > 0) {
+                    const fresh = orders[0];
+                    renderDetalhesCorridaHtml(fresh);
+                    preencherForm(fresh);
+                  }
+                })
+                .catch(() => {});
+            }
+            return;
+          }
+        } catch(e) { console.warn('Erro ao decodificar ?data=:', e); }
+      }
+
+      // PRIORIDADE 2: busca na API pelo ID (aparelho sem ?data= ou link antigo)
       const isLocalId = String(orderId).startsWith('local_');
       if (!isLocalId) {
         try {
@@ -4594,17 +4646,8 @@
           }
         } catch (e) { console.warn(e); }
       }
-      
-      if (dataParam) {
-        try {
-          const raw = safeBase64Decode(dataParam);
-          let order = raw.cn !== undefined ? { id: orderId, status: raw.st || 'pendente', coleta_nome: raw.cn, coleta_endereco: raw.ce, coleta_complemento: raw.cc, valor_total: raw.vt, retorno: !!raw.rt, obs: raw.ob, destinos: (raw.d || []).map(dest => ({ rua: dest.r, bairro: dest.b, valor: dest.v, comp: dest.c })) } : { ...raw, id: orderId, status: raw.st || raw.status || 'pendente' };
-          renderDetalhesCorridaHtml(order);
-          preencherForm(order);
-          return;
-        } catch(e) { console.warn(e); }
-      }
 
+      // PRIORIDADE 3: localStorage (mesmo aparelho do despachante)
       const localHistory = JSON.parse(localStorage.getItem('mc_historico') || '[]');
       const order = localHistory.find(h => String(h.id) === String(orderId));
       if (order) {
@@ -4613,7 +4656,7 @@
         return;
       }
 
-      // Nenhuma fonte encontrou a corrida — mostrar erro claro
+      // Nenhuma fonte encontrou a corrida
       const errCard = document.getElementById('accept-order-card');
       if (errCard) {
         errCard.innerHTML = `
@@ -4634,7 +4677,7 @@
       
       let statusBadgeClass = 'badge-pendente', statusLabel = 'Pendente';
       if (order.status === 'aceito') { statusBadgeClass = 'badge-aceito'; statusLabel = `Aceita por ${escapeHtml(order.motoboy_nome)}`; }
-      else if (order.status === 'concluido') { statusBadgeClass = 'badge-concluido'; statusLabel = 'Corrida Aceita'; }
+      else if (order.status === 'concluido') { statusBadgeClass = 'badge-concluido'; statusLabel = 'Concluída'; }
       else if (order.status === 'cancelado') { statusBadgeClass = 'badge-cancelado'; statusLabel = 'Cancelada'; }
       
       let destinosHtml = '';
@@ -4956,7 +4999,7 @@
         const isConcluido = run.status === 'concluido';
         const borderColor = isConcluido ? '#3b82f6' : '#10b981';
         const statusBadge = isConcluido
-          ? '<span class="badge badge-concluido">\ud83c\udfc1 Corrida Aceita</span>'
+          ? '<span class="badge badge-concluido">\ud83c\udfc1 Conclu\u00edda</span>'
           : '<span class="badge badge-aceito">\u2705 Ativa</span>';
         let destinos = '';
         (run.destinos || []).forEach((d, i) => {
