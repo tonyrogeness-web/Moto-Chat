@@ -2846,19 +2846,7 @@
         }
       }
       
-      // Tentar encurtar o link via TinyURL (sem chave de API, fallback silencioso)
-      async function _encurtarLink(url) {
-        try {
-          const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(4000) });
-          if (res.ok) {
-            const short = (await res.text()).trim();
-            if (short.startsWith('http')) return short;
-          }
-        } catch(_) {}
-        return url; // fallback: retorna o original
-      }
-
-      return await _encurtarLink(link);
+      return link;
     }
 
     async function copiarLinkConfirmacaoAtual() {
@@ -4447,13 +4435,17 @@
           let newAccepts = [];
           orders.forEach(o => {
             const prevStatus = _lastKnownStatuses[o.id];
-            if (prevStatus === 'pendente' && o.status === 'aceito') newAccepts.push(o);
+            // Detecta motoboy aceitando: pendente -> concluido OU pendente -> aceito
+            if (prevStatus === 'pendente' && (o.status === 'concluido' || o.status === 'aceito')) {
+              newAccepts.push(o);
+            }
           });
           _lastKnownStatuses = {};
           orders.forEach(o => { _lastKnownStatuses[o.id] = o.status; });
           state.historico = orders;
-          const histActive = document.getElementById('sec-historico').classList.contains('active');
-          if (histActive) renderHistorico();
+          save('mc_historico', state.historico);
+          // Sempre re-renderiza para atualizar nome/telefone do motoboy
+          renderHistorico();
           if (newAccepts.length > 0) mostrarNotificacaoAceite(newAccepts);
         } catch (e) {}
       }, 12000);
