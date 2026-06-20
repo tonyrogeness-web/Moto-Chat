@@ -1330,7 +1330,7 @@
   <!-- BANNER: BANCO OFFLINE -->
   <div id="banner-db-offline" style="display:none; background:#ef4444; color:#fff; text-align:center; padding:10px 16px; font-size:13px; font-weight:700; line-height:1.5; position:relative; z-index:9999;">
     ⚠️ <b>BANCO DE DADOS NÃO CONFIGURADO</b> — Os pedidos estão sendo salvos apenas neste aparelho.<br>
-    <span style="font-weight:400; font-size:12px;">Links enviados para motoboys <u>não vão funcionar</u> em outros aparelhos. Configure DATABASE_URL na Vercel.</span>
+    <span style="font-weight:400; font-size:12px;">Tickets enviados para motoboys <u>não vão funcionar</u> em outros aparelhos. Configure DATABASE_URL na Vercel.</span>
   </div>
 
   <!-- HEADER & TABS STICKY WRAPPER -->
@@ -1565,8 +1565,8 @@
               <span class="toggle-slider"></span>
             </label>
             <span class="toggle-label" style="display:flex; flex-direction:column; gap:2px;">
-              <span>📲 Mandar link para o Moto Boy</span>
-              <span style="font-size:11px; color:var(--text-muted); font-weight:400;">Inclui link de confirmação na mensagem do WhatsApp</span>
+              <span>🎫 Mandar ticket para o Moto Boy</span>
+              <span style="font-size:11px; color:var(--text-muted); font-weight:400;">Inclui ticket de confirmação na mensagem do WhatsApp</span>
             </span>
           </div>
         </div>
@@ -1604,9 +1604,9 @@
       </div>
 
       <div class="btn-row" style="margin-bottom:12px">
-        <button class="btn btn-outline" onclick="copiarLinkConfirmacaoAtual()" style="border-color: #a855f7; color: #a855f7;">
-          🏁 Link do Moto Boy
-        </button>
+          <button class="btn btn-outline" onclick="copiarLinkConfirmacaoAtual()" style="border-color: #a855f7; color: #a855f7;">
+            🏁 Ticket do Moto Boy
+          </button>
       </div>
 
       <div class="btn-row" style="margin-bottom:32px">
@@ -1623,7 +1623,7 @@
 
       <!-- AVISO DE RETENÇÃO DO BANCO -->
       <div style="font-size: 12px; color: var(--text-muted); background: var(--bg-card); padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-        <span>ℹ️ <b>Histórico:</b> Exibindo últimas 24h ativas (itens mais antigos vão para a Lixeira local). O banco de dados retém as corridas por 7 dias.</span>
+        <span>ℹ️ <b>Histórico:</b> As corridas são mantidas no banco de dados por até 7 dias. Exclusões manuais podem ser desfeitas temporariamente.</span>
       </div>
 
       <!-- DAY PANEL -->
@@ -1698,22 +1698,6 @@
         <button class="btn btn-outline btn-small" onclick="copiarResumoDia()" style="width: 100%; height: auto; padding: 10px; border-style: dashed;">
           📊 Copiar Resumo Financeiro (Hoje)
         </button>
-        <button class="btn btn-outline btn-small" id="btn-lixeira" onclick="toggleLixeira()" style="width:100%; height:auto; padding:9px; border-style:dashed; border-color:var(--accent); color:var(--accent); margin-top:8px;">
-          🗑️ Lixeira <span id="lixeira-count" style="font-weight:900;"></span>
-        </button>
-      </div>
-
-      <!-- LIXEIRA SECTION -->
-      <div id="sec-lixeira" style="display:none; margin-bottom:16px;">
-        <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; padding: 0 2px;">
-          <span>🗑️ Lixeira — Corridas dos últimos 7 dias</span>
-          <button onclick="toggleLixeira()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:18px;">×</button>
-        </div>
-        <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px; padding:8px 10px; background:rgba(239,68,68,0.07); border:1px dashed rgba(239,68,68,0.3); border-radius:8px;">
-          ⚠️ Corridas expiradas (mais de 24h). Elas serão apagadas permanentemente após <b>7 dias</b>.
-        </div>
-        <div id="lixeira-lista"></div>
-        <button onclick="limparLixeiraTotal()" style="margin-top:10px; width:100%; padding:9px; border:1px solid var(--accent); border-radius:8px; background:none; color:var(--accent); font-size:12px; font-weight:700; cursor:pointer;">🗑️ Esvaziar Lixeira</button>
       </div>
 
       <!-- FAVORITOS SEÇÃO -->
@@ -2933,7 +2917,7 @@
         }
         const link = await obterLinkConfirmacao(dbId);
         await navigator.clipboard.writeText(link);
-        toast('📋 Link copiado! Envie para o motoboy.');
+        toast('🎫 Ticket copiado! Envie para o motoboy.');
         playSound('success');
       } catch (e) {
         toast('⚠️ ' + e.message);
@@ -3038,9 +3022,9 @@
 
       document.getElementById('limpar-confirm-btn').onclick = () => {
         // Clear all local storage keys
-        // Limpa apenas histórico, lixeira e favoritos — configurações são mantidas
+        // Limpa apenas histórico e favoritos — configurações são mantidas
         const keysToRemove = [
-          'mc_historico', 'mc_lixeira', 'mc_favoritos', 'mc_form_draft'
+          'mc_historico', 'mc_favoritos', 'mc_form_draft'
         ];
         keysToRemove.forEach(k => localStorage.removeItem(k));
 
@@ -3369,103 +3353,84 @@
     }
 
 
-    // ─── LIXEIRA (TRASH) ─────────────────────────────────────────────────────────
-    function _getLixeira() {
-      return safeParse('mc_lixeira', []);
-    }
-    function _saveLixeira(arr) {
-      localStorage.setItem('mc_lixeira', JSON.stringify(arr));
-    }
+    // ─── EXCLUSÃO E REVERSÃO (UNDO DELETION) ──────────────────────────────────────
+    let deletarTimeout = null;
+    let ultimoExcluido = null;
+    let exclusoesPendentes = new Set();
 
-    function toggleLixeira() {
-      const sec = document.getElementById('sec-lixeira');
-      if (!sec) return;
-      const isVisible = sec.style.display !== 'none';
-      sec.style.display = isVisible ? 'none' : 'block';
-      if (!isVisible) renderLixeira();
-    }
-
-    function renderLixeira() {
-      const lista = document.getElementById('lixeira-lista');
-      const countEl = document.getElementById('lixeira-count');
-      if (!lista) return;
-      const lixeira = _getLixeira();
-      const now = Date.now();
-      // Count items and update badge
-      if (countEl) countEl.textContent = lixeira.length > 0 ? `(${lixeira.length})` : '';
-      if (lixeira.length === 0) {
-        lista.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px;">🗑️ A lixeira está vazia</div>';
-        return;
+    async function deletarPedido(id) {
+      playSound('warning');
+      
+      // Se já existia uma deleção pendente, executa ela de vez antes de iniciar outra
+      if (deletarTimeout && ultimoExcluido) {
+        clearTimeout(deletarTimeout);
+        await executarDelecaoReal(ultimoExcluido.id);
       }
-      lista.innerHTML = '';
-      lixeira.forEach(item => {
-        const info = getDestInfo(item);
-        const color = bairroColor(info.bairro);
-        const formatData = new Date(item.created_at || item.id).toLocaleString('pt-BR');
-        // Days remaining in trash
-        const createdTime = parseOrderTime(item);
-        const expiresAt = createdTime + 7 * 24 * 60 * 60 * 1000;
-        const daysLeft = Math.max(0, Math.ceil((expiresAt - now) / (24 * 60 * 60 * 1000)));
-        const statusLabels = { pendente: '⏳ Aguardando', aceito: '✅ Confirmado', concluido: '✅ Confirmada', cancelado: '✕ Cancelado' };
-        const div = document.createElement('div');
-        div.style.cssText = 'margin-bottom:10px; padding:12px; background:var(--bg-card); border-radius:10px; border:1px solid var(--border-color); border-left:3px solid ' + color + ';';
-        div.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <div style="font-weight:700; font-size:13px;"><span class="bairro-dot" style="background:${color};"></span>🗺️ ${info.bairro}</div>
-            <div style="font-size:11px; color:var(--accent); font-weight:700;">⏳ ${daysLeft}d restantes</div>
-          </div>
-          <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">📍 ${info.rua}</div>
-          <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">🏢 ${escapeHtml(item.coleta_nome) || '—'} &nbsp;•&nbsp; 🕐 ${formatData}</div>
-          <div style="font-size:11px; margin-bottom:8px;"><span style="font-size:10px; background:rgba(0,0,0,0.15); padding:2px 8px; border-radius:8px;">${statusLabels[item.status] || item.status}</span> &nbsp; R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}</div>
-          <div style="display:flex; gap:6px;">
-            <button onclick="restaurarDaLixeira('${item.id}')" style="flex:1; padding:7px; background:var(--primary-glow); border:1px solid var(--primary); border-radius:7px; color:var(--primary); font-size:12px; font-weight:700; cursor:pointer;">♻️ Restaurar</button>
-            <button onclick="deletarDaLixeira('${item.id}')" style="flex:1; padding:7px; background:rgba(239,68,68,0.08); border:1px solid var(--accent); border-radius:7px; color:var(--accent); font-size:12px; font-weight:700; cursor:pointer;">🗑️ Excluir</button>
-          </div>
-        `;
-        lista.appendChild(div);
-      });
+      
+      const idx = state.historico.findIndex(h => String(h.id) === String(id));
+      if (idx === -1) return;
+      
+      // Remove localmente para sumir da tela de imediato
+      const [item] = state.historico.splice(idx, 1);
+      ultimoExcluido = item;
+      exclusoesPendentes.add(String(id));
+      
+      renderHistorico();
+      
+      const toastEl = document.getElementById('toast');
+      toastEl.innerHTML = `
+        <span>🗑️ Corrida excluída.</span>
+        <button onclick="desfazerExclusao()" style="background:#10b981; color:white; border:none; border-radius:12px; padding:4px 10px; font-weight:800; cursor:pointer; margin-left:12px; font-size:12px; box-shadow:0 2px 6px rgba(16,185,129,0.3);">Desfazer</button>
+      `;
+      toastEl.classList.add('show');
+      
+      deletarTimeout = setTimeout(async () => {
+        toastEl.classList.remove('show');
+        await executarDelecaoReal(id);
+      }, 7000);
     }
 
-    function restaurarDaLixeira(id) {
-      const lixeira = _getLixeira();
-      const idx = lixeira.findIndex(h => String(h.id) === String(id));
-      if (idx === -1) return;
-      const item = lixeira[idx];
-      // Move back to active history with refreshed created_at so it shows for 24h
-      item.created_at = new Date().toISOString();
-      item._restaurado = true;
-      state.historico.push(item);
-      localStorage.setItem('mc_historico', JSON.stringify(state.historico));
-      lixeira.splice(idx, 1);
-      _saveLixeira(lixeira);
-      renderLixeira();
+    async function desfazerExclusao() {
+      if (!ultimoExcluido) return;
+      
+      clearTimeout(deletarTimeout);
+      deletarTimeout = null;
+      
+      exclusoesPendentes.delete(String(ultimoExcluido.id));
+      
+      state.historico.push(ultimoExcluido);
+      state.historico.sort((a, b) => parseOrderTime(b) - parseOrderTime(a));
+      save('mc_historico', state.historico);
+      
+      ultimoExcluido = null;
       renderHistorico();
-      toast('♻️ Corrida restaurada ao histórico!');
+      
+      const toastEl = document.getElementById('toast');
+      toastEl.textContent = '♻️ Exclusão desfeita!';
+      toastEl.classList.add('show');
+      setTimeout(() => toastEl.classList.remove('show'), 2500);
       playSound('success');
     }
 
-    function deletarDaLixeira(id) {
-      if (!confirm('Excluir permanentemente esta corrida da lixeira?')) return;
-      const lixeira = _getLixeira().filter(h => String(h.id) !== String(id));
-      _saveLixeira(lixeira);
-      renderLixeira();
-      toast('🗑️ Excluído permanentemente.');
-      playSound('click');
-    }
-
-    function limparLixeiraTotal() {
-      if (!confirm('Esvaziar toda a lixeira? Esta ação não pode ser desfeita!')) return;
-      _saveLixeira([]);
-      renderLixeira();
-      toast('🗑️ Lixeira esvaziada.');
-      playSound('click');
-    }
-
-    function _atualizarBadgeLixeira() {
-      const countEl = document.getElementById('lixeira-count');
-      if (!countEl) return;
-      const lixeira = _getLixeira();
-      countEl.textContent = lixeira.length > 0 ? `(${lixeira.length})` : '';
+    async function executarDelecaoReal(id) {
+      exclusoesPendentes.delete(String(id));
+      ultimoExcluido = null;
+      deletarTimeout = null;
+      
+      const isLocal = String(id).startsWith('local_');
+      if (!isLocal) {
+        try {
+          await fetch('/api/orders', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+          });
+        } catch (e) {
+          console.warn('Erro de rede ao deletar do servidor:', e);
+        }
+      }
+      
+      save('mc_historico', state.historico);
     }
 
     function verificarPendentesAlerta() {
@@ -3512,11 +3477,7 @@
       verificarPendentesAlerta();
 
       const [rangeStart, rangeEnd] = getPeriodoRange(_periodoFilter);
-      const threshold24h = Date.now() - 24 * 60 * 60 * 1000;
-      let listToShow = state.historico.filter(h => {
-        const time = parseOrderTime(h);
-        return !isNaN(time) && time > threshold24h;
-      });
+      let listToShow = [...state.historico];
       if (rangeStart) {
         listToShow = listToShow.filter(h => {
           const d = new Date(h.created_at || h.id);
@@ -3624,7 +3585,7 @@
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar
             </button>
             <button class="hist-btn" onclick="copiarLinkHistorico('${item.id}')" style="border-color:#a855f7;color:#a855f7;">
-              🔗 Link
+              🎫 Ticket
             </button>
             <button class="hist-btn" onclick="deletarPedido('${item.id}')" style="border-color:var(--accent);color:var(--accent);">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg> Excluir
@@ -3661,37 +3622,7 @@
       }
     }
 
-    async function deletarPedido(id) {
-      if (!confirm('Deseja realmente excluir esta corrida permanentemente?')) return;
-      const isLocal = String(id).startsWith('local_');
-      
-      if (!isLocal) {
-        try {
-          const res = await fetch('/api/orders', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id })
-          });
-          
-          if (res.ok) {
-            toast('🗑️ Corrida excluída com sucesso!');
-            playSound('warning');
-            await carregarHistoricoServidor();
-            return;
-          }
-        } catch (e) {
-          console.warn('Erro de rede ao excluir:', e);
-        }
-      }
-      
-      const localHistory = safeParse('mc_historico', []);
-      const newLocal = localHistory.filter(h => String(h.id) !== String(id));
-      localStorage.setItem('mc_historico', JSON.stringify(newLocal));
-      state.historico = newLocal;
-      renderHistorico();
-      toast('🗑️ Corrida excluída localmente!');
-      playSound('warning');
-    }
+
 
     async function updateStatus(id, status) {
       const isLocal = String(id).startsWith('local_');
@@ -3738,7 +3669,7 @@
       if (!item) return;
       const msg = buildMsgFromOrder(item);
       navigator.clipboard.writeText(msg).then(() => {
-        toast('📋 Mensagem com link de aceite copiada!');
+        toast('🎫 Mensagem com ticket de aceite copiada!');
         playSound('success');
       }).catch(() => {
         toast('⚠️ Falha ao copiar, tente novamente');
@@ -4213,8 +4144,19 @@
         return clean;
       };
 
+      let cep = '';
+      const cepMatch = texto.match(/\b\d{5}-?\d{3}\b/);
+      if (cepMatch) cep = cepMatch[0];
+
+      let valor = null;
+      // Procura taxa de entrega/frete no texto bruto
+      const valMatch = texto.match(/(?:taxa\s+(?:de\s+)?entrega|valor\s+(?:da\s+)?entrega|taxa\s+(?:de\s+)?frete|frete|entrega)\s*[:\-=]?\s*(?:r?\$\s*)?(\d+(?:[.,]\d{2})?)\b/i);
+      if (valMatch) {
+        valor = parseFloat(valMatch[1].replace(',', '.'));
+      }
+
       if (!rua && linhas.length > 0) rua = linhas[0];
-      return { rua: limpar(rua), bairro: limpar(bairro), comp: limpar(comp || '') };
+      return { rua: limpar(rua), bairro: limpar(bairro), comp: limpar(comp || ''), cep, valor };
     }
 
     let _ocrScriptLoaded = false;
@@ -4365,13 +4307,27 @@
             document.getElementById('bairro-custom').value = parsed.bairro;
             document.getElementById('end-comp').value = parsed.comp;
             state.bairroSel = parsed.bairro;
-            const matched = state.bairros.find(b => b.toLowerCase() === parsed.bairro.toLowerCase());
-            if (matched) detectarPrecoPorBairro(matched);
+            
+            // Popula valor se detectado
+            if (parsed.valor !== null) {
+              document.getElementById('valor-custom').value = parsed.valor;
+              state.areaSel = null;
+              const select = document.getElementById('areas-select');
+              if (select) select.value = '';
+            } else {
+              const matched = state.bairros.find(b => b.toLowerCase() === parsed.bairro.toLowerCase());
+              if (matched) detectarPrecoPorBairro(matched);
+            }
+            
             resetCurrentOrderState();
             gerarPreview();
             if (statusEl) { statusEl.textContent = 'Preenchido com sucesso!'; statusEl.style.color = 'var(--primary)'; }
             if (checkEl) checkEl.style.display = 'block';
-            toast('✅ Endereço detectado!');
+            
+            let msg = '✅ Endereço detectado!';
+            if (parsed.cep) msg += ' CEP: ' + parsed.cep;
+            if (parsed.valor !== null) msg += ' Taxa: R$ ' + parsed.valor.toFixed(2).replace('.', ',');
+            toast(msg);
           }
         } catch (err) {
           console.error(err);
@@ -4395,13 +4351,27 @@
           document.getElementById('bairro-custom').value = parsed.bairro;
           document.getElementById('end-comp').value = parsed.comp;
           state.bairroSel = parsed.bairro;
-          const matched = state.bairros.find(b => b.toLowerCase() === parsed.bairro.toLowerCase());
-          if (matched) detectarPrecoPorBairro(matched);
+          
+          // Popula valor se detectado
+          if (parsed.valor !== null) {
+            document.getElementById('valor-custom').value = parsed.valor;
+            state.areaSel = null;
+            const select = document.getElementById('areas-select');
+            if (select) select.value = '';
+          } else {
+            const matched = state.bairros.find(b => b.toLowerCase() === parsed.bairro.toLowerCase());
+            if (matched) detectarPrecoPorBairro(matched);
+          }
+          
           resetCurrentOrderState();
           gerarPreview();
           if (statusEl) { statusEl.textContent = 'Preenchido!'; statusEl.style.color = 'var(--primary)'; }
           if (checkEl) checkEl.style.display = 'block';
-          toast('✅ Endereço detectado no texto!');
+          
+          let msg = '✅ Endereço detectado no texto!';
+          if (parsed.cep) msg += ' CEP: ' + parsed.cep;
+          if (parsed.valor !== null) msg += ' Taxa: R$ ' + parsed.valor.toFixed(2).replace('.', ',');
+          toast(msg);
         } else {
           if (statusEl) { statusEl.textContent = 'Nenhum endereço.'; statusEl.style.color = 'var(--accent)'; }
           toast('⚠️ Endereço não identificado.');
@@ -4482,7 +4452,8 @@
         const res = await fetch('/api/orders');
         const ct = res.headers.get('content-type') || '';
         if (res.ok && ct.includes('application/json')) {
-          state.historico = await res.json();
+          const fetched = await res.json();
+          state.historico = fetched.filter(o => !exclusoesPendentes.has(String(o.id)));
           save('mc_historico', state.historico);
           _apiAvailable = true;
           const banner = document.getElementById('banner-db-offline');
@@ -4494,7 +4465,7 @@
       } catch (e) {
         console.warn('Erro ao carregar histórico da nuvem, tentando localStorage:', e);
       }
-      state.historico = safeParse('mc_historico', []);
+      state.historico = safeParse('mc_historico', []).filter(o => !exclusoesPendentes.has(String(o.id)));
       _apiAvailable = false;
       const bannerOffline = document.getElementById('banner-db-offline');
       if (bannerOffline) bannerOffline.style.display = 'block';
@@ -4539,7 +4510,7 @@
         });
         _lastKnownStatuses = {};
         orders.forEach(o => { _lastKnownStatuses[o.id] = o.status; });
-        state.historico = orders;
+        state.historico = orders.filter(o => !exclusoesPendentes.has(String(o.id)));
         save('mc_historico', state.historico);
         renderHistorico();
         if (newAccepts.length > 0) mostrarNotificacaoAceite(newAccepts);
@@ -5021,11 +4992,8 @@
         const res = await fetch(`/api/motoboy-report?telefone=${tel}`);
         if (res.ok) runs = await res.json();
       } catch (e) {
-        // Fallback to lixeira + local merged history
-        const localAll = [
-          ...safeParse('mc_historico', []),
-          ...safeParse('mc_lixeira', [])
-        ];
+        // Fallback to local history
+        const localAll = safeParse('mc_historico', []);
         runs = localAll.filter(h => String(h.motoboy_telefone) === String(tel) && ['aceito','concluido'].includes(h.status));
       }
       if (!listEl) return; // card may have changed
@@ -5567,44 +5535,20 @@
 
     initTheme();
 
-    // ─── STARTUP: mover expirados para lixeira, limpar lixeira >7 dias ─────────
+    // ─── STARTUP: limpar histórico local >7 dias ─────────
     const now_startup = Date.now();
-    const threshold24h_startup = now_startup - 24 * 60 * 60 * 1000;
     const threshold7d_startup = now_startup - 7 * 24 * 60 * 60 * 1000;
 
     const localHist = safeParse('mc_historico', []);
-    const existingLixeira = safeParse('mc_lixeira', []);
 
-    // Move items older than 24h from active history to lixeira
-    const activeHist = [];
-    const toTrash = [];
-    localHist.forEach(h => {
-      const time = parseOrderTime(h);
-      if (!isNaN(time) && time > threshold24h_startup) {
-        activeHist.push(h);
-      } else if (!isNaN(time) && time > threshold7d_startup) {
-        // Only add to trash if not already there
-        if (!existingLixeira.some(l => String(l.id) === String(h.id))) {
-          toTrash.push(h);
-        }
-      }
-      // Items older than 7 days are simply dropped
-    });
-
-    // Clean lixeira: remove items older than 7 days
-    const cleanLixeira = existingLixeira.filter(h => {
+    // Keep items younger than 7 days in active history
+    const activeHist = localHist.filter(h => {
       const time = parseOrderTime(h);
       return !isNaN(time) && time > threshold7d_startup;
     });
-    // Add newly expired items to lixeira
-    toTrash.forEach(h => cleanLixeira.push(h));
 
     localStorage.setItem('mc_historico', JSON.stringify(activeHist));
-    localStorage.setItem('mc_lixeira', JSON.stringify(cleanLixeira));
     state.historico = activeHist;
-
-    // Update lixeira badge
-    _atualizarBadgeLixeira();
 
     if (!isMotoboyMode) {
       renderColeta();
