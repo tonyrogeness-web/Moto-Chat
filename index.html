@@ -1928,6 +1928,7 @@
 
   <!-- TOAST NOTIFICATION -->
   <div class="toast" id="toast"></div>
+  <div class="toast" id="toast-undo" style="pointer-events: auto; bottom: 90px;"></div>
 
   <!-- MOTOBOY ACCEPT VIEW -->
   <div id="motoboy-accept-view" style="display: none; padding: 20px; max-width: 500px; margin: 0 auto; min-height: 100vh;">
@@ -3367,6 +3368,8 @@
       // Se já existia uma deleção pendente, executa ela de vez antes de iniciar outra
       if (deletarTimeout && ultimoExcluido) {
         clearTimeout(deletarTimeout);
+        const prevToastEl = document.getElementById('toast-undo');
+        if (prevToastEl) prevToastEl.classList.remove('show');
         await executarDelecaoReal(ultimoExcluido.id);
       }
       
@@ -3380,7 +3383,7 @@
       
       renderHistorico();
       
-      const toastEl = document.getElementById('toast');
+      const toastEl = document.getElementById('toast-undo');
       toastEl.innerHTML = `
         <span>🗑️ Corrida excluída.</span>
         <button onclick="desfazerExclusao()" style="background:#10b981; color:white; border:none; border-radius:12px; padding:4px 10px; font-weight:800; cursor:pointer; margin-left:12px; font-size:12px; box-shadow:0 2px 6px rgba(16,185,129,0.3);">Desfazer</button>
@@ -3408,10 +3411,10 @@
       ultimoExcluido = null;
       renderHistorico();
       
-      const toastEl = document.getElementById('toast');
-      toastEl.textContent = '♻️ Exclusão desfeita!';
-      toastEl.classList.add('show');
-      setTimeout(() => toastEl.classList.remove('show'), 2500);
+      const toastEl = document.getElementById('toast-undo');
+      if (toastEl) toastEl.classList.remove('show');
+      
+      toast('♻️ Exclusão desfeita!');
       playSound('success');
     }
 
@@ -4153,9 +4156,14 @@
 
       let valor = null;
       // Procura taxa de entrega/frete no texto bruto
-      const valMatch = texto.match(/(?:taxa\s+(?:de\s+)?entrega|valor\s+(?:da\s+)?entrega|taxa\s+(?:de\s+)?frete|frete|entrega)[\s:\-=\+\(\)]*(?:r?\$\s*)?(\d+(?:\s*[.,]\s*\d{2})?)\b/i);
+      const valMatch = texto.match(/(?:taxa\s+(?:de\s+)?entrega|valor\s+(?:da\s+)?entrega|taxa\s+(?:de\s+)?frete|frete|entrega)[\s:\-=\+\(\)]*(?:(r?\$\s*)?(\d+(?:\s*[.,]\s*\d{2})?))\b/i);
       if (valMatch) {
-        valor = parseFloat(valMatch[1].replace(/\s/g, '').replace(',', '.'));
+        const temCifrao = !!valMatch[1];
+        const valorTexto = valMatch[2];
+        const temDecimais = /[.,]/.test(valorTexto);
+        if (temDecimais || temCifrao) {
+          valor = parseFloat(valorTexto.replace(/\s/g, '').replace(',', '.'));
+        }
       }
 
       if (!rua && linhas.length > 0) {
