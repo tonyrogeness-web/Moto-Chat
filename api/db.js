@@ -24,6 +24,9 @@ const CREATE_SQL = `
     completed_at TIMESTAMP WITH TIME ZONE
   );
   ALTER TABLE entregas ADD COLUMN IF NOT EXISTS tags JSONB DEFAULT '[]';
+  CREATE INDEX IF NOT EXISTS idx_entregas_created_at ON entregas (created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_entregas_status ON entregas (status);
+  CREATE INDEX IF NOT EXISTS idx_entregas_motoboy_telefone ON entregas (motoboy_telefone);
 `;
 
 async function ensureTable() {
@@ -123,7 +126,7 @@ if (process.env.DATABASE_URL) {
         return { rows:[] };
       }
       if (text.includes('DELETE FROM entregas WHERE created_at')) {
-        const cut = new Date(Date.now()-48*3600000).toISOString();
+        const cut = new Date(Date.now()-7*24*3600000).toISOString();
         const rem = db.filter(x => x.created_at >= cut);
         fs.writeFileSync(mockDbPath, JSON.stringify(rem, null, 2));
         return { rows:[], rowCount: db.length - rem.length };
