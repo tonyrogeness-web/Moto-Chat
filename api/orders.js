@@ -18,7 +18,6 @@ module.exports = async (req, res) => {
   const method = req.method;
 
   if (method === 'GET') {
-    if (!checkApiKey(req, res)) return;
     try {
       const { status, search, id } = req.query;
 
@@ -34,6 +33,8 @@ module.exports = async (req, res) => {
         const { rows } = await pool.query('SELECT * FROM entregas WHERE id = $1', [id]);
         return res.status(200).json(rows);
       }
+
+      if (!checkApiKey(req, res)) return;
 
       // Auto-completa em lote todas as corridas aceitas há mais de 1h20
       await pool.query(
