@@ -4153,12 +4153,20 @@
 
       let valor = null;
       // Procura taxa de entrega/frete no texto bruto
-      const valMatch = texto.match(/(?:taxa\s+(?:de\s+)?entrega|valor\s+(?:da\s+)?entrega|taxa\s+(?:de\s+)?frete|frete|entrega)\s*[:\-=]?\s*(?:r?\$\s*)?(\d+(?:[.,]\d{2})?)\b/i);
+      const valMatch = texto.match(/(?:taxa\s+(?:de\s+)?entrega|valor\s+(?:da\s+)?entrega|taxa\s+(?:de\s+)?frete|frete|entrega)[\s:\-=\+\(\)]*(?:r?\$\s*)?(\d+(?:\s*[.,]\s*\d{2})?)\b/i);
       if (valMatch) {
-        valor = parseFloat(valMatch[1].replace(',', '.'));
+        valor = parseFloat(valMatch[1].replace(/\s/g, '').replace(',', '.'));
       }
 
-      if (!rua && linhas.length > 0) rua = linhas[0];
+      if (!rua && linhas.length > 0) {
+        const reIgnorarFallbackRua = /\b(entrega|frete|subtotal|total|pago|pedido|finalizado|troco|cupom|desconto|pix|cartao|dinheiro|whatsapp|telefone|fone|celular)\b/i;
+        for (const linha of linhas) {
+          if (!reIgnorarFallbackRua.test(linha)) {
+            rua = linha;
+            break;
+          }
+        }
+      }
       return { rua: limpar(rua), bairro: limpar(bairro), comp: limpar(comp || ''), cep, valor };
     }
 
@@ -4305,11 +4313,13 @@
             return;
           }
           const parsed = extrairEnderecoDoTexto(text);
-          if (parsed.rua || parsed.bairro) {
-            document.getElementById('end-rua').value = parsed.rua;
-            document.getElementById('bairro-custom').value = parsed.bairro;
-            document.getElementById('end-comp').value = parsed.comp;
-            state.bairroSel = parsed.bairro;
+          if (parsed.rua || parsed.bairro || parsed.valor !== null) {
+            if (parsed.rua) document.getElementById('end-rua').value = parsed.rua;
+            if (parsed.bairro) {
+              document.getElementById('bairro-custom').value = parsed.bairro;
+              state.bairroSel = parsed.bairro;
+            }
+            if (parsed.comp) document.getElementById('end-comp').value = parsed.comp;
             
             // Popula valor se detectado
             if (parsed.valor !== null) {
@@ -4317,7 +4327,7 @@
               state.areaSel = null;
               const select = document.getElementById('areas-select');
               if (select) select.value = '';
-            } else {
+            } else if (parsed.bairro) {
               const matched = state.bairros.find(b => b.toLowerCase() === parsed.bairro.toLowerCase());
               if (matched) detectarPrecoPorBairro(matched);
             }
@@ -4349,11 +4359,13 @@
       if (checkEl) checkEl.style.display = 'none';
       setTimeout(() => {
         const parsed = extrairEnderecoDoTexto(text);
-        if (parsed.rua || parsed.bairro) {
-          document.getElementById('end-rua').value = parsed.rua;
-          document.getElementById('bairro-custom').value = parsed.bairro;
-          document.getElementById('end-comp').value = parsed.comp;
-          state.bairroSel = parsed.bairro;
+        if (parsed.rua || parsed.bairro || parsed.valor !== null) {
+          if (parsed.rua) document.getElementById('end-rua').value = parsed.rua;
+          if (parsed.bairro) {
+            document.getElementById('bairro-custom').value = parsed.bairro;
+            state.bairroSel = parsed.bairro;
+          }
+          if (parsed.comp) document.getElementById('end-comp').value = parsed.comp;
           
           // Popula valor se detectado
           if (parsed.valor !== null) {
@@ -4361,7 +4373,7 @@
             state.areaSel = null;
             const select = document.getElementById('areas-select');
             if (select) select.value = '';
-          } else {
+          } else if (parsed.bairro) {
             const matched = state.bairros.find(b => b.toLowerCase() === parsed.bairro.toLowerCase());
             if (matched) detectarPrecoPorBairro(matched);
           }
