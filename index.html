@@ -3188,7 +3188,7 @@
         const time = parseOrderTime(h);
         return !isNaN(time) && time >= startOfDay.getTime();
       });
-      const faturado = todayItems.filter(h => h.status === 'concluido').reduce((a, b) => a + Number(b.valor_total), 0);
+      const faturado = todayItems.filter(h => h.status !== 'cancelado').reduce((a, b) => a + Number(b.valor_total), 0);
       const elDate = document.getElementById('day-panel-date');
       if (elDate) elDate.textContent = hoje.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short' });
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
