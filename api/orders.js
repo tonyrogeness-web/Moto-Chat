@@ -18,6 +18,7 @@ module.exports = async (req, res) => {
   const method = req.method;
 
   if (method === 'GET') {
+    if (!checkApiKey(req, res)) return;
     try {
       const { status, search, id } = req.query;
 

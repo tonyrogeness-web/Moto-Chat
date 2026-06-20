@@ -2018,8 +2018,19 @@
   <!-- ─── JAVASCRIPT STATE & LOGIC ────────────────────────────────────────── -->
   <script>
     // ─── STATE & MIGRATION ────────────────────────────────────────────────────────
-    let oldColeta = JSON.parse(localStorage.getItem('mc_coleta') || 'null');
-    let savedColetas = JSON.parse(localStorage.getItem('mc_coletas') || '[]');
+    function safeParse(key, defaultValue) {
+      try {
+        const val = localStorage.getItem(key);
+        return val ? JSON.parse(val) : defaultValue;
+      } catch (e) {
+        console.warn(`Error parsing localStorage key "${key}":`, e);
+        return defaultValue;
+      }
+    }
+
+    // ─── STATE & MIGRATION ────────────────────────────────────────────────────────
+    let oldColeta = safeParse('mc_coleta', null);
+    let savedColetas = safeParse('mc_coletas', []);
     let activeColetaId = localStorage.getItem('mc_coleta_ativa_id') || '';
 
     if (oldColeta) {
@@ -2045,7 +2056,7 @@
       localStorage.setItem('mc_coleta_ativa_id', defaultId);
     }
 
-    let savedAreas = JSON.parse(localStorage.getItem('mc_areas') || 'null');
+    let savedAreas = safeParse('mc_areas', null);
     if (!savedAreas) {
       savedAreas = [
         { id: 'area_1', descricao: "Até 01 KM", valor: 11.00, tempo: "80min" },
@@ -2061,7 +2072,7 @@
       localStorage.setItem('mc_areas', JSON.stringify(savedAreas));
     }
 
-    let savedMotoboys = JSON.parse(localStorage.getItem('mc_motoboys_frequentes') || '[]');
+    let savedMotoboys = safeParse('mc_motoboys_frequentes', []);
     if (savedMotoboys.length === 0) {
       savedMotoboys = [
         { id: 'mb_1', nome: "João Motoboy", telefone: "5575999990001" },
@@ -2074,14 +2085,14 @@
       coletas: savedColetas,
       coletaAtivaId: activeColetaId,
       destinos: [],
-      bairros: JSON.parse(localStorage.getItem('mc_bairros') || '["Conceição","Mangabeira","SIM","Centro","Brasília","Caseb","Tomba","Muchila","Campo Limpo","São João","Jequiezinho","Primavera","Boa Vista","Zabelê"]'),
+      bairros: safeParse('mc_bairros', ["Conceição","Mangabeira","SIM","Centro","Brasília","Caseb","Tomba","Muchila","Campo Limpo","São João","Jequiezinho","Primavera","Boa Vista","Zabelê"]),
       areas: savedAreas,
-      historico: JSON.parse(localStorage.getItem('mc_historico') || '[]'),
+      historico: safeParse('mc_historico', []),
       numero: localStorage.getItem('mc_numero') || '',
       bairroSel: '',
       areaSel: null,
       theme: localStorage.getItem('mc_theme') || 'light-theme',
-      soundEnabled: JSON.parse(localStorage.getItem('mc_sound') || 'true'),
+      soundEnabled: safeParse('mc_sound', true),
       motoboysFrequentes: savedMotoboys,
       modalSubTab: 'parser',
       filaOrderId: null
@@ -2783,56 +2794,70 @@
         motoboy_telefone: null,
         ...orderData
       };
-      const hist = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      const hist = safeParse('mc_historico', []);
       hist.unshift(record);
       localStorage.setItem('mc_historico', JSON.stringify(hist));
       state.historico = hist;
       return localId;
     }
 
+    let _pendingSavePromise = null;
+
     async function garantirPedidoSalvo() {
       if (currentOrderState.saved && currentOrderState.id) {
         return currentOrderState.id;
       }
-
-      const orderData = _montarOrderData();
-      if (!orderData) return null;
-
-      if (orderData.destinos) {
-        orderData.destinos.forEach(d => {
-          salvarBairroSeNovo(d.bairro);
-        });
+      if (_pendingSavePromise) {
+        return _pendingSavePromise;
       }
+
+      _pendingSavePromise = (async () => {
+        const orderData = _montarOrderData();
+        if (!orderData) return null;
+
+        if (orderData.destinos) {
+          orderData.destinos.forEach(d => {
+            salvarBairroSeNovo(d.bairro);
+          });
+        }
+
+        try {
+          const res = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderData),
+            signal: AbortSignal.timeout(4000)
+          });
+
+          const ct = res.headers.get('content-type') || '';
+          if (res.ok && ct.includes('application/json')) {
+            const savedOrder = await res.json();
+            currentOrderState.id = savedOrder.id;
+            currentOrderState.saved = true;
+            _apiAvailable = true;
+            getMensagem(savedOrder.id).then(m => { const el = document.getElementById('preview-msg'); if(el) el.textContent = m; });
+            await carregarHistoricoServidor();
+            return savedOrder.id;
+          }
+        } catch (e) {
+          console.warn('Erro de rede na API, utilizando fallback local:', e);
+        }
+
+        _apiAvailable = false;
+        const localId = _salvarLocalFallback(orderData);
+        currentOrderState.id = localId;
+        currentOrderState.saved = true;
+        getMensagem(localId).then(m => { const el = document.getElementById('preview-msg'); if(el) el.textContent = m; });
+        renderHistorico();
+        return localId;
+      })();
 
       try {
-        const res = await fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderData),
-          signal: AbortSignal.timeout(4000)
-        });
-
-        const ct = res.headers.get('content-type') || '';
-        if (res.ok && ct.includes('application/json')) {
-          const savedOrder = await res.json();
-          currentOrderState.id = savedOrder.id;
-          currentOrderState.saved = true;
-          _apiAvailable = true;
-          getMensagem(savedOrder.id).then(m => { const el = document.getElementById('preview-msg'); if(el) el.textContent = m; });
-          await carregarHistoricoServidor();
-          return savedOrder.id;
-        }
-      } catch (e) {
-        console.warn('Erro de rede na API, utilizando fallback local:', e);
+        const result = await _pendingSavePromise;
+        return result;
+      } finally {
+        _pendingSavePromise = null;
       }
-
-      _apiAvailable = false;
-      const localId = _salvarLocalFallback(orderData);
-      currentOrderState.id = localId;
-      currentOrderState.saved = true;
-      getMensagem(localId).then(m => { const el = document.getElementById('preview-msg'); if(el) el.textContent = m; });
-      renderHistorico();
-      return localId;
     }
 
     async function copiarMensagem() {
@@ -3188,7 +3213,7 @@
       const dest = (item.destinos && item.destinos[0]) || {};
       const fav = { rua: dest.rua || item.rua, bairro: dest.bairro || item.bairro, comp: dest.comp || item.comp || '', savedAt: Date.now() };
       if (!fav.rua) { toast('⚠️ Endereço vazio, não salvou'); return; }
-      const favs = JSON.parse(localStorage.getItem('mc_favoritos') || '[]');
+      const favs = safeParse('mc_favoritos', []);
       if (favs.find(f => f.rua === fav.rua && f.bairro === fav.bairro)) { toast('⭐ Já está nos favoritos!'); return; }
       favs.unshift(fav);
       localStorage.setItem('mc_favoritos', JSON.stringify(favs.slice(0, 20)));
@@ -3197,7 +3222,7 @@
       renderFavoritos();
     }
     function renderFavoritos() {
-      const favs = JSON.parse(localStorage.getItem('mc_favoritos') || '[]');
+      const favs = safeParse('mc_favoritos', []);
       const sec = document.getElementById('sec-favoritos');
       const lista = document.getElementById('favoritos-lista');
       if (!sec || !lista) return;
@@ -3214,7 +3239,7 @@
         </div>`).join('');
     }
     function preencherDeFavorito(i) {
-      const favs = JSON.parse(localStorage.getItem('mc_favoritos') || '[]');
+      const favs = safeParse('mc_favoritos', []);
       const f = favs[i];
       if (!f) return;
       document.getElementById('end-rua').value = f.rua;
@@ -3230,7 +3255,7 @@
       showTab('solicitar');
     }
     function removerFavorito(i) {
-      const favs = JSON.parse(localStorage.getItem('mc_favoritos') || '[]');
+      const favs = safeParse('mc_favoritos', []);
       favs.splice(i, 1);
       localStorage.setItem('mc_favoritos', JSON.stringify(favs));
       renderFavoritos();
@@ -3338,7 +3363,7 @@
 
     // ─── LIXEIRA (TRASH) ─────────────────────────────────────────────────────────
     function _getLixeira() {
-      return JSON.parse(localStorage.getItem('mc_lixeira') || '[]');
+      return safeParse('mc_lixeira', []);
     }
     function _saveLixeira(arr) {
       localStorage.setItem('mc_lixeira', JSON.stringify(arr));
@@ -3651,7 +3676,7 @@
         }
       }
       
-      const localHistory = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      const localHistory = safeParse('mc_historico', []);
       const newLocal = localHistory.filter(h => String(h.id) !== String(id));
       localStorage.setItem('mc_historico', JSON.stringify(newLocal));
       state.historico = newLocal;
@@ -3682,7 +3707,7 @@
         }
       }
       
-      const hist = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      const hist = safeParse('mc_historico', []);
       const idx = hist.findIndex(h => String(h.id) === String(id));
       if (idx !== -1) {
         hist[idx].status = status;
@@ -4461,7 +4486,7 @@
       } catch (e) {
         console.warn('Erro ao carregar histórico da nuvem, tentando localStorage:', e);
       }
-      state.historico = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      state.historico = safeParse('mc_historico', []);
       _apiAvailable = false;
       const bannerOffline = document.getElementById('banner-db-offline');
       if (bannerOffline) bannerOffline.style.display = 'block';
@@ -4644,7 +4669,7 @@
       }
 
       // PRIORIDADE 2: localStorage (mesmo aparelho do despachante)
-      const localHistory = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      const localHistory = safeParse('mc_historico', []);
       const order = localHistory.find(h => String(h.id) === String(orderId));
       if (order) {
         renderDetalhesCorridaHtml(order);
@@ -4816,7 +4841,7 @@
       }
       
       // Fallback
-      const localHistory = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      const localHistory = safeParse('mc_historico', []);
       let idx = localHistory.findIndex(h => String(h.id) === String(orderId));
       
       if (idx === -1 && dataParam) {
@@ -4917,7 +4942,7 @@
       }
       
       // Fallback local ou offline
-      const localHistory = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      const localHistory = safeParse('mc_historico', []);
       const idx = localHistory.findIndex(h => String(h.id) === String(orderId));
       if (idx !== -1) {
         localHistory[idx].status = 'concluido';
@@ -4990,8 +5015,8 @@
       } catch (e) {
         // Fallback to lixeira + local merged history
         const localAll = [
-          ...JSON.parse(localStorage.getItem('mc_historico') || '[]'),
-          ...JSON.parse(localStorage.getItem('mc_lixeira') || '[]')
+          ...safeParse('mc_historico', []),
+          ...safeParse('mc_lixeira', [])
         ];
         runs = localAll.filter(h => String(h.motoboy_telefone) === String(tel) && ['aceito','concluido'].includes(h.status));
       }
@@ -5051,7 +5076,7 @@
       }
       
       // Fallback
-      const localHistory = JSON.parse(localStorage.getItem('mc_historico') || '[]');
+      const localHistory = safeParse('mc_historico', []);
       const runs = localHistory.filter(h => String(h.motoboy_telefone) === String(telefone) && ['aceito', 'concluido'].includes(h.status));
       renderReportRunsHtml(runs);
       playSound('success');
@@ -5539,8 +5564,8 @@
     const threshold24h_startup = now_startup - 24 * 60 * 60 * 1000;
     const threshold7d_startup = now_startup - 7 * 24 * 60 * 60 * 1000;
 
-    const localHist = JSON.parse(localStorage.getItem('mc_historico') || '[]');
-    const existingLixeira = JSON.parse(localStorage.getItem('mc_lixeira') || '[]');
+    const localHist = safeParse('mc_historico', []);
+    const existingLixeira = safeParse('mc_lixeira', []);
 
     // Move items older than 24h from active history to lixeira
     const activeHist = [];
