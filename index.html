@@ -1657,16 +1657,14 @@
 
       <!-- FILTRO DE PERIODO -->
       <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
-        <button class="hist-btn" id="filter-hoje" onclick="filtrarPeriodo('hoje')" style="border-color:var(--primary); color:var(--primary); background:var(--primary-glow);">Hoje</button>
         <button class="hist-btn" id="filter-ontem" onclick="filtrarPeriodo('ontem')">Ontem</button>
-        <button class="hist-btn" id="filter-semana" onclick="filtrarPeriodo('semana')">Esta Semana</button>
-        <button class="hist-btn" id="filter-mes" onclick="filtrarPeriodo('mes')">Este Mês</button>
+        <button class="hist-btn" id="filter-semana" onclick="filtrarPeriodo('semana')" style="border-color:var(--primary); color:var(--primary); background:var(--primary-glow);">Esta Semana</button>
         <button class="hist-btn" id="filter-todos" onclick="filtrarPeriodo('todos')">Todos</button>
       </div>
 
       <div class="day-panel-title" style="margin-bottom:8px;">
         <span>📊 Resumo do Filtro</span>
-        <span id="periodo-label" style="font-weight:600; font-size:12px; color:var(--text-muted);">Hoje</span>
+        <span id="periodo-label" style="font-weight:600; font-size:12px; color:var(--text-muted);">Esta Semana</span>
       </div>
       <div class="resumo-grid">
         <div class="resumo-card">
@@ -3159,10 +3157,10 @@
       dl.innerHTML = [...ruas].map(r => `<option value="${r}">`).join('');
     }
 
-    let _periodoFilter = 'hoje';
+    let _periodoFilter = 'semana';
     function filtrarPeriodo(p) {
       _periodoFilter = p;
-      ['hoje','ontem','semana','mes','todos'].forEach(id => {
+      ['ontem','semana','todos'].forEach(id => {
         const el = document.getElementById('filter-' + id);
         if (!el) return;
         const isActive = id === p;
@@ -3175,10 +3173,8 @@
     function getPeriodoRange(p) {
       const now = new Date();
       const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      if (p === 'hoje') return [start, null];
       if (p === 'ontem') { const s = new Date(start); s.setDate(s.getDate()-1); const e = new Date(start); return [s, e]; }
-      if (p === 'semana') { const s = new Date(start); s.setDate(s.getDate() - s.getDay()); return [s, null]; }
-      if (p === 'mes') { const s = new Date(now.getFullYear(), now.getMonth(), 1); return [s, null]; }
+      if (p === 'semana') { const s = new Date(start); s.setDate(s.getDate() - 6); return [s, null]; }
       return [null, null];
     }
 
@@ -3479,9 +3475,9 @@
       atualizarSugestoesRua();
       verificarPendentesAlerta();
 
-      const periodoLabels = { hoje: 'Hoje', ontem: 'Ontem', semana: 'Esta Semana', mes: 'Este Mês', todos: 'Todos' };
+      const periodoLabels = { ontem: 'Ontem', semana: 'Esta Semana', todos: 'Todos' };
       const elPeriodoLabel = document.getElementById('periodo-label');
-      if (elPeriodoLabel) elPeriodoLabel.textContent = periodoLabels[_periodoFilter] || 'Hoje';
+      if (elPeriodoLabel) elPeriodoLabel.textContent = periodoLabels[_periodoFilter] || 'Esta Semana';
 
       const [rangeStart, rangeEnd] = getPeriodoRange(_periodoFilter);
       let listToShow = [...state.historico];
@@ -3641,7 +3637,7 @@
         }
       };
 
-      const agruparPorDia = ['semana', 'mes', 'todos'].includes(_periodoFilter);
+      const agruparPorDia = ['semana', 'todos'].includes(_periodoFilter);
 
       if (agruparPorDia) {
         const grupos = new Map();
