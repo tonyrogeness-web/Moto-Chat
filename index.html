@@ -1701,6 +1701,10 @@
             </select>
           </div>
         </div>
+        <div id="filtros-ativos-badge" style="display:none; align-items:center; gap:6px; font-size:11px; color:var(--primary); font-weight:600; margin-bottom:12px;">
+          🔍 Filtros de busca/status aplicados
+          <button onclick="limparFiltrosHistorico()" style="background:none; border:none; color:var(--primary); text-decoration:underline; cursor:pointer; font-size:11px; padding:0;">limpar</button>
+        </div>
         <button class="btn btn-outline btn-small" onclick="copiarResumoDia()" style="width: 100%; height: auto; padding: 10px; border-style: dashed;">
           📊 Copiar Resumo Financeiro (Hoje)
         </button>
@@ -1710,7 +1714,7 @@
       <div id="sec-favoritos" style="display:none; margin-bottom:16px;">
         <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
           <span>⭐ Endereços Favoritos</span>
-          <button onclick="document.getElementById('sec-favoritos').style.display='none'" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:18px;">×</button>
+          <button onclick="fecharFavoritos()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:18px;">×</button>
         </div>
         <div id="favoritos-lista"></div>
       </div>
@@ -3178,6 +3182,14 @@
       return [null, null];
     }
 
+    function limparFiltrosHistorico() {
+      const search = document.getElementById('hist-search');
+      if (search) search.value = '';
+      const status = document.getElementById('hist-filter-status');
+      if (status) status.value = 'todos';
+      filtrarPeriodo('todos');
+    }
+
     function atualizarDayPanel() {
       const hoje = new Date();
       const startOfDay = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
@@ -3214,6 +3226,7 @@
       if (favs.find(f => f.rua === fav.rua && f.bairro === fav.bairro)) { toast('⭐ Já está nos favoritos!'); return; }
       favs.unshift(fav);
       localStorage.setItem('mc_favoritos', JSON.stringify(favs.slice(0, 20)));
+      localStorage.removeItem('mc_favoritos_fechado');
       toast('⭐ Endereço salvo nos favoritos!');
       playSound('success');
       renderFavoritos();
@@ -3224,7 +3237,8 @@
       const lista = document.getElementById('favoritos-lista');
       if (!sec || !lista) return;
       if (!favs.length) { sec.style.display = 'none'; return; }
-      sec.style.display = 'block';
+      const fechado = localStorage.getItem('mc_favoritos_fechado') === '1';
+      sec.style.display = fechado ? 'none' : 'block';
       lista.innerHTML = favs.map((f, i) => `
         <div class="fav-item" onclick="preencherDeFavorito(${i})">
           <span class="bairro-dot" style="background:${bairroColor(f.bairro)};"></span>
@@ -3234,6 +3248,10 @@
           </div>
           <button onclick="event.stopPropagation(); removerFavorito(${i})" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; padding:4px;">✕</button>
         </div>`).join('');
+    }
+    function fecharFavoritos() {
+      localStorage.setItem('mc_favoritos_fechado', '1');
+      document.getElementById('sec-favoritos').style.display = 'none';
     }
     function preencherDeFavorito(i) {
       const favs = safeParse('mc_favoritos', []);
@@ -3479,6 +3497,9 @@
       const elPeriodoLabel = document.getElementById('periodo-label');
       if (elPeriodoLabel) elPeriodoLabel.textContent = periodoLabels[_periodoFilter] || 'Esta Semana';
 
+      const elFiltrosBadge = document.getElementById('filtros-ativos-badge');
+      if (elFiltrosBadge) elFiltrosBadge.style.display = (query || filterStatus !== 'todos') ? 'flex' : 'none';
+
       const [rangeStart, rangeEnd] = getPeriodoRange(_periodoFilter);
       let listToShow = [...state.historico];
       if (rangeStart) {
@@ -3514,7 +3535,7 @@
       document.getElementById('res-concluidas').textContent = concluidasFiltradas.length;
 
       if (!listToShow.length) {
-        lista.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><p>Nenhum registro encontrado.</p></div>';
+        lista.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><p>Nenhum registro encontrado.</p><button class="btn btn-outline btn-small" onclick="limparFiltrosHistorico()" style="margin:10px auto 0;">Limpar Filtros</button></div>';
         return;
       }
 
@@ -3570,7 +3591,7 @@
           <div class="hist-header">
             <div class="hist-bairro"><span class="bairro-dot" style="background:${color};"></span>${icon} ${info.bairro}${typeLabel}</div>
             <div style="display:flex;align-items:center;gap:6px;">
-              <span style="font-size:11px; font-weight:700; color:var(--text-muted);">#${item.id}</span>
+              <span onclick="copiarTicketId('${item.id}', event)" style="font-size:11px; font-weight:700; color:var(--text-muted); cursor:pointer;" title="Copiar nº do ticket">#${item.id}</span>
               ${timerBadge}
               <div class="hist-valor">R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}</div>
             </div>
@@ -3715,6 +3736,17 @@
         playSound('success');
       }).catch(() => {
         toast('⚠️ Falha ao copiar, tente novamente');
+        playSound('warning');
+      });
+    }
+
+    function copiarTicketId(id, event) {
+      if (event) event.stopPropagation();
+      navigator.clipboard.writeText(String(id)).then(() => {
+        toast('🎫 Ticket #' + id + ' copiado!');
+        playSound('success');
+      }).catch(() => {
+        toast('⚠️ Falha ao copiar ticket');
         playSound('warning');
       });
     }
