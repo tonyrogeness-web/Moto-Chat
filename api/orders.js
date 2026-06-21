@@ -98,7 +98,7 @@ module.exports = async (req, res) => {
     try {
       const { id, clearAll } = req.body;
       if (clearAll) {
-        await pool.query("DELETE FROM entregas WHERE created_at < NOW() - INTERVAL '7 days'");
+        await pool.query('DELETE FROM entregas');
         return res.status(200).json({ success: true });
       }
       if (!id) return res.status(400).json({ error: 'ID é obrigatório' });
