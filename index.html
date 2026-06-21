@@ -3095,7 +3095,8 @@
     }
 
     function buildMsgFromOrder(item) {
-      let msg = '🏍️ *SOLICITAÇÃO DE CORRIDA* 🏍️\n\n';
+      let msg = '🏍️ *SOLICITAÇÃO DE CORRIDA* 🏍️\n';
+      msg += `🎫 *Ticket Nº ${item.id}*\n\n`;
       msg += '*Ponto de Coleta:*\n';
       msg += `🏢 *${item.coleta_nome}*\n`;
       if (item.coleta_endereco) {
@@ -4538,6 +4539,36 @@
       }
     }
 
+    let _autoConclusaoExecutada = false;
+    async function autoConcluirPendentesAntigos() {
+      if (_autoConclusaoExecutada) return;
+      _autoConclusaoExecutada = true;
+
+      const hojeStr = new Date().toLocaleDateString('pt-BR');
+      const antigos = state.historico.filter(item => {
+        if (!['pendente', 'aceito'].includes(item.status)) return false;
+        const time = parseOrderTime(item);
+        if (isNaN(time)) return false;
+        return new Date(time).toLocaleDateString('pt-BR') !== hojeStr;
+      });
+      if (!antigos.length) return;
+
+      antigos.forEach(item => {
+        item.status = 'concluido';
+        item.completed_at = item.completed_at || new Date().toISOString();
+      });
+      save('mc_historico', state.historico);
+
+      const sincronizaveis = antigos.filter(item => !String(item.id).startsWith('local_'));
+      await Promise.all(sincronizaveis.map(item =>
+        fetch('/api/orders', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: item.id, status: 'concluido' })
+        }).catch(e => console.warn('Falha ao sincronizar auto-conclusão do ticket #' + item.id, e))
+      ));
+    }
+
     async function carregarHistoricoServidor() {
       try {
         const res = await fetch('/api/orders');
@@ -4549,6 +4580,7 @@
           _apiAvailable = true;
           const banner = document.getElementById('banner-db-offline');
           if (banner) banner.style.display = 'none';
+          await autoConcluirPendentesAntigos();
           renderHistorico();
           renderFavoritos();
           return;
@@ -4560,6 +4592,7 @@
       _apiAvailable = false;
       const bannerOffline = document.getElementById('banner-db-offline');
       if (bannerOffline) bannerOffline.style.display = 'block';
+      await autoConcluirPendentesAntigos();
       renderHistorico();
       renderFavoritos();
     }
@@ -4793,6 +4826,9 @@
       const coletaMapsUrl = order.coleta_endereco ? `https://maps.google.com/?q=${encodeURIComponent(order.coleta_nome + ' ' + order.coleta_endereco + ' Feira de Santana BA')}` : null;
       
       card.innerHTML = `
+        <div style="text-align:center; margin-bottom:12px;">
+          <span style="display:inline-block; font-size:13px; font-weight:800; color:var(--primary); background:var(--primary-light); padding:6px 16px; border-radius:20px;">🎫 Ticket Nº ${order.id}</span>
+        </div>
         <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
           <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">🕐 ${formatData}</span>
           <span class="badge ${statusBadgeClass}">${statusLabel}</span>
@@ -4845,7 +4881,6 @@
       }
       
       const redirecionar = (whatsappMsg) => {
-        // Tenta usar o número do logista/grupo salvo pelo despachante
         const numLogista = (localStorage.getItem('mc_numero') || '').replace(/\D/g, '');
         const url = numLogista.length >= 10
           ? `https://wa.me/${numLogista}?text=${encodeURIComponent(whatsappMsg)}`
@@ -4889,7 +4924,7 @@
               });
             }
             const pixSalvo = localStorage.getItem('mc_motoboy_pix') || pix || '';
-            const msg = `✅ *CORRIDA CONFIRMADA!*\n\n🏍️ *Entregador:* ${nome}\n📞 *WhatsApp:* ${telefone}${pixSalvo ? '\n💳 *Pix:* ' + pixSalvo : ''}\n🏢 *Coleta:* ${o.coleta_nome || ''}${msgDestinos}\n💰 *Total:* R$ ${Number(o.valor_total||0).toFixed(2).replace('.', ',')}\n🔄 *Retorno:* ${o.retorno ? 'Sim' : 'Não'}${o.obs ? '\n💬 *Obs:* ' + o.obs : ''}\n🆔 *ID:* ${orderId}`;
+            const msg = `✅ *CORRIDA CONFIRMADA!*\n🎫 *Ticket Nº ${orderId}*\n\n🏍️ *Entregador:* ${nome}\n📞 *WhatsApp:* ${telefone}${pixSalvo ? '\n💳 *Pix:* ' + pixSalvo : ''}\n🏢 *Coleta:* ${o.coleta_nome || ''}${msgDestinos}\n💰 *Total:* R$ ${Number(o.valor_total||0).toFixed(2).replace('.', ',')}\n🔄 *Retorno:* ${o.retorno ? 'Sim' : 'Não'}${o.obs ? '\n💬 *Obs:* ' + o.obs : ''}`;
             setTimeout(() => redirecionar(msg), 600);
             return;
           } else {
