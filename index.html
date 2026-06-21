@@ -1655,6 +1655,19 @@
         </div>
       </div>
 
+      <!-- FILTRO DE PERIODO -->
+      <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+        <button class="hist-btn" id="filter-hoje" onclick="filtrarPeriodo('hoje')" style="border-color:var(--primary); color:var(--primary); background:var(--primary-glow);">Hoje</button>
+        <button class="hist-btn" id="filter-ontem" onclick="filtrarPeriodo('ontem')">Ontem</button>
+        <button class="hist-btn" id="filter-semana" onclick="filtrarPeriodo('semana')">Esta Semana</button>
+        <button class="hist-btn" id="filter-mes" onclick="filtrarPeriodo('mes')">Este Mês</button>
+        <button class="hist-btn" id="filter-todos" onclick="filtrarPeriodo('todos')">Todos</button>
+      </div>
+
+      <div class="day-panel-title" style="margin-bottom:8px;">
+        <span>📊 Resumo do Filtro</span>
+        <span id="periodo-label" style="font-weight:600; font-size:12px; color:var(--text-muted);">Hoje</span>
+      </div>
       <div class="resumo-grid">
         <div class="resumo-card">
           <div class="resumo-num" id="res-total">0</div>
@@ -1678,7 +1691,7 @@
       <div class="card" style="padding: 16px; margin-bottom: 16px;">
         <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
           <div style="flex: 2; min-width: 180px;">
-            <input type="text" id="hist-search" placeholder="🔍 Buscar por rua ou bairro..." oninput="renderHistorico()">
+            <input type="text" id="hist-search" placeholder="🔍 Buscar por rua, bairro ou nº do ticket..." oninput="renderHistorico()">
           </div>
           <div style="flex: 1; min-width: 120px;">
             <select id="hist-filter-status" onchange="renderHistorico()">
@@ -1689,14 +1702,6 @@
               <option value="cancelado">Cancelados</option>
             </select>
           </div>
-        </div>
-        <!-- FILTRO DE PERIODO -->
-        <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
-          <button class="hist-btn" id="filter-hoje" onclick="filtrarPeriodo('hoje')" style="border-color:var(--primary); color:var(--primary); background:var(--primary-glow);">Hoje</button>
-          <button class="hist-btn" id="filter-ontem" onclick="filtrarPeriodo('ontem')">Ontem</button>
-          <button class="hist-btn" id="filter-semana" onclick="filtrarPeriodo('semana')">Esta Semana</button>
-          <button class="hist-btn" id="filter-mes" onclick="filtrarPeriodo('mes')">Este Mês</button>
-          <button class="hist-btn" id="filter-todos" onclick="filtrarPeriodo('todos')">Todos</button>
         </div>
         <button class="btn btn-outline btn-small" onclick="copiarResumoDia()" style="width: 100%; height: auto; padding: 10px; border-style: dashed;">
           📊 Copiar Resumo Financeiro (Hoje)
@@ -3467,20 +3472,16 @@
 
     function renderHistorico() {
       const lista = document.getElementById('hist-lista');
-      const query = (document.getElementById('hist-search')?.value || '').toLowerCase();
+      const query = (document.getElementById('hist-search')?.value || '').toLowerCase().trim();
       const filterStatus = document.getElementById('hist-filter-status')?.value || 'todos';
-
-      const concluidas = state.historico.filter(h => h.status === 'concluido');
-      const totalVal = concluidas.reduce((a, b) => a + Number(b.valor_total), 0);
-
-      document.getElementById('res-total').textContent = state.historico.length;
-      document.getElementById('res-valor').textContent = 'R$ ' + totalVal.toFixed(2).replace('.', ',');
-      document.getElementById('res-pendentes').textContent = state.historico.filter(h => h.status === 'pendente').length;
-      document.getElementById('res-concluidas').textContent = concluidas.length;
 
       atualizarDayPanel();
       atualizarSugestoesRua();
       verificarPendentesAlerta();
+
+      const periodoLabels = { hoje: 'Hoje', ontem: 'Ontem', semana: 'Esta Semana', mes: 'Este Mês', todos: 'Todos' };
+      const elPeriodoLabel = document.getElementById('periodo-label');
+      if (elPeriodoLabel) elPeriodoLabel.textContent = periodoLabels[_periodoFilter] || 'Hoje';
 
       const [rangeStart, rangeEnd] = getPeriodoRange(_periodoFilter);
       let listToShow = [...state.historico];
@@ -3494,6 +3495,7 @@
         listToShow = listToShow.filter(h => h.status === filterStatus);
       }
       if (query) {
+        const queryId = query.replace(/^#/, '');
         listToShow = listToShow.filter(h => {
           const info = getDestInfo(h);
           const destText = JSON.stringify(h.destinos || []).toLowerCase();
@@ -3502,9 +3504,18 @@
             (h.coleta_nome || '').toLowerCase().includes(query) ||
             (h.obs || '').toLowerCase().includes(query) ||
             destText.includes(query) ||
-            (h.motoboy_nome || '').toLowerCase().includes(query);
+            (h.motoboy_nome || '').toLowerCase().includes(query) ||
+            String(h.id).toLowerCase().includes(queryId);
         });
       }
+
+      const concluidasFiltradas = listToShow.filter(h => h.status === 'concluido');
+      const totalValFiltrado = concluidasFiltradas.reduce((a, b) => a + Number(b.valor_total), 0);
+
+      document.getElementById('res-total').textContent = listToShow.length;
+      document.getElementById('res-valor').textContent = 'R$ ' + totalValFiltrado.toFixed(2).replace('.', ',');
+      document.getElementById('res-pendentes').textContent = listToShow.filter(h => h.status === 'pendente').length;
+      document.getElementById('res-concluidas').textContent = concluidasFiltradas.length;
 
       if (!listToShow.length) {
         lista.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><p>Nenhum registro encontrado.</p></div>';
@@ -3512,9 +3523,6 @@
       }
 
       lista.innerHTML = '';
-
-      const pendentes = listToShow.filter(h => h.status === 'pendente' || h.status === 'aceito');
-      const concluidas_lista = listToShow.filter(h => h.status === 'concluido' || h.status === 'cancelado');
 
       const renderItem = (item) => {
         const badges = { pendente: 'badge-pendente', aceito: 'badge-aceito', concluido: 'badge-concluido', cancelado: 'badge-cancelado' };
@@ -3566,6 +3574,7 @@
           <div class="hist-header">
             <div class="hist-bairro"><span class="bairro-dot" style="background:${color};"></span>${icon} ${info.bairro}${typeLabel}</div>
             <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:11px; font-weight:700; color:var(--text-muted);">#${item.id}</span>
               ${timerBadge}
               <div class="hist-valor">R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}</div>
             </div>
@@ -3602,29 +3611,60 @@
         lista.appendChild(div);
       };
 
-      if (pendentes.length > 0) {
-        if (filterStatus === 'todos' && concluidas_lista.length > 0) {
-          const hdr = document.createElement('div');
-          hdr.style.cssText = 'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:var(--primary);padding:8px 4px 4px;opacity:0.85;';
-          hdr.textContent = `⏳ Em Andamento (${pendentes.length})`;
-          lista.appendChild(hdr);
-        }
-        pendentes.forEach(renderItem);
-      }
+      const renderGrupo = (grupo) => {
+        const pendentes = grupo.filter(h => h.status === 'pendente' || h.status === 'aceito');
+        const concluidas_lista = grupo.filter(h => h.status === 'concluido' || h.status === 'cancelado');
 
-      if (concluidas_lista.length > 0) {
-        if (filterStatus === 'todos' && pendentes.length > 0) {
-          const divider = document.createElement('div');
-          divider.style.cssText = 'margin:14px 0 6px; border-top:1px dashed var(--border-color); position:relative;';
-          divider.innerHTML = `<span style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--bg-app);padding:0 10px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:#10b981;">🏁 Concluídas (${concluidas_lista.length})</span>`;
-          lista.appendChild(divider);
-        } else if (filterStatus === 'todos') {
-          const hdr = document.createElement('div');
-          hdr.style.cssText = 'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:#10b981;padding:8px 4px 4px;opacity:0.85;';
-          hdr.textContent = `✅ Confirmadas (${concluidas_lista.length})`;
-          lista.appendChild(hdr);
+        if (pendentes.length > 0) {
+          if (filterStatus === 'todos' && concluidas_lista.length > 0) {
+            const hdr = document.createElement('div');
+            hdr.style.cssText = 'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:var(--primary);padding:8px 4px 4px;opacity:0.85;';
+            hdr.textContent = `⏳ Em Andamento (${pendentes.length})`;
+            lista.appendChild(hdr);
+          }
+          pendentes.forEach(renderItem);
         }
-        concluidas_lista.forEach(renderItem);
+
+        if (concluidas_lista.length > 0) {
+          if (filterStatus === 'todos' && pendentes.length > 0) {
+            const divider = document.createElement('div');
+            divider.style.cssText = 'margin:14px 0 6px; border-top:1px dashed var(--border-color); position:relative;';
+            divider.innerHTML = `<span style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--bg-app);padding:0 10px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:#10b981;">🏁 Concluídas (${concluidas_lista.length})</span>`;
+            lista.appendChild(divider);
+          } else if (filterStatus === 'todos') {
+            const hdr = document.createElement('div');
+            hdr.style.cssText = 'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:#10b981;padding:8px 4px 4px;opacity:0.85;';
+            hdr.textContent = `✅ Confirmadas (${concluidas_lista.length})`;
+            lista.appendChild(hdr);
+          }
+          concluidas_lista.forEach(renderItem);
+        }
+      };
+
+      const agruparPorDia = ['semana', 'mes', 'todos'].includes(_periodoFilter);
+
+      if (agruparPorDia) {
+        const grupos = new Map();
+        listToShow.forEach(h => {
+          const time = parseOrderTime(h);
+          const dia = isNaN(time) ? 'Sem data' : new Date(time).toLocaleDateString('pt-BR');
+          if (!grupos.has(dia)) grupos.set(dia, []);
+          grupos.get(dia).push(h);
+        });
+
+        const diasOrdenados = [...grupos.keys()].sort((a, b) => parseOrderTime(grupos.get(b)[0]) - parseOrderTime(grupos.get(a)[0]));
+
+        diasOrdenados.forEach(dia => {
+          const itensDia = grupos.get(dia);
+          const valorDia = itensDia.filter(h => h.status === 'concluido').reduce((a, b) => a + Number(b.valor_total), 0);
+          const diaHdr = document.createElement('div');
+          diaHdr.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin:18px 0 8px; padding:8px 12px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px;';
+          diaHdr.innerHTML = `<span style="font-size:13px; font-weight:800;">📅 ${dia}</span><span style="font-size:12px; color:var(--text-muted); font-weight:600;">${itensDia.length} entrega${itensDia.length === 1 ? '' : 's'} • R$ ${valorDia.toFixed(2).replace('.', ',')}</span>`;
+          lista.appendChild(diaHdr);
+          renderGrupo(itensDia);
+        });
+      } else {
+        renderGrupo(listToShow);
       }
     }
 
@@ -3750,8 +3790,8 @@
       let total = 0;
       let resumo = `📊 *MOTO-CHAT • RESUMO FINANCEIRO (${hoje})*\n`;
       resumo += `----------------------------------\n`;
-      itensHoje.forEach((item, idx) => {
-        resumo += `🛵 Corrida #${idx + 1}: ${item.bairro} - R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n`;
+      itensHoje.forEach((item) => {
+        resumo += `🛵 Corrida #${item.id}: ${item.bairro} - R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n`;
         total += Number(item.valor_total);
       });
       resumo += `----------------------------------\n`;
