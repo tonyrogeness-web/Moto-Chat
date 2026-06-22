@@ -1710,6 +1710,9 @@
         </button>
       </div>
 
+      <!-- RANKING MOTOBOYS -->
+      <div id="sec-ranking-motoboys" style="margin-bottom:16px;"></div>
+
       <!-- FAVORITOS SEÇÃO -->
       <div id="sec-favoritos" style="display:none; margin-bottom:16px;">
         <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
@@ -3619,6 +3622,9 @@
             <button class="hist-btn" onclick="copiarLinkHistorico('${item.id}')" style="border-color:#a855f7;color:#a855f7;" title="Copiar Link do Ticket">
               🎫 Ticket #${item.id}
             </button>
+            <button class="hist-btn" onclick="repetirPedido('${item.id}')" style="border-color:#10b981;color:#10b981;">
+              🔁 Repetir
+            </button>
             <button class="hist-btn" onclick="deletarPedido('${item.id}')" style="border-color:var(--accent);color:var(--accent);">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg> Excluir
             </button>
@@ -3683,6 +3689,7 @@
       } else {
         renderGrupo(listToShow);
       }
+      renderRankingMotoboysPeriodo(listToShow);
     }
 
 
@@ -3752,7 +3759,7 @@
     }
 
     function repetirPedido(id) {
-      const item = state.historico.find(h => h.id === id);
+      const item = state.historico.find(h => String(h.id) === String(id));
       if (!item) return;
       
       playSound('bell');
@@ -3808,13 +3815,11 @@
     function copiarResumoDia() {
       const hoje = new Date().toLocaleDateString('pt-BR');
       const itensHoje = state.historico.filter(h => h.status === 'concluido' && new Date(h.created_at).toLocaleDateString('pt-BR') === hoje);
-      
       if (itensHoje.length === 0) {
         toast('⚠️ Nenhuma entrega confirmada hoje!');
         playSound('warning');
         return;
       }
-      
       let total = 0;
       let resumo = `📊 *MOTO-CHAT • RESUMO FINANCEIRO (${hoje})*\n`;
       resumo += `----------------------------------\n`;
@@ -3825,7 +3830,6 @@
       resumo += `----------------------------------\n`;
       resumo += `📈 *Total em Taxas:* R$ ${total.toFixed(2).replace('.', ',')}\n`;
       resumo += `📦 *Total de Entregas:* ${itensHoje.length}\n`;
-      
       navigator.clipboard.writeText(resumo).then(() => {
         toast('📊 Resumo financeiro copiado!');
         playSound('success');
@@ -3833,6 +3837,81 @@
         toast('⚠️ Falha ao copiar resumo');
         playSound('warning');
       });
+    }
+
+    function renderRankingMotoboys() {
+      const el = document.getElementById('sec-ranking-motoboys');
+      if (!el) return;
+      const hojeStr = new Date().toLocaleDateString('pt-BR');
+      const hoje = state.historico.filter(h => {
+        const time = parseOrderTime(h);
+        return !isNaN(time) && new Date(time).toLocaleDateString('pt-BR') === hojeStr
+          && h.motoboy_nome && ['aceito','concluido'].includes(h.status);
+      });
+      if (!hoje.length) { el.innerHTML = ''; return; }
+
+      const map = new Map();
+      hoje.forEach(h => {
+        const k = h.motoboy_nome;
+        if (!map.has(k)) map.set(k, { nome: k, corridas: 0, total: 0 });
+        const e = map.get(k);
+        e.corridas++;
+        e.total += Number(h.valor_total);
+      });
+      const lista = [...map.values()].sort((a, b) => b.corridas - a.corridas);
+
+      el.innerHTML = `
+        <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:8px;">🏍️ Motoboys Hoje</div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          ${lista.map((m, i) => `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px; padding:8px 12px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:13px; font-weight:800; color:var(--primary);">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`}</span>
+                <div>
+                  <div style="font-size:13px; font-weight:700;">${escapeHtml(m.nome)}</div>
+                  <div style="font-size:11px; color:var(--text-muted);">${m.corridas} corrida${m.corridas > 1 ? 's' : ''}</div>
+                </div>
+              </div>
+              <div style="font-size:13px; font-weight:800; color:#10b981;">R$ ${m.total.toFixed(2).replace('.', ',')}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function renderRankingMotoboysPeriodo(listToShow) {
+      const el = document.getElementById('sec-ranking-motoboys');
+      if (!el) return;
+      const comMotoboy = listToShow.filter(h => h.motoboy_nome && ['aceito','concluido'].includes(h.status));
+      if (!comMotoboy.length) { el.innerHTML = ''; return; }
+
+      const map = new Map();
+      comMotoboy.forEach(h => {
+        const k = h.motoboy_nome;
+        if (!map.has(k)) map.set(k, { nome: k, corridas: 0, total: 0 });
+        const e = map.get(k);
+        e.corridas++;
+        e.total += Number(h.valor_total);
+      });
+      const lista = [...map.values()].sort((a, b) => b.corridas - a.corridas);
+
+      el.innerHTML = `
+        <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:8px;">🏍️ Motoboys — ${document.getElementById('periodo-label')?.textContent || ''}</div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          ${lista.map((m, i) => `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px; padding:8px 12px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:13px; font-weight:800; color:var(--primary);">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`}</span>
+                <div>
+                  <div style="font-size:13px; font-weight:700;">${escapeHtml(m.nome)}</div>
+                  <div style="font-size:11px; color:var(--text-muted);">${m.corridas} corrida${m.corridas > 1 ? 's' : ''}</div>
+                </div>
+              </div>
+              <div style="font-size:13px; font-weight:800; color:#10b981;">R$ ${m.total.toFixed(2).replace('.', ',')}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
     }
 
     function limparHistorico() {
@@ -4613,6 +4692,12 @@
         histTab.classList.add('tab-pulse');
         setTimeout(() => histTab.classList.remove('tab-pulse'), 3000);
       }
+      _atualizarTituloAba();
+    }
+
+    function _atualizarTituloAba() {
+      const pendentes = state.historico.filter(h => h.status === 'pendente' || h.status === 'aceito').length;
+      document.title = pendentes > 0 ? `(${pendentes}) MotoChat` : 'MotoChat';
     }
 
     let dispatcherPollInterval = null;
@@ -4633,10 +4718,10 @@
         });
         _lastKnownStatuses = {};
         orders.forEach(o => { _lastKnownStatuses[o.id] = o.status; });
-        const localOnly = state.historico.filter(o => String(o.id).startsWith('local_'));
-        state.historico = [...localOnly, ...orders].filter(o => !exclusoesPendentes.has(String(o.id)));
+        state.historico = orders.filter(o => !exclusoesPendentes.has(String(o.id)));
         save('mc_historico', state.historico);
         renderHistorico();
+        _atualizarTituloAba();
         if (newAccepts.length > 0) mostrarNotificacaoAceite(newAccepts);
       } catch (e) {}
     }
@@ -4649,7 +4734,10 @@
         _pollVisibilityBound = true;
         document.addEventListener('visibilitychange', () => {
           iniciarPollingDespachante();
-          if (document.visibilityState === 'visible') _executarPollDespachante();
+          if (document.visibilityState === 'visible') {
+            _executarPollDespachante();
+            document.title = 'MotoChat';
+          }
         });
       }
     }
