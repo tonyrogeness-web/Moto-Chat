@@ -3123,12 +3123,6 @@
       }
       msg += `🔄 *Tem retorno?* ${item.retorno ? 'Sim' : 'Não'}`;
       if (item.obs) msg += `\n💬 *Obs:* ${escapeHtml(item.obs)}`;
-      
-      const link = `${window.location.origin}${window.location.pathname}?aceitar=true&id=${item.id}`;
-      msg += '\n\n――――――――――――――――――――';
-      msg += '\n🎫 Este link é o seu *ticket de confirmação* — comprovante da entrega para o estabelecimento e para o motoboy:';
-      msg += '\n' + link;
-      
       return msg.trimEnd();
     }
 
@@ -4580,8 +4574,7 @@
         const ct = res.headers.get('content-type') || '';
         if (res.ok && ct.includes('application/json')) {
           const fetched = await res.json();
-          const localOnly = state.historico.filter(o => String(o.id).startsWith('local_'));
-          state.historico = [...localOnly, ...fetched].filter(o => !exclusoesPendentes.has(String(o.id)));
+          state.historico = fetched.filter(o => !exclusoesPendentes.has(String(o.id)));
           save('mc_historico', state.historico);
           _apiAvailable = true;
           const banner = document.getElementById('banner-db-offline');
@@ -4680,35 +4673,51 @@
         }
 
         if (order.status === 'pendente') {
-          acceptFormCard.innerHTML = `
-            <div class="card-title">✍️ Identificação do Entregador</div>
-            <div class="field">
-              <label for="motoboy-nome">Seu Nome Completo</label>
-              <input type="text" id="motoboy-nome" placeholder="Ex: João Silva">
-            </div>
-            <div class="field">
-              <label for="motoboy-telefone">Seu WhatsApp (apenas números com DDD)</label>
-              <input type="tel" id="motoboy-telefone" placeholder="Ex: 75999990000">
-            </div>
-            <div class="field">
-              <label for="motoboy-pix">Chave Pix <span style="font-weight:400; color:var(--text-muted); font-size:12px;">(Opcional)</span></label>
-              <input type="text" id="motoboy-pix" placeholder="CPF, telefone, e-mail ou chave aleatória">
-            </div>
-            <button class="btn btn-green" onclick="confirmarAceiteCorrida()" style="margin-top: 10px; font-size:17px; padding:16px;">
-              🏍️ Aceitar Corrida
-            </button>
-            <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
-              📊 Ver Minhas Corridas (Relatório)
-            </button>
-          `;
-          document.getElementById('motoboy-nome').value = autoNome || localStorage.getItem('mc_motoboy_nome') || '';
-          document.getElementById('motoboy-telefone').value = autoTel || localStorage.getItem('mc_motoboy_telefone') || '';
-          const pixEl = document.getElementById('motoboy-pix');
-          if (pixEl) pixEl.value = localStorage.getItem('mc_motoboy_pix') || '';
-          if (autoNome && autoTel) {
-            const btn = acceptFormCard.querySelector('button');
-            if (btn) { btn.disabled = true; btn.innerHTML = '⚙️ Confirmando...'; }
-            setTimeout(confirmarAceiteCorrida, 800);
+          const nomeLocal = autoNome || localStorage.getItem('mc_motoboy_nome') || '';
+          const telLocal  = autoTel  || localStorage.getItem('mc_motoboy_telefone') || '';
+          const pixLocal  = localStorage.getItem('mc_motoboy_pix') || '';
+
+          if (nomeLocal && telLocal) {
+            acceptFormCard.innerHTML = `
+              <div style="text-align:center; padding:8px 0 16px;">
+                <div style="font-size:15px; font-weight:800; color:var(--text-main); margin-bottom:4px;">👤 ${escapeHtml(nomeLocal)}</div>
+                <div style="font-size:12px; color:var(--text-muted);">📞 ${telLocal}${pixLocal ? ' &nbsp;•&nbsp; 💳 ' + escapeHtml(pixLocal) : ''}</div>
+                <button onclick="trocarIdentidadeMotoboy()" style="background:none; border:none; color:var(--primary); font-size:11px; text-decoration:underline; cursor:pointer; margin-top:4px;">Não sou eu</button>
+              </div>
+              <button class="btn btn-green" id="btn-aceitar-corrida" onclick="confirmarAceiteCorrida()" style="font-size:17px; padding:16px; width:100%;">
+                🏍️ Confirmar Corrida
+              </button>
+              <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
+                📊 Ver Minhas Corridas (Relatório)
+              </button>
+            `;
+            if (autoNome && autoTel) {
+              const btn = document.getElementById('btn-aceitar-corrida');
+              if (btn) { btn.disabled = true; btn.innerHTML = '⚙️ Confirmando...'; }
+              setTimeout(confirmarAceiteCorrida, 800);
+            }
+          } else {
+            acceptFormCard.innerHTML = `
+              <div class="card-title">✍️ Identificação do Entregador</div>
+              <div class="field">
+                <label for="motoboy-nome">Seu Nome Completo</label>
+                <input type="text" id="motoboy-nome" placeholder="Ex: João Silva">
+              </div>
+              <div class="field">
+                <label for="motoboy-telefone">Seu WhatsApp (apenas números com DDD)</label>
+                <input type="tel" id="motoboy-telefone" placeholder="Ex: 75999990000">
+              </div>
+              <div class="field">
+                <label for="motoboy-pix">Chave Pix <span style="font-weight:400; color:var(--text-muted); font-size:12px;">(Opcional)</span></label>
+                <input type="text" id="motoboy-pix" placeholder="CPF, telefone, e-mail ou chave aleatória">
+              </div>
+              <button class="btn btn-green" onclick="confirmarAceiteCorrida()" style="margin-top: 10px; font-size:17px; padding:16px;">
+                🏍️ Aceitar Corrida
+              </button>
+              <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
+                📊 Ver Minhas Corridas (Relatório)
+              </button>
+            `;
           }
         } else if (order.status === 'aceito') {
           acceptFormCard.innerHTML = `
@@ -4867,9 +4876,12 @@
     async function confirmarAceiteCorrida() {
       const urlParams = new URLSearchParams(window.location.search);
       const orderId = urlParams.get('id');
-      const nome = document.getElementById('motoboy-nome').value.trim();
-      const telefone = document.getElementById('motoboy-telefone').value.replace(/\D/g, '');
-      const pix = (document.getElementById('motoboy-pix')?.value || '').trim();
+      const nome = (document.getElementById('motoboy-nome')?.value || '').trim()
+                || localStorage.getItem('mc_motoboy_nome') || '';
+      const telefone = (document.getElementById('motoboy-telefone')?.value || '').replace(/\D/g, '')
+                    || (localStorage.getItem('mc_motoboy_telefone') || '').replace(/\D/g, '');
+      const pix = (document.getElementById('motoboy-pix')?.value || '').trim()
+               || localStorage.getItem('mc_motoboy_pix') || '';
       const dataParam = urlParams.get('data');
       
       if (!nome) { toast('⚠️ Por favor, digite seu nome completo'); playSound('warning'); return; }
@@ -5104,6 +5116,14 @@
         url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
       }
       window.open(url, '_blank');
+    }
+
+    function trocarIdentidadeMotoboy() {
+      localStorage.removeItem('mc_motoboy_nome');
+      localStorage.removeItem('mc_motoboy_telefone');
+      localStorage.removeItem('mc_motoboy_pix');
+      const urlParams = new URLSearchParams(window.location.search);
+      carregarDetalhesCorrida(urlParams.get('id'));
     }
 
     function abrirRelatorioMotoboyDireto() {

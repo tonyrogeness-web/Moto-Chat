@@ -2,7 +2,6 @@ const { pool, ensureTable } = require('./db');
 const { handleError } = require('./_utils');
 
 module.exports = async (req, res) => {
-  // Vercel envia automaticamente o header Authorization: Bearer <CRON_SECRET>
   const authHeader = req.headers['authorization'];
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: 'Não autorizado.' });
