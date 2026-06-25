@@ -1699,7 +1699,6 @@
 
       <!-- FILTRO DE PERIODO -->
       <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
-        <button class="hist-btn" id="filter-hoje" onclick="filtrarPeriodo('hoje')">Hoje</button>
         <button class="hist-btn" id="filter-ontem" onclick="filtrarPeriodo('ontem')">Ontem</button>
         <button class="hist-btn" id="filter-semana" onclick="filtrarPeriodo('semana')" style="border-color:var(--primary); color:var(--primary); background:var(--primary-glow);">Esta Semana</button>
         <button class="hist-btn" id="filter-todos" onclick="filtrarPeriodo('todos')">Todos</button>
@@ -2025,9 +2024,6 @@
       <button class="btn btn-green" onclick="confirmarAceiteCorrida()" style="margin-top: 10px; font-size:17px; padding:16px;">
         🏍️ Aceitar Corrida
       </button>
-      <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
-        📊 Ver Minhas Corridas (Relatório)
-      </button>
     </div>
   </div>
 
@@ -2069,7 +2065,6 @@
       <div style="font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px;">🔍 Filtrar Extrato</div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <div style="display: flex; gap: 6px; margin-bottom: 4px; flex-wrap: wrap;">
-          <button class="hist-btn" id="report-filter-period-hoje" onclick="filtrarPeriodoReport('hoje')" style="flex: 1; justify-content: center;">Hoje</button>
           <button class="hist-btn" id="report-filter-period-ontem" onclick="filtrarPeriodoReport('ontem')" style="flex: 1; justify-content: center;">Ontem</button>
           <button class="hist-btn" id="report-filter-period-semana" onclick="filtrarPeriodoReport('semana')" style="flex: 1; justify-content: center; border-color:var(--primary); color:var(--primary); background:var(--primary-glow);">Esta Semana</button>
           <button class="hist-btn" id="report-filter-period-todos" onclick="filtrarPeriodoReport('todos')" style="flex: 1; justify-content: center;">Todos</button>
@@ -2232,7 +2227,7 @@
 
     // ─── AUDIO SYNTHESIZER ────────────────────────────────────────────────────────
     let audioCtx = null;
-    function playSound(type) {
+    function playSound(type, repeats = 1) {
       if (!state.soundEnabled) return;
       try {
         if (!audioCtx) {
@@ -2245,10 +2240,9 @@
         const now = audioCtx.currentTime;
         
         if (type === 'success') {
-          const repeat = 3;
           const gap = 0.25;
           const dur = 0.2;
-          for (let i = 0; i < repeat; i++) {
+          for (let i = 0; i < repeats; i++) {
             const t = now + i * gap;
             const osc = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
@@ -2279,10 +2273,9 @@
           osc.start(now);
           osc.stop(now + 0.06);
         } else if (type === 'warning') {
-          const repeat = 3;
           const gap = 0.35;
           const dur = 0.3;
-          for (let i = 0; i < repeat; i++) {
+          for (let i = 0; i < repeats; i++) {
             const t = now + i * gap;
             const osc = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
@@ -2299,10 +2292,9 @@
             osc.stop(t + dur);
           }
         } else if (type === 'bell') {
-          const repeat = 3;
           const gap = 0.45;
           const dur = 0.4;
-          for (let i = 0; i < repeat; i++) {
+          for (let i = 0; i < repeats; i++) {
             const t = now + i * gap;
             const osc = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
@@ -3290,7 +3282,7 @@
     let _periodoFilter = 'semana';
     function filtrarPeriodo(p) {
       _periodoFilter = p;
-      ['hoje','ontem','semana','todos'].forEach(id => {
+      ['ontem','semana','todos'].forEach(id => {
         const el = document.getElementById('filter-' + id);
         if (!el) return;
         const isActive = id === p;
@@ -3303,7 +3295,6 @@
     function getPeriodoRange(p) {
       const now = new Date();
       const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      if (p === 'hoje') { return [start, null]; }
       if (p === 'ontem') { const s = new Date(start); s.setDate(s.getDate()-1); const e = new Date(start); return [s, e]; }
       if (p === 'semana') { const s = new Date(start); s.setDate(s.getDate() - 6); return [s, null]; }
       return [null, null];
@@ -3644,7 +3635,7 @@
       atualizarSugestoesRua();
       verificarPendentesAlerta();
 
-      const periodoLabels = { hoje: 'Hoje', ontem: 'Ontem', semana: 'Esta Semana', todos: 'Todos' };
+      const periodoLabels = { ontem: 'Ontem', semana: 'Esta Semana', todos: 'Todos' };
       const elPeriodoLabel = document.getElementById('periodo-label');
       if (elPeriodoLabel) elPeriodoLabel.textContent = periodoLabels[_periodoFilter] || 'Esta Semana';
 
@@ -4832,12 +4823,7 @@
 
     function mostrarNotificacaoAceite(orders) {
       if (orders.length === 0) return;
-      const times = Math.min(orders.length, 3);
-      let delay = 0;
-      for (let i = 0; i < times; i++) {
-        setTimeout(() => playSound('bell'), delay);
-        delay += 400;
-      }
+      playSound('bell', 3);
       const names = orders.map(o => o.motoboy_nome).join(', ');
       toast(`🔔 CORRIDA CONFIRMADA por ${names}!`);
       const histTab = document.querySelector('.tab:nth-child(2)');
@@ -4847,6 +4833,22 @@
         histTab.classList.add('tab-pulse');
         setTimeout(() => histTab.classList.remove('tab-pulse'), 3000);
       }
+      _atualizarTituloAba();
+    }
+
+    function mostrarNotificacaoCancelamento(orders) {
+      if (orders.length === 0) return;
+      playSound('warning', 3);
+      const ids = orders.map(o => `#${o.id}`).join(', ');
+      toast(`❌ Corrida ${ids} foi cancelada!`);
+      _atualizarTituloAba();
+    }
+
+    function mostrarNotificacaoDesistencia(orders) {
+      if (orders.length === 0) return;
+      playSound('warning', 3);
+      const names = orders.map(o => o.motoboy_nome).join(', ');
+      toast(`⚠️ Motoboy ${names} desistiu de uma corrida!`);
       _atualizarTituloAba();
     }
 
@@ -4865,10 +4867,18 @@
         if (!res.ok) return;
         const orders = await res.json();
         let newAccepts = [];
+        let newCancels = [];
+        let newAbandons = [];
         orders.forEach(o => {
           const prevStatus = _lastKnownStatuses[o.id];
-          if (prevStatus === 'pendente' && (o.status === 'concluido' || o.status === 'aceito')) {
-            newAccepts.push(o);
+          if (prevStatus) {
+            if (prevStatus === 'pendente' && (o.status === 'concluido' || o.status === 'aceito')) {
+              newAccepts.push(o);
+            } else if (prevStatus === 'aceito' && o.status === 'cancelado') {
+              newCancels.push(o);
+            } else if (prevStatus === 'aceito' && o.status === 'pendente') {
+              newAbandons.push(o);
+            }
           }
         });
         _lastKnownStatuses = {};
@@ -4878,6 +4888,8 @@
         renderHistorico();
         _atualizarTituloAba();
         if (newAccepts.length > 0) mostrarNotificacaoAceite(newAccepts);
+        if (newCancels.length > 0) mostrarNotificacaoCancelamento(newCancels);
+        if (newAbandons.length > 0) mostrarNotificacaoDesistencia(newAbandons);
       } catch (e) {}
     }
 
@@ -4930,9 +4942,6 @@
               <button class="btn btn-green" id="btn-aceitar-corrida" onclick="confirmarAceiteCorrida()" style="font-size:17px; padding:16px; width:100%;">
                 🏍️ Confirmar Corrida
               </button>
-              <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
-                📊 Ver Minhas Corridas (Relatório)
-              </button>
             `;
             if (autoNome && autoTel) {
               const btn = document.getElementById('btn-aceitar-corrida');
@@ -4956,9 +4965,6 @@
               </div>
               <button class="btn btn-green" onclick="confirmarAceiteCorrida()" style="margin-top: 10px; font-size:17px; padding:16px;">
                 🏍️ Aceitar Corrida
-              </button>
-              <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
-                📊 Ver Minhas Corridas (Relatório)
               </button>
             `;
           }
@@ -4994,9 +5000,6 @@
             </div>
             <button class="btn btn-green" onclick="window.open('${whatsappUrl}', '_blank')" style="background:#059669; border-color:#059669; color:#fff; font-size:15px; padding:12px; width:100%; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; border-radius:8px; border:1px solid #059669; font-weight:bold;">
               💬 Avisar Logista no WhatsApp (Opcional)
-            </button>
-            <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary); width:100%;">
-              📊 Ver Minhas Corridas
             </button>
           `;
         } else if (order.status === 'concluido') {
@@ -5041,9 +5044,6 @@
         } else {
           acceptFormCard.innerHTML = `
             <div class="card-title" style="color:var(--accent);">❌ Corrida Cancelada</div>
-            <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
-              📊 Ver Minhas Corridas
-            </button>
           `;
         }
       };
@@ -5498,7 +5498,7 @@
     let _reportPeriodoFilter = 'semana';
     function filtrarPeriodoReport(p) {
       _reportPeriodoFilter = p;
-      ['hoje', 'ontem', 'semana', 'todos'].forEach(id => {
+      ['ontem', 'semana', 'todos'].forEach(id => {
         const el = document.getElementById('report-filter-period-' + id);
         if (!el) return;
         const isActive = id === p;
@@ -5524,9 +5524,7 @@
           const now = new Date();
           const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
           
-          if (_reportPeriodoFilter === 'hoje') {
-            if (!runTime || runTime < startOfToday) return false;
-          } else if (_reportPeriodoFilter === 'ontem') {
+          if (_reportPeriodoFilter === 'ontem') {
             const startOfYesterday = startOfToday - 24 * 60 * 60 * 1000;
             if (!runTime || runTime < startOfYesterday || runTime >= startOfToday) return false;
           } else if (_reportPeriodoFilter === 'semana') {
