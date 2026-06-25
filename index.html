@@ -854,6 +854,48 @@
     .hist-btn-rate { border-color: #ec4899; color: #ec4899; }
     .hist-btn-rate:hover { background: rgba(236,72,153,0.1); }
 
+    .status-select {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1.5px solid var(--border-color);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--bg-card);
+      color: var(--text-main);
+      transition: all var(--transition-fast);
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+      display: inline-flex;
+      align-items: center;
+      height: 31px;
+    }
+
+    .status-select:hover {
+      background: var(--bg-input);
+    }
+    
+    .status-select.status-pendente { border-color: var(--text-muted); color: var(--text-muted); }
+    .status-select.status-pendente:hover { background: rgba(100, 116, 139, 0.08); }
+    .status-select.status-aceito { border-color: #10b981; color: #10b981; }
+    .status-select.status-aceito:hover { background: rgba(16, 185, 129, 0.08); }
+    .status-select.status-concluido { border-color: #3b82f6; color: #3b82f6; }
+    .status-select.status-concluido:hover { background: rgba(59, 130, 246, 0.08); }
+    .status-select.status-cancelado { border-color: #ef4444; color: #ef4444; }
+    .status-select.status-cancelado:hover { background: rgba(239, 68, 68, 0.08); }
+
+    .status-select option {
+      color: var(--text-main);
+      background-color: var(--bg-card);
+      font-weight: normal;
+    }
+
     /* ─── TAGS ───────────────────────────────────────────────────────────────── */
     .tags-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
     .tag-chip {
@@ -3665,15 +3707,12 @@
           ${item.obs ? `<div class="hist-obs">💬 ${escapeHtml(item.obs)}</div>` : ''}
           <div style="margin-top:8px;"><span class="badge ${badges[item.status]}">${labels[item.status]}</span></div>
           <div class="hist-actions">
-            <button class="hist-btn hist-btn-aceito" onclick="updateStatus('${item.id}','aceito')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Confirmar
-            </button>
-            <button class="hist-btn hist-btn-concluido" onclick="updateStatus('${item.id}','concluido')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Concluída
-            </button>
-            <button class="hist-btn hist-btn-cancelado" onclick="updateStatus('${item.id}','cancelado')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Cancelada
-            </button>
+            <select onchange="updateStatus('${item.id}', this.value)" class="status-select status-${item.status}">
+              <option value="pendente" ${item.status === 'pendente' ? 'selected' : ''}>⏳ Aguardando</option>
+              <option value="aceito" ${item.status === 'aceito' ? 'selected' : ''}>🏍️ Confirmado</option>
+              <option value="concluido" ${item.status === 'concluido' ? 'selected' : ''}>✅ Concluída</option>
+              <option value="cancelado" ${item.status === 'cancelado' ? 'selected' : ''}>❌ Cancelada</option>
+            </select>
             <button class="hist-btn hist-btn-copiar" onclick="copiarHist('${item.id}')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar
             </button>
@@ -3754,7 +3793,10 @@
 
     async function updateStatus(id, status) {
       if (status === 'cancelado') {
-        if (!confirm('Deseja realmente CANCELAR esta corrida?')) return;
+        if (!confirm('Deseja realmente CANCELAR esta corrida?')) {
+          renderHistorico();
+          return;
+        }
       }
       
       const isLocal = String(id).startsWith('local_');
@@ -5491,27 +5533,16 @@
           destinosText += `<div>📍 <b>#${idx+1}:</b> ${d.rua} (${d.bairro})</div>`;
         });
         
-        let acoesHtml = '';
-        if (run.status === 'aceito') {
-          acoesHtml = `
-            <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-              <button class="btn btn-green btn-small" onclick="concluirCorridaPeloReport('${run.id}')" style="font-size: 11px; padding: 6px 12px; background: #3b82f6; border-color: #3b82f6; height: auto; width: auto; color: #fff; cursor: pointer; font-weight: bold; border-radius: 6px;">
-                🏁 Marcar como Concluída
-              </button>
-              <button class="btn btn-outline btn-small" onclick="desistirCorridaPeloReport('${run.id}')" style="font-size: 11px; padding: 6px 12px; border-color: #ef4444; color: #ef4444; background: transparent; height: auto; width: auto; cursor: pointer; font-weight: bold; border-radius: 6px;">
-                ✕ Desistir da Corrida
-              </button>
-            </div>
-          `;
-        } else if (run.status === 'concluido') {
-          acoesHtml = `
-            <div style="margin-top: 8px;">
-              <button onclick="cancelarCorridaPeloReport('${run.id}')" style="font-size: 10px; padding: 4px 8px; border: 1px solid var(--border-color); color: var(--text-muted); background: transparent; height: auto; width: auto; cursor: pointer; border-radius: 4px; font-weight: normal; transition: opacity 0.2s;">
-                ✕ Cancelar Corrida
-              </button>
-            </div>
-          `;
-        }
+        let acoesHtml = `
+          <div style="margin-top: 10px;">
+            <select onchange="updateStatusPeloReport('${run.id}', this.value, this)" class="status-select status-${run.status}">
+              <option value="aceito" ${run.status === 'aceito' ? 'selected' : ''}>🏍️ Assumida (Ativa)</option>
+              <option value="concluido" ${run.status === 'concluido' ? 'selected' : ''}>✅ Concluída</option>
+              <option value="pendente" ${run.status === 'pendente' ? 'selected' : ''}>🔄 Desistir (Liberar)</option>
+              <option value="cancelado" ${run.status === 'cancelado' ? 'selected' : ''}>❌ Cancelar Corrida</option>
+            </select>
+          </div>
+        `;
 
         itemDiv.innerHTML = `
           <div class="hist-header">
@@ -5546,7 +5577,7 @@
             const errData = await res.json();
             toast('⚠️ ' + (errData.error || 'Erro ao concluir corrida'));
             playSound('warning');
-            return;
+            return false;
           }
         }
         
@@ -5567,14 +5598,16 @@
         toast('✅ Corrida concluída com sucesso!');
         playSound('success');
         filtrarERenderizarRelatorio();
+        return true;
       } catch (e) {
         toast('⚠️ Erro ao conectar ao servidor');
         playSound('warning');
+        return false;
       }
     }
 
     async function desistirCorridaPeloReport(orderId) {
-      if (!confirm('Deseja realmente desistir desta corrida? Ela voltará a ficar disponível para outros entregadores.')) return;
+      if (!confirm('Deseja realmente desistir desta corrida? Ela voltará a ficar disponível para outros entregadores.')) return false;
       
       const isLocal = String(orderId).startsWith('local_');
       
@@ -5590,7 +5623,7 @@
             const errData = await res.json();
             toast('⚠️ ' + (errData.error || 'Erro ao desistir da corrida'));
             playSound('warning');
-            return;
+            return false;
           }
         }
         
@@ -5609,14 +5642,16 @@
         toast('✅ Você desistiu da corrida. Ela foi liberada.');
         playSound('success');
         filtrarERenderizarRelatorio();
+        return true;
       } catch (e) {
         toast('⚠️ Erro ao conectar ao servidor');
         playSound('warning');
+        return false;
       }
     }
 
     async function cancelarCorridaPeloReport(orderId) {
-      if (!confirm('Deseja realmente marcar esta corrida como CANCELADA?')) return;
+      if (!confirm('Deseja realmente marcar esta corrida como CANCELADA?')) return false;
       
       const isLocal = String(orderId).startsWith('local_');
       
@@ -5632,7 +5667,7 @@
             const errData = await res.json();
             toast('⚠️ ' + (errData.error || 'Erro ao cancelar corrida'));
             playSound('warning');
-            return;
+            return false;
           }
         }
         
@@ -5648,9 +5683,70 @@
         toast('✅ Corrida marcada como cancelada.');
         playSound('success');
         filtrarERenderizarRelatorio();
+        return true;
       } catch (e) {
         toast('⚠️ Erro ao conectar ao servidor');
         playSound('warning');
+        return false;
+      }
+    }
+
+    async function reverterParaAceitoPeloReport(orderId) {
+      const isLocal = String(orderId).startsWith('local_');
+      try {
+        if (!isLocal) {
+          const res = await fetch('/api/orders', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: orderId, status: 'aceito' })
+          });
+          if (!res.ok) {
+            const errData = await res.json();
+            toast('⚠️ ' + (errData.error || 'Erro ao reverter corrida'));
+            playSound('warning');
+            return false;
+          }
+        }
+        
+        const runIdx = currentReportRuns.findIndex(r => String(r.id) === String(orderId));
+        if (runIdx !== -1) {
+          currentReportRuns[runIdx].status = 'aceito';
+          currentReportRuns[runIdx].completed_at = null;
+        }
+        
+        const localHistory = safeParse('mc_historico', []);
+        const idx = localHistory.findIndex(h => String(h.id) === String(orderId));
+        if (idx !== -1) {
+          localHistory[idx].status = 'aceito';
+          localHistory[idx].completed_at = null;
+          localStorage.setItem('mc_historico', JSON.stringify(localHistory));
+        }
+        
+        toast('✅ Corrida revertida para ativa!');
+        playSound('success');
+        filtrarERenderizarRelatorio();
+        return true;
+      } catch (e) {
+        toast('⚠️ Erro ao conectar ao servidor');
+        playSound('warning');
+        return false;
+      }
+    }
+
+    async function updateStatusPeloReport(orderId, newStatus, selectEl) {
+      let success = false;
+      if (newStatus === 'concluido') {
+        success = await concluirCorridaPeloReport(orderId);
+      } else if (newStatus === 'pendente') {
+        success = await desistirCorridaPeloReport(orderId);
+      } else if (newStatus === 'cancelado') {
+        success = await cancelarCorridaPeloReport(orderId);
+      } else if (newStatus === 'aceito') {
+        success = await reverterParaAceitoPeloReport(orderId);
+      }
+      
+      if (!success) {
+        filtrarERenderizarRelatorio();
       }
     }
 
