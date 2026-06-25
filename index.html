@@ -4808,6 +4808,22 @@
             `;
           }
         } else if (order.status === 'aceito') {
+          const o = order || {};
+          const destinos = o.destinos || [];
+          let msgDestinos = '';
+          if (destinos.length > 0) {
+            destinos.forEach((d, i) => {
+              msgDestinos += `\n📍 ${destinos.length > 1 ? '#' + (i+1) + ': ' : ''}${d.rua || ''} — ${d.bairro || ''} (R$ ${Number(d.valor||0).toFixed(2).replace('.', ',')})`;
+            });
+          }
+          const pixSalvo = localStorage.getItem('mc_motoboy_pix') || '';
+          const msg = `✅ *CORRIDA CONFIRMADA!*\n🎫 *Ticket Nº ${order.id}*\n\n🏍️ *Entregador:* ${order.motoboy_nome}\n📞 *WhatsApp:* ${order.motoboy_telefone}${pixSalvo ? '\n💳 *Pix:* ' + pixSalvo : ''}\n🏢 *Coleta:* ${o.coleta_nome || ''}${msgDestinos}\n💰 *Total:* R$ ${Number(o.valor_total||0).toFixed(2).replace('.', ',')}\n🔄 *Retorno:* ${o.retorno ? 'Sim' : 'Não'}${o.obs ? '\n💬 *Obs:* ' + o.obs : ''}`;
+          
+          const numLogista = (localStorage.getItem('mc_numero') || '').replace(/\D/g, '');
+          const whatsappUrl = numLogista.length >= 10
+            ? `https://wa.me/${numLogista}?text=${encodeURIComponent(msg)}`
+            : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+
           acceptFormCard.innerHTML = `
             <div style="text-align:center; padding:20px 16px 10px;">
               <div style="font-size:52px; margin-bottom:8px;">✅</div>
@@ -4821,11 +4837,30 @@
             <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); color:#059669; padding:10px 14px; border-radius:10px; text-align:center; font-weight:700; margin:12px 0; font-size:13px;">
               🏍️ O motoboy está a caminho!
             </div>
-            <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary);">
+            <button class="btn btn-green" onclick="window.open('${whatsappUrl}', '_blank')" style="background:#059669; border-color:#059669; color:#fff; font-size:15px; padding:12px; width:100%; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; border-radius:8px; border:1px solid #059669; font-weight:bold;">
+              💬 Avisar Logista no WhatsApp (Opcional)
+            </button>
+            <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="margin-top: 8px; border-style: dashed; color: var(--primary); border-color: var(--primary); width:100%;">
               📊 Ver Minhas Corridas
             </button>
           `;
         } else if (order.status === 'concluido') {
+          const isLocal = String(order.id).startsWith('local_');
+          let whatsappBtnHtml = '';
+          if (isLocal) {
+            const msg = `🏁 *CORRIDA CONCLUÍDA POR MOTOBOY (LOCAL)!*\n\n🏍️ *Entregador:* ${order.motoboy_nome || ''}\n📞 *Contato:* ${order.motoboy_telefone || ''}\n📍 *Destino:* Rota para ${order.coleta_nome || ''} (Valor R$ ${Number(order.valor_total||0).toFixed(2).replace('.', ',')})\n🆔 *ID:* ${order.id}`;
+            const numLogista = (localStorage.getItem('mc_numero') || '').replace(/\D/g, '');
+            const whatsappUrl = numLogista.length >= 10
+              ? `https://wa.me/${numLogista}?text=${encodeURIComponent(msg)}`
+              : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+            
+            whatsappBtnHtml = `
+              <button class="btn btn-green" onclick="window.open('${whatsappUrl}', '_blank')" style="background:#059669; border-color:#059669; color:#fff; font-size:15px; padding:12px; width:100%; margin-bottom:12px; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; border-radius:8px; border:1px solid #059669; font-weight:bold;">
+                💬 Avisar Logista no WhatsApp (Opcional)
+              </button>
+            `;
+          }
+
           acceptFormCard.innerHTML = `
             <div style="text-align:center; padding:16px 0 10px;">
               <div style="font-size:52px; margin-bottom:6px;">\ud83c\udf89</div>
@@ -4840,6 +4875,7 @@
             <div style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.25); color:#2563eb; padding:10px 14px; border-radius:10px; text-align:center; font-weight:700; margin-bottom:20px; font-size:13px;">
               Obrigado pelo excelente trabalho! \ud83d\ude4c
             </div>
+            ${whatsappBtnHtml}
             <div style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.8px; color:var(--primary); margin-bottom:10px; border-top:1px dashed var(--border-color); padding-top:14px;">\ud83d\udcca Suas Corridas \u2014 \u00daltimos 7 dias</div>
             <div id="inline-report-list">
               <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:13px;">\u23f3 Carregando hist\u00f3rico...</div>
@@ -4985,24 +5021,6 @@
         btn.innerHTML = '⚙️ Confirmando...';
       }
       
-      const redirecionar = (whatsappMsg) => {
-        const numLogista = (localStorage.getItem('mc_numero') || '').replace(/\D/g, '');
-        const url = numLogista.length >= 10
-          ? `https://wa.me/${numLogista}?text=${encodeURIComponent(whatsappMsg)}`
-          : `https://wa.me/?text=${encodeURIComponent(whatsappMsg)}`;
-        if (btn) {
-          btn.disabled = false;
-          btn.style.background = '#059669';
-          btn.style.borderColor = '#059669';
-          btn.innerHTML = '💬 Avisar Logista no WhatsApp';
-          btn.onclick = () => { window.open(url, '_blank'); };
-        }
-        const newWin = window.open(url, '_blank');
-        if (!newWin) {
-          toast('⚠️ Redirecionamento bloqueado. Clique no botão para avisar o logista.');
-        }
-      };
-
       const isLocal = String(orderId).startsWith('local_');
 
       if (!isLocal) {
@@ -5014,23 +5032,10 @@
           });
           
           if (res.ok) {
-            const data = await res.json();
             toast('✅ Corrida Confirmada com sucesso!');
             playSound('success');
             
             carregarDetalhesCorrida(orderId);
-            
-            const o = data.order || {};
-            const destinos = o.destinos || [];
-            let msgDestinos = '';
-            if (destinos.length > 0) {
-              destinos.forEach((d, i) => {
-                msgDestinos += `\n📍 ${destinos.length > 1 ? `#${i+1}: ` : ''}${d.rua || ''} — ${d.bairro || ''} (R$ ${Number(d.valor||0).toFixed(2).replace('.', ',')})`;
-              });
-            }
-            const pixSalvo = localStorage.getItem('mc_motoboy_pix') || pix || '';
-            const msg = `✅ *CORRIDA CONFIRMADA!*\n🎫 *Ticket Nº ${orderId}*\n\n🏍️ *Entregador:* ${nome}\n📞 *WhatsApp:* ${telefone}${pixSalvo ? '\n💳 *Pix:* ' + pixSalvo : ''}\n🏢 *Coleta:* ${o.coleta_nome || ''}${msgDestinos}\n💰 *Total:* R$ ${Number(o.valor_total||0).toFixed(2).replace('.', ',')}\n🔄 *Retorno:* ${o.retorno ? 'Sim' : 'Não'}${o.obs ? '\n💬 *Obs:* ' + o.obs : ''}`;
-            setTimeout(() => redirecionar(msg), 600);
             return;
           } else {
             const data = await res.json();
@@ -5108,9 +5113,6 @@
         toast('✅ Corrida Confirmada!');
         playSound('success');
         carregarDetalhesCorrida(orderId);
-        
-        const msg = `🏁 *CORRIDA CONCLUÍDA POR MOTOBOY (LOCAL)!*\n\n🏍️ *Entregador:* ${nome}\n📞 *Contato:* ${telefone}\n📍 *Destino:* Rota para ${localHistory[idx].coleta_nome} (Valor R$ ${Number(localHistory[idx].valor_total).toFixed(2).replace('.', ',')})\n🆔 *ID:* ${orderId}`;
-        setTimeout(() => redirecionar(msg), 600);
       } else {
         toast('⚠️ Corrida não encontrada para concluir');
         if (btn) {
