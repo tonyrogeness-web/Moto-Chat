@@ -1700,6 +1700,11 @@
               <option value="cancelado">Cancelados</option>
             </select>
           </div>
+          <div style="flex: 1; min-width: 120px;">
+            <select id="hist-filter-motoboy" onchange="renderHistorico()">
+              <option value="todos">Todos os Motoboys</option>
+            </select>
+          </div>
         </div>
         <div id="filtros-ativos-badge" style="display:none; align-items:center; gap:6px; font-size:11px; color:var(--primary); font-weight:600; margin-bottom:12px;">
           🔍 Filtros de busca/status aplicados
@@ -3214,6 +3219,8 @@
       if (search) search.value = '';
       const status = document.getElementById('hist-filter-status');
       if (status) status.value = 'todos';
+      const motoboy = document.getElementById('hist-filter-motoboy');
+      if (motoboy) motoboy.value = 'todos';
       filtrarPeriodo('todos');
     }
 
@@ -3511,10 +3518,32 @@
       }
     }
 
+    function atualizarFiltroMotoboySelect() {
+      const select = document.getElementById('hist-filter-motoboy');
+      if (!select) return;
+      const valAntigo = select.value;
+      const nomes = new Set();
+      state.historico.forEach(h => {
+        if (h.motoboy_nome) nomes.add(h.motoboy_nome.trim());
+      });
+      let html = '<option value="todos">Todos os Motoboys</option>';
+      Array.from(nomes).sort().forEach(nome => {
+        html += `<option value="${escapeHtml(nome)}">${escapeHtml(nome)}</option>`;
+      });
+      select.innerHTML = html;
+      if (nomes.has(valAntigo)) {
+        select.value = valAntigo;
+      } else {
+        select.value = 'todos';
+      }
+    }
+
     function renderHistorico() {
+      atualizarFiltroMotoboySelect();
       const lista = document.getElementById('hist-lista');
       const query = (document.getElementById('hist-search')?.value || '').toLowerCase().trim();
       const filterStatus = document.getElementById('hist-filter-status')?.value || 'todos';
+      const filterMotoboy = document.getElementById('hist-filter-motoboy')?.value || 'todos';
 
       atualizarDayPanel();
       atualizarSugestoesRua();
@@ -3525,7 +3554,7 @@
       if (elPeriodoLabel) elPeriodoLabel.textContent = periodoLabels[_periodoFilter] || 'Esta Semana';
 
       const elFiltrosBadge = document.getElementById('filtros-ativos-badge');
-      if (elFiltrosBadge) elFiltrosBadge.style.display = (query || filterStatus !== 'todos') ? 'flex' : 'none';
+      if (elFiltrosBadge) elFiltrosBadge.style.display = (query || filterStatus !== 'todos' || filterMotoboy !== 'todos') ? 'flex' : 'none';
 
       const [rangeStart, rangeEnd] = getPeriodoRange(_periodoFilter);
       let listToShow = [...state.historico];
@@ -3537,6 +3566,9 @@
       }
       if (filterStatus !== 'todos') {
         listToShow = listToShow.filter(h => h.status === filterStatus);
+      }
+      if (filterMotoboy !== 'todos') {
+        listToShow = listToShow.filter(h => (h.motoboy_nome || '').trim() === filterMotoboy);
       }
       if (query) {
         const queryId = query.replace(/^#/, '');
@@ -5439,6 +5471,20 @@
           destinosText += `<div>📍 <b>#${idx+1}:</b> ${d.rua} (${d.bairro})</div>`;
         });
         
+        let acoesHtml = '';
+        if (run.status === 'aceito') {
+          acoesHtml = `
+            <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn btn-green btn-small" onclick="concluirCorridaPeloReport('${run.id}')" style="font-size: 11px; padding: 6px 12px; background: #3b82f6; border-color: #3b82f6; height: auto; width: auto; color: #fff; cursor: pointer; font-weight: bold; border-radius: 6px;">
+                🏁 Marcar como Concluída
+              </button>
+              <button class="btn btn-outline btn-small" onclick="desistirCorridaPeloReport('${run.id}')" style="font-size: 11px; padding: 6px 12px; border-color: #ef4444; color: #ef4444; background: transparent; height: auto; width: auto; cursor: pointer; font-weight: bold; border-radius: 6px;">
+                ✕ Desistir da Corrida
+              </button>
+            </div>
+          `;
+        }
+
         itemDiv.innerHTML = `
           <div class="hist-header">
             <div class="hist-bairro">🏢 ${run.coleta_nome || '—'}</div>
@@ -5448,10 +5494,97 @@
             ${destinosText}
           </div>
           <div class="hist-info">🕐 ${formatData}</div>
-          <div style="margin-top: 8px;"><span class="badge ${statusBadgeClass}">${statusLabel}</span></div>
+          <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <span class="badge ${statusBadgeClass}">${statusLabel}</span>
+          </div>
+          ${acoesHtml}
         `;
         listEl.appendChild(itemDiv);
       });
+    }
+
+    async function concluirCorridaPeloReport(orderId) {
+      const isLocal = String(orderId).startsWith('local_');
+      
+      try {
+        if (!isLocal) {
+          const res = await fetch('/api/orders', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: orderId, status: 'concluido' })
+          });
+          
+          if (!res.ok) {
+            const errData = await res.json();
+            toast('⚠️ ' + (errData.error || 'Erro ao concluir corrida'));
+            playSound('warning');
+            return;
+          }
+        }
+        
+        const runIdx = currentReportRuns.findIndex(r => String(r.id) === String(orderId));
+        if (runIdx !== -1) {
+          currentReportRuns[runIdx].status = 'concluido';
+          currentReportRuns[runIdx].completed_at = new Date().toISOString();
+        }
+        
+        const localHistory = safeParse('mc_historico', []);
+        const idx = localHistory.findIndex(h => String(h.id) === String(orderId));
+        if (idx !== -1) {
+          localHistory[idx].status = 'concluido';
+          localHistory[idx].completed_at = new Date().toISOString();
+          localStorage.setItem('mc_historico', JSON.stringify(localHistory));
+        }
+        
+        toast('✅ Corrida concluída com sucesso!');
+        playSound('success');
+        filtrarERenderizarRelatorio();
+      } catch (e) {
+        toast('⚠️ Erro ao conectar ao servidor');
+        playSound('warning');
+      }
+    }
+
+    async function desistirCorridaPeloReport(orderId) {
+      if (!confirm('Deseja realmente desistir desta corrida? Ela voltará a ficar disponível para outros entregadores.')) return;
+      
+      const isLocal = String(orderId).startsWith('local_');
+      
+      try {
+        if (!isLocal) {
+          const res = await fetch('/api/orders', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: orderId, status: 'pendente' })
+          });
+          
+          if (!res.ok) {
+            const errData = await res.json();
+            toast('⚠️ ' + (errData.error || 'Erro ao desistir da corrida'));
+            playSound('warning');
+            return;
+          }
+        }
+        
+        currentReportRuns = currentReportRuns.filter(r => String(r.id) !== String(orderId));
+        
+        const localHistory = safeParse('mc_historico', []);
+        const idx = localHistory.findIndex(h => String(h.id) === String(orderId));
+        if (idx !== -1) {
+          localHistory[idx].status = 'pendente';
+          localHistory[idx].motoboy_nome = null;
+          localHistory[idx].motoboy_telefone = null;
+          localHistory[idx].accepted_at = null;
+          localStorage.setItem('mc_historico', JSON.stringify(localHistory));
+        }
+        
+        toast('✅ Você desistiu da corrida. Ela foi liberada.');
+        playSound('success');
+        filtrarERenderizarRelatorio();
+      } catch (e) {
+        toast('⚠️ Erro ao conectar ao servidor');
+        playSound('warning');
+      }
     }
 
     // ─── FILA DESPACHO & CHAT PARSER LOGIC ────────────────────────────────────────

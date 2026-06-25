@@ -84,6 +84,7 @@ module.exports = async (req, res) => {
       let q = 'UPDATE entregas SET status = $1';
       let p = [status, id];
       if (status === 'concluido') q += ', completed_at = CURRENT_TIMESTAMP';
+      else if (status === 'pendente') q += ', motoboy_nome = NULL, motoboy_telefone = NULL, accepted_at = NULL';
       q += ' WHERE id = $2 RETURNING *';
 
       const { rows } = await pool.query(q, p);
