@@ -13,7 +13,7 @@ module.exports = async (req, res) => {
     if (!telefone) return res.status(400).json({ error: 'Telefone é obrigatório' });
 
     const { rows } = await pool.query(
-      `SELECT * FROM entregas WHERE motoboy_telefone=$1 AND status IN ('aceito','concluido')
+      `SELECT * FROM entregas WHERE motoboy_telefone=$1 AND status IN ('aceito','concluido','cancelado','cancelado_loja','cancelado_motoboy')
        AND created_at > NOW() - INTERVAL '30 days' ORDER BY created_at DESC LIMIT 100`,
       [telefone]
     );

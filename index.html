@@ -2075,6 +2075,7 @@
             <option value="todos">Todos os Status</option>
             <option value="aceito">Assumidas (Ativas)</option>
             <option value="concluido">Concluídas</option>
+            <option value="canceladas">Canceladas</option>
           </select>
           <select id="report-filter-loja" onchange="filtrarERenderizarRelatorio()" style="flex: 1;">
             <option value="todos">Todas as Lojas</option>
@@ -2196,6 +2197,27 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+    }
+
+    function getLojaTelefone(order) {
+      let lojaTel = '';
+      if (order && order.tags) {
+        const tLoja = order.tags.find(t => String(t).startsWith('loja_tel:'));
+        if (tLoja) {
+          lojaTel = tLoja.split(':')[1];
+        }
+      }
+      if (!lojaTel) {
+        const urlParams = new URLSearchParams(window.location.search);
+        lojaTel = urlParams.get('loja') || '';
+      }
+      if (!lojaTel && order) {
+        lojaTel = localStorage.getItem('mc_numero_loja_' + order.id) || '';
+      }
+      if (!lojaTel) {
+        lojaTel = localStorage.getItem('mc_numero') || '';
+      }
+      return String(lojaTel).replace(/\D/g, '');
     }
 
     // ─── SEGURANÇA: DECODE BASE64 UTF-8 SEGURO ───────────────────────────────────
@@ -2901,7 +2923,12 @@
         valor_total: totalVal,
         retorno: document.getElementById('retorno-toggle').checked,
         obs: document.getElementById('obs').value.trim(),
-        tags: getSelectedTags()
+        tags: (() => {
+          const t = getSelectedTags();
+          const numLoja = (localStorage.getItem('mc_numero') || '').replace(/\D/g, '');
+          if (numLoja) t.push('loja_tel:' + numLoja);
+          return t;
+        })()
       };
     }
 
@@ -3687,8 +3714,22 @@
       lista.innerHTML = '';
 
       const renderItem = (item) => {
-        const badges = { pendente: 'badge-pendente', aceito: 'badge-aceito', concluido: 'badge-concluido', cancelado: 'badge-cancelado' };
-        const labels = { pendente: '⏳ Aguardando', aceito: '✅ Confirmado', concluido: '✅ Confirmada', cancelado: '✕ Cancelado' };
+        const badges = {
+          pendente: 'badge-pendente',
+          aceito: 'badge-aceito',
+          concluido: 'badge-concluido',
+          cancelado: 'badge-cancelado',
+          cancelado_loja: 'badge-cancelado',
+          cancelado_motoboy: 'badge-cancelado'
+        };
+        const labels = {
+          pendente: '⏳ Aguardando',
+          aceito: '✅ Confirmado',
+          concluido: '✅ Confirmada',
+          cancelado: '✕ Cancelado',
+          cancelado_loja: '❌ Cancelado pela Loja',
+          cancelado_motoboy: '❌ Cancelado pelo Motoboy'
+        };
         
         const destinos = item.destinos || [];
         const isMulti = destinos.length > 1;
@@ -3698,7 +3739,7 @@
         const color = bairroColor(info.bairro);
         const timerBadge = getElapsedBadge(item);
         
-        const tagsArr = item.tags || [];
+        const tagsArr = (item.tags || []).filter(t => !t.startsWith('loja_tel:'));
         const tagMap = { urgente:'🚨 Urgente', fragil:'🥚 Frágil', cobrar:'💳 Cobrar', retorno:'🔄 Retorno' };
         const tagColors = { urgente:'#ef4444', fragil:'#f59e0b', cobrar:'#3b82f6', retorno:'#10b981' };
         const tagsHtml = tagsArr.length > 0
@@ -3708,7 +3749,8 @@
         const ratingHtml = item.rating ? `<span style="font-size:11px;margin-left:6px;">${'⭐'.repeat(item.rating)}</span>` : '';
         
         const div = document.createElement('div');
-        div.className = 'hist-item ' + (item.status === 'cancelado' ? 'cancelado' : item.status === 'concluido' ? 'concluido' : '');
+        const isCancelado = item.status === 'cancelado' || item.status === 'cancelado_loja' || item.status === 'cancelado_motoboy';
+        div.className = 'hist-item ' + (isCancelado ? 'cancelado' : item.status === 'concluido' ? 'concluido' : '');
         div.style.borderLeftColor = color;
         if (item.status === 'aceito') {
           div.style.background = 'linear-gradient(135deg, var(--bg-card) 0%, rgba(16,185,129,0.05) 100%)';
@@ -3728,7 +3770,22 @@
         
         let motoboyInfo = '';
         if (item.motoboy_nome) {
-          motoboyInfo = `<div style="margin-top:6px; padding:8px 10px; background:rgba(16,185,129,0.08); border-radius:8px; border:1px solid rgba(16,185,129,0.2); font-size:12px;">🏁 <b>Confirmada por:</b> ${item.motoboy_nome}${ratingHtml} <span style="color:var(--text-muted)">(${item.motoboy_telefone})</span></div>`;
+          let waLinkHtml = '';
+          const isAtivoOuCancelado = ['aceito', 'cancelado', 'cancelado_loja', 'cancelado_motoboy'].includes(item.status);
+          if (isAtivoOuCancelado && item.motoboy_telefone) {
+            const cleanTel = String(item.motoboy_telefone).replace(/\D/g, '');
+            if (cleanTel.length >= 8) {
+              const waText = encodeURIComponent(`Olá ${item.motoboy_nome}, sobre a corrida #${item.id}:`);
+              waLinkHtml = ` <a href="https://wa.me/${cleanTel}?text=${waText}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; background:#25d366; color:#fff; padding:3px 8px; border-radius:6px; text-decoration:none; font-weight:700; margin-left:6px; font-size:11px;" title="Conversar no WhatsApp" onclick="event.stopPropagation();">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.504-5.724-1.466L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.864.002-2.637-1.019-5.117-2.877-6.979C16.6 1.895 14.12 .874 11.487.874c-5.441 0-9.866 4.423-9.87 9.868-.001 1.8.49 3.555 1.42 5.11L1.965 22.025l6.347-1.662c-1.536.837-1.637.797-1.665.791z"/></svg> Conversar
+              </a>`;
+            }
+          }
+          
+          motoboyInfo = `<div style="margin-top:6px; padding:8px 10px; background:rgba(16,185,129,0.08); border-radius:8px; border:1px solid rgba(16,185,129,0.2); font-size:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px;">
+            <div>🏁 <b>Confirmada por:</b> ${item.motoboy_nome}${ratingHtml} <span style="color:var(--text-muted)">(${item.motoboy_telefone})</span></div>
+            ${waLinkHtml}
+          </div>`;
         }
 
         div.innerHTML = `
@@ -3747,13 +3804,15 @@
           ${motoboyInfo}
           <div class="hist-info" style="margin-top:8px;">🕐 ${formatData} &nbsp;•&nbsp; Retorno: ${item.retorno ? 'Sim' : 'Não'}</div>
           ${item.obs ? `<div class="hist-obs">💬 ${escapeHtml(item.obs)}</div>` : ''}
-          <div style="margin-top:8px;"><span class="badge ${badges[item.status]}">${labels[item.status]}</span></div>
+          <div style="margin-top:8px;"><span class="badge ${badges[item.status] || 'badge-pendente'}">${labels[item.status] || item.status}</span></div>
           <div class="hist-actions">
             <select onchange="updateStatus('${item.id}', this.value)" class="status-select status-${item.status}">
               <option value="pendente" ${item.status === 'pendente' ? 'selected' : ''}>⏳ Aguardando</option>
               <option value="aceito" ${item.status === 'aceito' ? 'selected' : ''}>🏍️ Confirmado</option>
               <option value="concluido" ${item.status === 'concluido' ? 'selected' : ''}>✅ Concluída</option>
-              <option value="cancelado" ${item.status === 'cancelado' ? 'selected' : ''}>❌ Cancelada</option>
+              ${item.status === 'cancelado_loja' ? `<option value="cancelado_loja" selected>❌ Cancelado pela Loja</option>` : ''}
+              ${item.status === 'cancelado_motoboy' ? `<option value="cancelado_motoboy" selected>❌ Cancelado pelo Motoboy</option>` : ''}
+              ${item.status !== 'cancelado_loja' && item.status !== 'cancelado_motoboy' ? `<option value="cancelado_loja" ${item.status === 'cancelado' ? 'selected' : ''}>❌ Cancelar Corrida</option>` : ''}
             </select>
             <button class="hist-btn hist-btn-copiar" onclick="copiarHist('${item.id}')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar
@@ -3834,11 +3893,12 @@
 
 
     async function updateStatus(id, status) {
-      if (status === 'cancelado') {
+      if (status === 'cancelado' || status === 'cancelado_loja' || status === 'cancelado_motoboy') {
         if (!confirm('Deseja realmente CANCELAR esta corrida?')) {
           renderHistorico();
           return;
         }
+        status = 'cancelado_loja';
       }
       
       const isLocal = String(id).startsWith('local_');
@@ -4874,7 +4934,7 @@
           if (prevStatus) {
             if (prevStatus === 'pendente' && (o.status === 'concluido' || o.status === 'aceito')) {
               newAccepts.push(o);
-            } else if (prevStatus === 'aceito' && o.status === 'cancelado') {
+            } else if (prevStatus === 'aceito' && (o.status === 'cancelado' || o.status === 'cancelado_loja' || o.status === 'cancelado_motoboy')) {
               newCancels.push(o);
             } else if (prevStatus === 'aceito' && o.status === 'pendente') {
               newAbandons.push(o);
@@ -4915,6 +4975,10 @@
       const autoNome = urlParams.get('nome');
       const autoTel = urlParams.get('tel');
       const dataParam = urlParams.get('data');
+      const lojaParam = urlParams.get('loja');
+      if (lojaParam) {
+        localStorage.setItem('mc_numero_loja_' + orderId, lojaParam);
+      }
       
       const preencherForm = (order) => {
         const acceptFormCard = document.getElementById('accept-form-card');
@@ -4980,7 +5044,7 @@
           const pixSalvo = localStorage.getItem('mc_motoboy_pix') || '';
           const msg = `✅ *CORRIDA CONFIRMADA!*\n🎫 *Ticket Nº ${order.id}*\n\n🏍️ *Entregador:* ${order.motoboy_nome}\n📞 *WhatsApp:* ${order.motoboy_telefone}${pixSalvo ? '\n💳 *Pix:* ' + pixSalvo : ''}\n🏢 *Coleta:* ${o.coleta_nome || ''}${msgDestinos}\n💰 *Total:* R$ ${Number(o.valor_total||0).toFixed(2).replace('.', ',')}\n🔄 *Retorno:* ${o.retorno ? 'Sim' : 'Não'}${o.obs ? '\n💬 *Obs:* ' + o.obs : ''}`;
           
-          const numLogista = (localStorage.getItem('mc_numero') || '').replace(/\D/g, '');
+          const numLogista = getLojaTelefone(order);
           const whatsappUrl = numLogista.length >= 10
             ? `https://wa.me/${numLogista}?text=${encodeURIComponent(msg)}`
             : `https://wa.me/?text=${encodeURIComponent(msg)}`;
@@ -5007,7 +5071,7 @@
           let whatsappBtnHtml = '';
           if (isLocal) {
             const msg = `🏁 *CORRIDA CONCLUÍDA POR MOTOBOY (LOCAL)!*\n\n🏍️ *Entregador:* ${order.motoboy_nome || ''}\n📞 *Contato:* ${order.motoboy_telefone || ''}\n📍 *Destino:* Rota para ${order.coleta_nome || ''} (Valor R$ ${Number(order.valor_total||0).toFixed(2).replace('.', ',')})\n🆔 *ID:* ${order.id}`;
-            const numLogista = (localStorage.getItem('mc_numero') || '').replace(/\D/g, '');
+            const numLogista = getLojaTelefone(order);
             const whatsappUrl = numLogista.length >= 10
               ? `https://wa.me/${numLogista}?text=${encodeURIComponent(msg)}`
               : `https://wa.me/?text=${encodeURIComponent(msg)}`;
@@ -5021,26 +5085,50 @@
 
           acceptFormCard.innerHTML = `
             <div style="text-align:center; padding:16px 0 10px;">
-              <div style="font-size:52px; margin-bottom:6px;">\ud83c\udf89</div>
+              <div style="font-size:52px; margin-bottom:6px;">🎉</div>
               <div style="font-size:19px; font-weight:900; color:#10b981; margin-bottom:4px;">✅ Corrida Confirmada!</div>
               <div style="font-size:13px; font-weight:800; color:var(--primary); margin-bottom:8px;">Ticket #${order.id}</div>
               <div style="font-size:13px; color:var(--text-muted); line-height:1.7;">
                 Por: <b style="color:var(--text-main);">${escapeHtml(order.motoboy_nome) || 'Entregador'}</b><br>
-                WhatsApp: ${order.motoboy_telefone || '\u2014'}<br>
-                ${order.completed_at ? `<span style="font-size:11px;">\ud83d\udd50 ${new Date(order.completed_at).toLocaleString('pt-BR')}</span>` : ''}
+                WhatsApp: ${order.motoboy_telefone || '—'}<br>
+                ${order.completed_at ? `<span style="font-size:11px;">🕒 ${new Date(order.completed_at).toLocaleString('pt-BR')}</span>` : ''}
               </div>
             </div>
             <div style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.25); color:#2563eb; padding:10px 14px; border-radius:10px; text-align:center; font-weight:700; margin-bottom:20px; font-size:13px;">
-              Obrigado pelo excelente trabalho! \ud83d\ude4c
+              Obrigado pelo excelente trabalho! 🙌
             </div>
             ${whatsappBtnHtml}
-            <div style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.8px; color:var(--primary); margin-bottom:10px; border-top:1px dashed var(--border-color); padding-top:14px;">\ud83d\udcca Suas Corridas \u2014 \u00daltimos 7 dias</div>
+            <div style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.8px; color:var(--primary); margin-bottom:10px; border-top:1px dashed var(--border-color); padding-top:14px;">📊 Suas Corridas — Últimos 7 dias</div>
             <div id="inline-report-list">
-              <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:13px;">\u23f3 Carregando hist\u00f3rico...</div>
+              <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:13px;">⏳ Carregando histórico...</div>
             </div>
           `;
           _carregarRelatorioInline(order.motoboy_telefone);
 
+        } else if (order.status === 'cancelado' || order.status === 'cancelado_loja' || order.status === 'cancelado_motoboy') {
+          let cancelLabel = '❌ Corrida Cancelada';
+          if (order.status === 'cancelado_loja') cancelLabel = '❌ Cancelada pela Loja';
+          else if (order.status === 'cancelado_motoboy') cancelLabel = '❌ Cancelada pelo Motoboy';
+
+          let whatsappBtnHtml = '';
+          const numLogista = getLojaTelefone(order);
+          if (numLogista && numLogista.length >= 8) {
+            const waText = encodeURIComponent(`Olá, sou o entregador ${order.motoboy_nome || ''}. Gostaria de falar sobre a corrida #${order.id} que consta como cancelada.`);
+            whatsappBtnHtml = `
+              <button class="btn btn-green" onclick="window.open('https://wa.me/${numLogista}?text=${waText}', '_blank')" style="background:#25d366; border-color:#25d366; color:#fff; font-size:15px; padding:12px; width:100%; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; border-radius:8px; font-weight:bold; border:none; margin-top:15px;">
+                💬 Falar com a Loja
+              </button>
+            `;
+          }
+
+          acceptFormCard.innerHTML = `
+            <div style="text-align:center; padding:20px 16px 10px;">
+              <div style="font-size:52px; margin-bottom:8px;">❌</div>
+              <div style="font-size:20px; font-weight:900; color:var(--accent); margin-bottom:4px;">${cancelLabel}</div>
+              <div style="font-size:14px; font-weight:800; color:var(--primary); margin-bottom:10px;">Ticket #${order.id}</div>
+              ${whatsappBtnHtml}
+            </div>
+          `;
         } else {
           acceptFormCard.innerHTML = `
             <div class="card-title" style="color:var(--accent);">❌ Corrida Cancelada</div>
@@ -5095,7 +5183,10 @@
       let statusBadgeClass = 'badge-pendente', statusLabel = 'Pendente';
       if (order.status === 'aceito') { statusBadgeClass = 'badge-aceito'; statusLabel = `✅ Confirmada por ${escapeHtml(order.motoboy_nome)}`; }
       else if (order.status === 'concluido') { statusBadgeClass = 'badge-concluido'; statusLabel = '✅ Confirmada'; }
-      else if (order.status === 'cancelado') { statusBadgeClass = 'badge-cancelado'; statusLabel = 'Cancelada'; }
+      else if (order.status === 'cancelado' || order.status === 'cancelado_loja' || order.status === 'cancelado_motoboy') {
+        statusBadgeClass = 'badge-cancelado';
+        statusLabel = order.status === 'cancelado_loja' ? 'Cancelada pela Loja' : (order.status === 'cancelado_motoboy' ? 'Cancelada pelo Motoboy' : 'Cancelada');
+      }
       
       let destinosHtml = '';
       destinos.forEach((d, idx) => {
@@ -5397,36 +5488,42 @@
       } catch (e) {
         // Fallback to local history
         const localAll = safeParse('mc_historico', []);
-        runs = localAll.filter(h => String(h.motoboy_telefone) === String(tel) && ['aceito','concluido'].includes(h.status));
+        runs = localAll.filter(h => String(h.motoboy_telefone) === String(tel) && ['aceito','concluido','cancelado','cancelado_loja','cancelado_motoboy'].includes(h.status));
       }
       if (!listEl) return; // card may have changed
       if (runs.length === 0) {
-        listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">\ud83d\ude14 Nenhuma corrida encontrada para este n\u00famero.</div>';
+        listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">😔 Nenhuma corrida encontrada para este número.</div>';
         return;
       }
       // Summary line
       const total = runs.reduce((s, r) => s + Number(r.valor_total), 0);
       let html = `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--primary-light);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-weight:800;">
-        <span>\ud83d\udcb0 Total Ganho:</span><span style="color:var(--primary);font-size:16px;">R$ ${total.toFixed(2).replace('.',',')}</span>
+        <span>💰 Total Ganho:</span><span style="color:var(--primary);font-size:16px;">R$ ${total.toFixed(2).replace('.',',')}</span>
       </div>`;
       runs.forEach(run => {
         const dt = new Date(run.created_at).toLocaleString('pt-BR');
         const isConcluido = run.status === 'concluido';
-        const borderColor = isConcluido ? '#3b82f6' : '#10b981';
-        const statusBadge = isConcluido
-          ? '<span class="badge badge-concluido">\ud83c\udfc1 Conclu\u00edda</span>'
-          : '<span class="badge badge-aceito">\u2705 Ativa</span>';
+        const isCancel = ['cancelado', 'cancelado_loja', 'cancelado_motoboy'].includes(run.status);
+        const borderColor = isConcluido ? '#3b82f6' : (isCancel ? '#ef4444' : '#10b981');
+        let statusBadge = '';
+        if (isConcluido) {
+          statusBadge = '<span class="badge badge-concluido">🏁 Concluída</span>';
+        } else if (isCancel) {
+          statusBadge = `<span class="badge badge-cancelado">${run.status === 'cancelado_loja' ? 'Cancelada pela Loja' : (run.status === 'cancelado_motoboy' ? 'Cancelada pelo Motoboy' : 'Cancelada')}</span>`;
+        } else {
+          statusBadge = '<span class="badge badge-aceito">✅ Ativa</span>';
+        }
         let destinos = '';
         (run.destinos || []).forEach((d, i) => {
-          destinos += `<div style="font-size:12px;color:var(--text-muted);">\ud83d\udccd ${d.rua} (${d.bairro})</div>`;
+          destinos += `<div style="font-size:12px;color:var(--text-muted);">📍 ${d.rua} (${d.bairro})</div>`;
         });
         html += `<div class="hist-item" style="border-left-color:${borderColor};margin-bottom:10px;">
           <div class="hist-header">
-            <div class="hist-bairro">\ud83c\udfe2 ${run.coleta_nome || '\u2014'}</div>
+            <div class="hist-bairro">🏢 ${run.coleta_nome || '—'}</div>
             <div class="hist-valor">R$ ${Number(run.valor_total).toFixed(2).replace('.',',')}</div>
           </div>
           ${destinos}
-          <div class="hist-info" style="margin-top:4px;">\ud83d\udd50 ${dt}</div>
+          <div class="hist-info" style="margin-top:4px;">🕒 ${dt}</div>
           <div style="margin-top:6px;">${statusBadge}</div>
         </div>`;
       });
@@ -5543,8 +5640,13 @@
           if (!idMatch && !coletaMatch && !destinosMatch) return false;
         }
         
-        if (filterStatus !== 'todos' && run.status !== filterStatus) {
-          return false;
+        if (filterStatus !== 'todos') {
+          if (filterStatus === 'canceladas') {
+            const isCancel = run.status === 'cancelado' || run.status === 'cancelado_loja' || run.status === 'cancelado_motoboy';
+            if (!isCancel) return false;
+          } else if (run.status !== filterStatus) {
+            return false;
+          }
         }
         
         if (filterLoja !== 'todos' && (run.coleta_nome || '').trim() !== filterLoja) {
@@ -5605,12 +5707,28 @@
         
         let statusBadgeClass = 'badge-aceito';
         let statusLabel = 'Assumida (Ativa)';
-        if (run.status === 'concluido') { statusBadgeClass = 'badge-concluido'; statusLabel = 'Concluída'; }
+        if (run.status === 'concluido') {
+          statusBadgeClass = 'badge-concluido';
+          statusLabel = 'Concluída';
+        } else if (run.status === 'cancelado_loja') {
+          statusBadgeClass = 'badge-cancelado';
+          statusLabel = 'Cancelado pela Loja';
+        } else if (run.status === 'cancelado_motoboy') {
+          statusBadgeClass = 'badge-cancelado';
+          statusLabel = 'Cancelado pelo Motoboy';
+        } else if (run.status === 'cancelado') {
+          statusBadgeClass = 'badge-cancelado';
+          statusLabel = 'Cancelado';
+        }
         
         const itemDiv = document.createElement('div');
-        itemDiv.className = 'hist-item';
-        if (run.status === 'concluido') {
+        const isCancel = run.status === 'cancelado' || run.status === 'cancelado_loja' || run.status === 'cancelado_motoboy';
+        const isConcluido = run.status === 'concluido';
+        itemDiv.className = 'hist-item ' + (isCancel ? 'cancelado' : isConcluido ? 'concluido' : '');
+        if (isConcluido) {
           itemDiv.style.borderLeftColor = '#3b82f6';
+        } else if (isCancel) {
+          itemDiv.style.borderLeftColor = '#ef4444';
         } else {
           itemDiv.style.borderLeftColor = '#10b981';
         }
@@ -5626,10 +5744,26 @@
               <option value="aceito" ${run.status === 'aceito' ? 'selected' : ''}>🏍️ Assumida (Ativa)</option>
               <option value="concluido" ${run.status === 'concluido' ? 'selected' : ''}>✅ Concluída</option>
               <option value="pendente" ${run.status === 'pendente' ? 'selected' : ''}>🔄 Desistir (Liberar)</option>
-              <option value="cancelado" ${run.status === 'cancelado' ? 'selected' : ''}>❌ Cancelar Corrida</option>
+              ${run.status === 'cancelado_loja' ? `<option value="cancelado_loja" selected>❌ Cancelado pela Loja</option>` : ''}
+              ${run.status === 'cancelado_motoboy' ? `<option value="cancelado_motoboy" selected>❌ Cancelado pelo Motoboy</option>` : ''}
+              ${run.status !== 'cancelado_loja' && run.status !== 'cancelado_motoboy' ? `<option value="cancelado_motoboy" ${run.status === 'cancelado' ? 'selected' : ''}>❌ Cancelar Corrida</option>` : ''}
             </select>
           </div>
         `;
+
+        let whatsappBtnHtml = '';
+        const isAtivaOuCancelada = ['aceito', 'cancelado', 'cancelado_loja', 'cancelado_motoboy'].includes(run.status);
+        if (isAtivaOuCancelada) {
+          const lojaTel = getLojaTelefone(run);
+          if (lojaTel && lojaTel.length >= 8) {
+            const waText = encodeURIComponent(`Olá, sou o entregador ${run.motoboy_nome || ''}. Gostaria de falar sobre a corrida #${run.id}.`);
+            whatsappBtnHtml = `
+              <button class="btn btn-green" onclick="window.open('https://wa.me/${lojaTel}?text=${waText}', '_blank')" style="background:#25d366; border-color:#25d366; color:#fff; font-size:12.5px; padding:4px 10px; display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; border-radius:6px; font-weight:bold; border:none; width:auto; height:30px; margin:0;">
+                💬 Falar com a Loja
+              </button>
+            `;
+          }
+        }
 
         itemDiv.innerHTML = `
           <div class="hist-header">
@@ -5642,6 +5776,7 @@
           <div class="hist-info">🕐 ${formatData}</div>
           <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
             <span class="badge ${statusBadgeClass}">${statusLabel}</span>
+            ${whatsappBtnHtml}
           </div>
           ${acoesHtml}
         `;
@@ -5747,7 +5882,7 @@
           const res = await fetch('/api/orders', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: orderId, status: 'cancelado' })
+            body: JSON.stringify({ id: orderId, status: 'cancelado_motoboy' })
           });
           
           if (!res.ok) {
@@ -5758,12 +5893,15 @@
           }
         }
         
-        currentReportRuns = currentReportRuns.filter(r => String(r.id) !== String(orderId));
+        const runIdx = currentReportRuns.findIndex(r => String(r.id) === String(orderId));
+        if (runIdx !== -1) {
+          currentReportRuns[runIdx].status = 'cancelado_motoboy';
+        }
         
         const localHistory = safeParse('mc_historico', []);
         const idx = localHistory.findIndex(h => String(h.id) === String(orderId));
         if (idx !== -1) {
-          localHistory[idx].status = 'cancelado';
+          localHistory[idx].status = 'cancelado_motoboy';
           localStorage.setItem('mc_historico', JSON.stringify(localHistory));
         }
         
