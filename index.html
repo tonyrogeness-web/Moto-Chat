@@ -2034,14 +2034,16 @@
     </div>
 
     <!-- Summary Statistics Grid -->
-    <div class="resumo-grid" id="report-summary-grid" style="display: none;">
-      <div class="resumo-card">
-        <div class="resumo-num" id="report-total-runs">0</div>
-        <div class="resumo-label">Total Corridas</div>
+    <div class="resumo-grid" id="report-summary-grid" style="display: none; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px;">
+      <div class="resumo-card" style="padding: 12px; text-align: center;">
+        <div style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Hoje</div>
+        <div class="resumo-valor" id="report-today-earnings" style="font-size: 18px; font-weight: 800; color: #10b981; margin: 4px 0;">R$ 0,00</div>
+        <div style="font-size: 11px; color: var(--text-muted);"><span id="report-today-runs">0</span> corridas</div>
       </div>
-      <div class="resumo-card">
-        <div class="resumo-valor" id="report-total-earnings">R$ 0,00</div>
-        <div class="resumo-label">Total Faturado</div>
+      <div class="resumo-card" style="padding: 12px; text-align: center;">
+        <div style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Acumulado</div>
+        <div class="resumo-valor" id="report-total-earnings" style="font-size: 18px; font-weight: 800; color: var(--primary); margin: 4px 0;">R$ 0,00</div>
+        <div style="font-size: 11px; color: var(--text-muted);"><span id="report-total-runs">0</span> corridas</div>
       </div>
     </div>
 
@@ -5446,6 +5448,20 @@
       const totalCount = runs.length;
       const totalEarnings = runs.reduce((acc, curr) => acc + Number(curr.valor_total), 0);
       
+      const hoje = new Date();
+      const hojeInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).getTime();
+      const runsHoje = runs.filter(run => {
+        const time = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now()).getTime();
+        return time && time >= hojeInicio;
+      });
+      const todayCount = runsHoje.length;
+      const todayEarnings = runsHoje.reduce((acc, curr) => acc + Number(curr.valor_total), 0);
+
+      const todayRunsEl = document.getElementById('report-today-runs');
+      const todayEarningsEl = document.getElementById('report-today-earnings');
+      if (todayRunsEl) todayRunsEl.textContent = todayCount;
+      if (todayEarningsEl) todayEarningsEl.textContent = 'R$ ' + todayEarnings.toFixed(2).replace('.', ',');
+
       totalRunsEl.textContent = totalCount;
       totalEarningsEl.textContent = 'R$ ' + totalEarnings.toFixed(2).replace('.', ',');
       summaryGrid.style.display = 'grid';
@@ -5480,6 +5496,14 @@
               </button>
               <button class="btn btn-outline btn-small" onclick="desistirCorridaPeloReport('${run.id}')" style="font-size: 11px; padding: 6px 12px; border-color: #ef4444; color: #ef4444; background: transparent; height: auto; width: auto; cursor: pointer; font-weight: bold; border-radius: 6px;">
                 ✕ Desistir da Corrida
+              </button>
+            </div>
+          `;
+        } else if (run.status === 'concluido') {
+          acoesHtml = `
+            <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn btn-outline btn-small" onclick="cancelarCorridaPeloReport('${run.id}')" style="font-size: 11px; padding: 6px 12px; border-color: #ef4444; color: #ef4444; background: transparent; height: auto; width: auto; cursor: pointer; font-weight: bold; border-radius: 6px;">
+                ❌ Marcar como Cancelada
               </button>
             </div>
           `;
@@ -5579,6 +5603,45 @@
         }
         
         toast('✅ Você desistiu da corrida. Ela foi liberada.');
+        playSound('success');
+        filtrarERenderizarRelatorio();
+      } catch (e) {
+        toast('⚠️ Erro ao conectar ao servidor');
+        playSound('warning');
+      }
+    }
+
+    async function cancelarCorridaPeloReport(orderId) {
+      if (!confirm('Deseja realmente marcar esta corrida como CANCELADA?')) return;
+      
+      const isLocal = String(orderId).startsWith('local_');
+      
+      try {
+        if (!isLocal) {
+          const res = await fetch('/api/orders', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: orderId, status: 'cancelado' })
+          });
+          
+          if (!res.ok) {
+            const errData = await res.json();
+            toast('⚠️ ' + (errData.error || 'Erro ao cancelar corrida'));
+            playSound('warning');
+            return;
+          }
+        }
+        
+        currentReportRuns = currentReportRuns.filter(r => String(r.id) !== String(orderId));
+        
+        const localHistory = safeParse('mc_historico', []);
+        const idx = localHistory.findIndex(h => String(h.id) === String(orderId));
+        if (idx !== -1) {
+          localHistory[idx].status = 'cancelado';
+          localStorage.setItem('mc_historico', JSON.stringify(localHistory));
+        }
+        
+        toast('✅ Corrida marcada como cancelada.');
         playSound('success');
         filtrarERenderizarRelatorio();
       } catch (e) {
