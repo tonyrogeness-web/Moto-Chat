@@ -1979,7 +1979,13 @@
 
   <!-- MOTOBOY REPORT VIEW -->
   <div id="motoboy-report-view" style="display: none; padding: 20px; max-width: 500px; margin: 0 auto; min-height: 100vh;">
-    <div style="text-align: center; margin-bottom: 24px; padding-top: 20px;">
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; margin-top: 10px;">
+      <button onclick="window.history.back()" class="btn btn-outline btn-small" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; height: auto; width: auto; font-size: 13px; font-weight: 700;">
+        ⬅️ Voltar
+      </button>
+    </div>
+
+    <div style="text-align: center; margin-bottom: 24px; padding-top: 10px;">
       <div style="background: var(--primary-light); display: inline-flex; padding: 12px; border-radius: 16px; margin-bottom: 12px;">
         <svg style="width: 36px; height: 36px; fill: var(--primary); stroke: var(--primary); stroke-width: 0.5" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"></circle><polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2"></polyline>
@@ -1993,7 +1999,7 @@
     </div>
 
     <!-- Inquiry Card -->
-    <div class="card">
+    <div class="card" style="margin-bottom: 16px;">
       <div class="card-title">Dados de Acesso</div>
       <div class="field">
         <label for="report-telefone">Digite seu WhatsApp cadastrado (apenas números)</label>
@@ -2002,6 +2008,24 @@
       <button class="btn btn-green" onclick="consultarRelatorioMotoboy()">
         🔍 Consultar Minhas Corridas
       </button>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="card" id="report-filters-card" style="display: none; padding: 16px; margin-bottom: 16px;">
+      <div style="font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px;">🔍 Filtrar Extrato</div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <input type="text" id="report-search" placeholder="🔍 Buscar por rua, bairro ou ticket..." oninput="filtrarERenderizarRelatorio()">
+        <div style="display: flex; gap: 8px;">
+          <select id="report-filter-status" onchange="filtrarERenderizarRelatorio()" style="flex: 1;">
+            <option value="todos">Todos os Status</option>
+            <option value="aceito">Assumidas (Ativas)</option>
+            <option value="concluido">Concluídas</option>
+          </select>
+          <select id="report-filter-loja" onchange="filtrarERenderizarRelatorio()" style="flex: 1;">
+            <option value="todos">Todas as Lojas</option>
+          </select>
+        </div>
+      </div>
     </div>
 
     <!-- Summary Statistics Grid -->
@@ -5271,6 +5295,8 @@
       listEl.innerHTML = html;
     }
 
+    let currentReportRuns = [];
+
     async function consultarRelatorioMotoboy() {
       const telefone = document.getElementById('report-telefone').value.replace(/\D/g, '');
       if (telefone.length < 10) { toast('⚠️ Informe seu telefone WhatsApp com DDD'); playSound('warning'); return; }
@@ -5278,25 +5304,91 @@
       localStorage.setItem('mc_motoboy_telefone', telefone);
       
       const listEl = document.getElementById('report-runs-list');
+      const filtersCard = document.getElementById('report-filters-card');
+      const summaryGrid = document.getElementById('report-summary-grid');
+      
+      if (filtersCard) filtersCard.style.display = 'none';
+      if (summaryGrid) summaryGrid.style.display = 'none';
       listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">Consultando corridas no banco...</div>';
       
+      let fetchedRuns = [];
       try {
         const res = await fetch(`/api/motoboy-report?telefone=${telefone}`);
         if (res.ok) {
-          const runs = await res.json();
-          renderReportRunsHtml(runs);
-          playSound('success');
-          return;
+          fetchedRuns = await res.json();
         }
       } catch (e) {
         console.warn('Erro ao obter extrato da nuvem, tentando local:', e);
       }
       
-      // Fallback
-      const localHistory = safeParse('mc_historico', []);
-      const runs = localHistory.filter(h => String(h.motoboy_telefone) === String(telefone) && ['aceito', 'concluido'].includes(h.status));
-      renderReportRunsHtml(runs);
-      playSound('success');
+      if (fetchedRuns.length === 0) {
+        // Fallback local
+        const localHistory = safeParse('mc_historico', []);
+        fetchedRuns = localHistory.filter(h => String(h.motoboy_telefone) === String(telefone) && ['aceito', 'concluido'].includes(h.status));
+      }
+      
+      currentReportRuns = fetchedRuns;
+      
+      if (fetchedRuns.length > 0) {
+        atualizarFiltrosEstabelecimento(fetchedRuns);
+        if (filtersCard) filtersCard.style.display = 'block';
+        playSound('success');
+      } else {
+        if (filtersCard) filtersCard.style.display = 'none';
+      }
+      
+      filtrarERenderizarRelatorio();
+    }
+
+    function atualizarFiltrosEstabelecimento(runs) {
+      const selectLoja = document.getElementById('report-filter-loja');
+      if (!selectLoja) return;
+      
+      const lojas = new Set();
+      runs.forEach(r => {
+        if (r.coleta_nome) lojas.add(r.coleta_nome.trim());
+      });
+      
+      let html = '<option value="todos">Todas as Lojas</option>';
+      Array.from(lojas).sort().forEach(loja => {
+        html += `<option value="${escapeHtml(loja)}">${escapeHtml(loja)}</option>`;
+      });
+      selectLoja.innerHTML = html;
+      selectLoja.value = 'todos';
+    }
+
+    function filtrarERenderizarRelatorio() {
+      const searchInput = document.getElementById('report-search');
+      const statusSelect = document.getElementById('report-filter-status');
+      const lojaSelect = document.getElementById('report-filter-loja');
+      
+      const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+      const filterStatus = statusSelect ? statusSelect.value : 'todos';
+      const filterLoja = lojaSelect ? lojaSelect.value : 'todos';
+      
+      const filtered = currentReportRuns.filter(run => {
+        if (query) {
+          const idMatch = String(run.id).toLowerCase().includes(query);
+          const coletaMatch = (run.coleta_nome || '').toLowerCase().includes(query);
+          const destinosMatch = (run.destinos || []).some(d => 
+            (d.rua || '').toLowerCase().includes(query) || 
+            (d.bairro || '').toLowerCase().includes(query)
+          );
+          if (!idMatch && !coletaMatch && !destinosMatch) return false;
+        }
+        
+        if (filterStatus !== 'todos' && run.status !== filterStatus) {
+          return false;
+        }
+        
+        if (filterLoja !== 'todos' && (run.coleta_nome || '').trim() !== filterLoja) {
+          return false;
+        }
+        
+        return true;
+      });
+      
+      renderReportRunsHtml(filtered);
     }
 
     function renderReportRunsHtml(runs) {
@@ -5307,10 +5399,13 @@
       
       if (runs.length === 0) {
         summaryGrid.style.display = 'none';
+        const hasFilters = (document.getElementById('report-search')?.value || '').trim() !== '' || 
+                           (document.getElementById('report-filter-status')?.value || 'todos') !== 'todos' || 
+                           (document.getElementById('report-filter-loja')?.value || 'todos') !== 'todos';
         listEl.innerHTML = `
           <div class="empty">
             <div class="empty-icon">🏍️</div>
-            <p>Nenhuma corrida aceita ou confirmada encontrada para este telefone.</p>
+            <p>${hasFilters ? 'Nenhuma corrida encontrada com os filtros aplicados.' : 'Nenhuma corrida aceita ou confirmada encontrada para este telefone.'}</p>
           </div>
         `;
         return;
@@ -5340,13 +5435,13 @@
         }
         
         let destinosText = '';
-        run.destinos.forEach((d, idx) => {
+        (run.destinos || []).forEach((d, idx) => {
           destinosText += `<div>📍 <b>#${idx+1}:</b> ${d.rua} (${d.bairro})</div>`;
         });
         
         itemDiv.innerHTML = `
           <div class="hist-header">
-            <div class="hist-bairro">🏢 ${run.coleta_nome}</div>
+            <div class="hist-bairro">🏢 ${run.coleta_nome || '—'}</div>
             <div class="hist-valor">R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}</div>
           </div>
           <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px; line-height: 1.4;">
