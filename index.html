@@ -1699,6 +1699,7 @@
 
       <!-- FILTRO DE PERIODO -->
       <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+        <button class="hist-btn" id="filter-hoje" onclick="filtrarPeriodo('hoje')">Hoje</button>
         <button class="hist-btn" id="filter-ontem" onclick="filtrarPeriodo('ontem')">Ontem</button>
         <button class="hist-btn" id="filter-semana" onclick="filtrarPeriodo('semana')" style="border-color:var(--primary); color:var(--primary); background:var(--primary-glow);">Esta Semana</button>
         <button class="hist-btn" id="filter-todos" onclick="filtrarPeriodo('todos')">Todos</button>
@@ -1997,6 +1998,12 @@
       </div>
       <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">Moto-Chat • Ticket da Corrida</h2>
       <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Toque abaixo para aceitar — este link é o comprovante da entrega</p>
+      
+      <div style="margin-top: 16px; display: flex; justify-content: center; margin-bottom: 8px;">
+        <button class="btn btn-outline" onclick="abrirRelatorioMotoboyDireto()" style="border-width: 2px; font-weight: 800; color: var(--primary); border-color: var(--primary); background: var(--primary-light); box-shadow: var(--shadow-sm); width: 100%; max-width: 320px;">
+          📊 Ver Meu Extrato / Painel
+        </button>
+      </div>
     </div>
 
     <!-- Order Info Card -->
@@ -2041,7 +2048,7 @@
       <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">Meu Extrato de Corridas</h2>
       <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Consulte seu relatório acumulado e faturado</p>
       <div style="margin-top: 10px; font-size: 11px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px; justify-content: center; background: var(--bg-card); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);">
-        <span>⚠️ Exibindo apenas corridas dos últimos 7 dias.</span>
+        <span>⚠️ Exibindo apenas corridas dos últimos 30 dias.</span>
       </div>
     </div>
 
@@ -2061,6 +2068,12 @@
     <div class="card" id="report-filters-card" style="display: none; padding: 16px; margin-bottom: 16px;">
       <div style="font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px;">🔍 Filtrar Extrato</div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; gap: 6px; margin-bottom: 4px; flex-wrap: wrap;">
+          <button class="hist-btn" id="report-filter-period-hoje" onclick="filtrarPeriodoReport('hoje')" style="flex: 1; justify-content: center;">Hoje</button>
+          <button class="hist-btn" id="report-filter-period-ontem" onclick="filtrarPeriodoReport('ontem')" style="flex: 1; justify-content: center;">Ontem</button>
+          <button class="hist-btn" id="report-filter-period-semana" onclick="filtrarPeriodoReport('semana')" style="flex: 1; justify-content: center; border-color:var(--primary); color:var(--primary); background:var(--primary-glow);">Esta Semana</button>
+          <button class="hist-btn" id="report-filter-period-todos" onclick="filtrarPeriodoReport('todos')" style="flex: 1; justify-content: center;">Todos</button>
+        </div>
         <input type="text" id="report-search" placeholder="🔍 Buscar por rua, bairro ou ticket..." oninput="filtrarERenderizarRelatorio()">
         <div style="display: flex; gap: 8px;">
           <select id="report-filter-status" onchange="filtrarERenderizarRelatorio()" style="flex: 1;">
@@ -3240,7 +3253,7 @@
     let _periodoFilter = 'semana';
     function filtrarPeriodo(p) {
       _periodoFilter = p;
-      ['ontem','semana','todos'].forEach(id => {
+      ['hoje','ontem','semana','todos'].forEach(id => {
         const el = document.getElementById('filter-' + id);
         if (!el) return;
         const isActive = id === p;
@@ -3253,6 +3266,7 @@
     function getPeriodoRange(p) {
       const now = new Date();
       const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      if (p === 'hoje') { return [start, null]; }
       if (p === 'ontem') { const s = new Date(start); s.setDate(s.getDate()-1); const e = new Date(start); return [s, e]; }
       if (p === 'semana') { const s = new Date(start); s.setDate(s.getDate() - 6); return [s, null]; }
       return [null, null];
@@ -3593,7 +3607,7 @@
       atualizarSugestoesRua();
       verificarPendentesAlerta();
 
-      const periodoLabels = { ontem: 'Ontem', semana: 'Esta Semana', todos: 'Todos' };
+      const periodoLabels = { hoje: 'Hoje', ontem: 'Ontem', semana: 'Esta Semana', todos: 'Todos' };
       const elPeriodoLabel = document.getElementById('periodo-label');
       if (elPeriodoLabel) elPeriodoLabel.textContent = periodoLabels[_periodoFilter] || 'Esta Semana';
 
@@ -5321,7 +5335,14 @@
     }
 
     function abrirRelatorioMotoboyDireto() {
-      window.location.search = '?relatorio=true';
+      const telInput = document.getElementById('motoboy-telefone');
+      const tel = (telInput ? telInput.value : '') || localStorage.getItem('mc_motoboy_telefone') || '';
+      const cleanTel = tel.replace(/\D/g, '');
+      
+      const newUrl = `${window.location.origin}${window.location.pathname}?relatorio=true${cleanTel ? '&tel=' + cleanTel : ''}`;
+      window.history.pushState({ path: newUrl }, '', newUrl);
+      
+      mostrarRelatorioView();
     }
 
     async function _carregarRelatorioInline(telefone) {
@@ -5437,6 +5458,20 @@
       selectLoja.value = 'todos';
     }
 
+    let _reportPeriodoFilter = 'semana';
+    function filtrarPeriodoReport(p) {
+      _reportPeriodoFilter = p;
+      ['hoje', 'ontem', 'semana', 'todos'].forEach(id => {
+        const el = document.getElementById('report-filter-period-' + id);
+        if (!el) return;
+        const isActive = id === p;
+        el.style.borderColor = isActive ? 'var(--primary)' : '';
+        el.style.color = isActive ? 'var(--primary)' : '';
+        el.style.background = isActive ? 'var(--primary-glow)' : '';
+      });
+      filtrarERenderizarRelatorio();
+    }
+
     function filtrarERenderizarRelatorio() {
       const searchInput = document.getElementById('report-search');
       const statusSelect = document.getElementById('report-filter-status');
@@ -5447,6 +5482,22 @@
       const filterLoja = lojaSelect ? lojaSelect.value : 'todos';
       
       const filtered = currentReportRuns.filter(run => {
+        if (_reportPeriodoFilter !== 'todos') {
+          const runTime = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now()).getTime();
+          const now = new Date();
+          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+          
+          if (_reportPeriodoFilter === 'hoje') {
+            if (!runTime || runTime < startOfToday) return false;
+          } else if (_reportPeriodoFilter === 'ontem') {
+            const startOfYesterday = startOfToday - 24 * 60 * 60 * 1000;
+            if (!runTime || runTime < startOfYesterday || runTime >= startOfToday) return false;
+          } else if (_reportPeriodoFilter === 'semana') {
+            const startOfWeek = startOfToday - 6 * 24 * 60 * 60 * 1000;
+            if (!runTime || runTime < startOfWeek) return false;
+          }
+        }
+
         if (query) {
           const idMatch = String(run.id).toLowerCase().includes(query);
           const coletaMatch = (run.coleta_nome || '').toLowerCase().includes(query);
@@ -5481,7 +5532,8 @@
         summaryGrid.style.display = 'none';
         const hasFilters = (document.getElementById('report-search')?.value || '').trim() !== '' || 
                            (document.getElementById('report-filter-status')?.value || 'todos') !== 'todos' || 
-                           (document.getElementById('report-filter-loja')?.value || 'todos') !== 'todos';
+                           (document.getElementById('report-filter-loja')?.value || 'todos') !== 'todos' ||
+                           _reportPeriodoFilter !== 'semana';
         listEl.innerHTML = `
           <div class="empty">
             <div class="empty-icon">🏍️</div>
@@ -6137,32 +6189,78 @@
     });
 
     // ─── INIT ────────────────────────────────────────────────────────────────────
-    const urlParams = new URLSearchParams(window.location.search);
-    let isMotoboyMode = false;
-    
-    if (urlParams.has('aceitar') && urlParams.has('id')) {
-      isMotoboyMode = true;
+    function mostrarRelatorioView() {
       const header = document.querySelector('.sticky-header-container');
       const content = document.querySelector('.content');
       if (header) header.style.display = 'none';
       if (content) content.style.display = 'none';
+      
       const acceptView = document.getElementById('motoboy-accept-view');
-      if (acceptView) acceptView.style.display = 'block';
-      carregarDetalhesCorrida(urlParams.get('id'));
-    } else if (urlParams.has('relatorio')) {
-      isMotoboyMode = true;
-      const header = document.querySelector('.sticky-header-container');
-      const content = document.querySelector('.content');
-      if (header) header.style.display = 'none';
-      if (content) content.style.display = 'none';
+      if (acceptView) acceptView.style.display = 'none';
+      
       const reportView = document.getElementById('motoboy-report-view');
       if (reportView) reportView.style.display = 'block';
-      const savedPhone = urlParams.get('tel') || localStorage.getItem('mc_motoboy_telefone') || '';
+      
+      const params = new URLSearchParams(window.location.search);
+      const savedPhone = params.get('tel') || localStorage.getItem('mc_motoboy_telefone') || '';
       if (savedPhone) {
         const reportTel = document.getElementById('report-telefone');
         if (reportTel) reportTel.value = savedPhone;
         consultarRelatorioMotoboy();
       }
+    }
+
+    function mostrarAcceptView() {
+      const header = document.querySelector('.sticky-header-container');
+      const content = document.querySelector('.content');
+      if (header) header.style.display = 'none';
+      if (content) content.style.display = 'none';
+      
+      const reportView = document.getElementById('motoboy-report-view');
+      if (reportView) reportView.style.display = 'none';
+      
+      const acceptView = document.getElementById('motoboy-accept-view');
+      if (acceptView) acceptView.style.display = 'block';
+      
+      const params = new URLSearchParams(window.location.search);
+      carregarDetalhesCorrida(params.get('id'));
+    }
+
+    function mostrarSolicitanteView() {
+      const header = document.querySelector('.sticky-header-container');
+      const content = document.querySelector('.content');
+      if (header) header.style.display = 'block';
+      if (content) content.style.display = 'block';
+      
+      const reportView = document.getElementById('motoboy-report-view');
+      if (reportView) reportView.style.display = 'none';
+      
+      const acceptView = document.getElementById('motoboy-accept-view');
+      if (acceptView) acceptView.style.display = 'none';
+    }
+
+    window.addEventListener('popstate', () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('aceitar') && params.has('id')) {
+        mostrarAcceptView();
+      } else if (params.has('relatorio')) {
+        mostrarRelatorioView();
+      } else {
+        mostrarSolicitanteView();
+      }
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    let isMotoboyMode = false;
+    
+    if (urlParams.has('aceitar') && urlParams.has('id')) {
+      isMotoboyMode = true;
+      mostrarAcceptView();
+    } else if (urlParams.has('relatorio')) {
+      isMotoboyMode = true;
+      mostrarRelatorioView();
+    } else {
+      mostrarSolicitanteView();
     }
 
     initTheme();

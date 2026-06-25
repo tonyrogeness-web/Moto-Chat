@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
 
     const { rows } = await pool.query(
       `SELECT * FROM entregas WHERE motoboy_telefone=$1 AND status IN ('aceito','concluido')
-       AND created_at > NOW() - INTERVAL '7 days' ORDER BY created_at DESC LIMIT 100`,
+       AND created_at > NOW() - INTERVAL '30 days' ORDER BY created_at DESC LIMIT 100`,
       [telefone]
     );
     res.status(200).json(rows);
