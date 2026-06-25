@@ -3753,6 +3753,10 @@
 
 
     async function updateStatus(id, status) {
+      if (status === 'cancelado') {
+        if (!confirm('Deseja realmente CANCELAR esta corrida?')) return;
+      }
+      
       const isLocal = String(id).startsWith('local_');
       
       if (!isLocal) {
@@ -5501,9 +5505,9 @@
           `;
         } else if (run.status === 'concluido') {
           acoesHtml = `
-            <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-              <button class="btn btn-outline btn-small" onclick="cancelarCorridaPeloReport('${run.id}')" style="font-size: 11px; padding: 6px 12px; border-color: #ef4444; color: #ef4444; background: transparent; height: auto; width: auto; cursor: pointer; font-weight: bold; border-radius: 6px;">
-                ❌ Marcar como Cancelada
+            <div style="margin-top: 8px;">
+              <button onclick="cancelarCorridaPeloReport('${run.id}')" style="font-size: 10px; padding: 4px 8px; border: 1px solid var(--border-color); color: var(--text-muted); background: transparent; height: auto; width: auto; cursor: pointer; border-radius: 4px; font-weight: normal; transition: opacity 0.2s;">
+                ✕ Cancelar Corrida
               </button>
             </div>
           `;
