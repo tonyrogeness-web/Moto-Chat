@@ -3793,7 +3793,7 @@
           <div class="hist-header">
             <div class="hist-bairro"><span class="bairro-dot" style="background:${color};"></span>${icon} ${info.bairro}${typeLabel}</div>
             <div style="display:flex;align-items:center;gap:6px;">
-              <span onclick="copiarTicketId('${item.id}', event)" style="font-size:11px; font-weight:700; color:var(--text-muted); cursor:pointer;" title="Copiar nº do ticket">Ticket #${item.id}</span>
+              <span onclick="copiarTicketId('${item.id}', event)" style="font-size:11px; font-weight:800; color:var(--primary); background:var(--primary-light); padding:2px 8px; border-radius:4px; cursor:pointer; border:1px solid rgba(16,185,129,0.25);" title="Copiar nº do ticket">🎫 Ticket #${item.id}</span>
               ${timerBadge}
               <div class="hist-valor">R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}</div>
             </div>
@@ -5053,7 +5053,7 @@
             <div style="text-align:center; padding:20px 16px 10px;">
               <div style="font-size:52px; margin-bottom:8px;">✅</div>
               <div style="font-size:20px; font-weight:900; color:#10b981; margin-bottom:4px;">Corrida Confirmada!</div>
-              <div style="font-size:14px; font-weight:800; color:var(--primary); margin-bottom:10px;">Ticket #${order.id}</div>
+              <div style="font-size:14px; font-weight:900; color:var(--primary); background:var(--primary-light); padding:4px 12px; border-radius:6px; display:inline-block; margin-bottom:10px; border:1px solid rgba(16,185,129,0.3);">🎫 Ticket #${order.id}</div>
               <div style="font-size:13px; color:var(--text-muted); line-height:1.8;">
                 Entregador: <b style="color:var(--text-main);">${escapeHtml(order.motoboy_nome)}</b><br>
                 WhatsApp: ${escapeHtml(order.motoboy_telefone)}
@@ -5087,7 +5087,7 @@
             <div style="text-align:center; padding:16px 0 10px;">
               <div style="font-size:52px; margin-bottom:6px;">🎉</div>
               <div style="font-size:19px; font-weight:900; color:#10b981; margin-bottom:4px;">✅ Corrida Confirmada!</div>
-              <div style="font-size:13px; font-weight:800; color:var(--primary); margin-bottom:8px;">Ticket #${order.id}</div>
+              <div style="font-size:14px; font-weight:900; color:var(--primary); background:var(--primary-light); padding:4px 12px; border-radius:6px; display:inline-block; margin-bottom:8px; border:1px solid rgba(16,185,129,0.3);">🎫 Ticket #${order.id}</div>
               <div style="font-size:13px; color:var(--text-muted); line-height:1.7;">
                 Por: <b style="color:var(--text-main);">${escapeHtml(order.motoboy_nome) || 'Entregador'}</b><br>
                 WhatsApp: ${order.motoboy_telefone || '—'}<br>
@@ -5125,7 +5125,7 @@
             <div style="text-align:center; padding:20px 16px 10px;">
               <div style="font-size:52px; margin-bottom:8px;">❌</div>
               <div style="font-size:20px; font-weight:900; color:var(--accent); margin-bottom:4px;">${cancelLabel}</div>
-              <div style="font-size:14px; font-weight:800; color:var(--primary); margin-bottom:10px;">Ticket #${order.id}</div>
+              <div style="font-size:14px; font-weight:900; color:var(--primary); background:var(--primary-light); padding:4px 12px; border-radius:6px; display:inline-block; margin-bottom:10px; border:1px solid rgba(16,185,129,0.3);">🎫 Ticket #${order.id}</div>
               ${whatsappBtnHtml}
             </div>
           `;
@@ -5211,7 +5211,7 @@
       
       card.innerHTML = `
         <div style="text-align:center; margin-bottom:12px;">
-          <span style="display:inline-block; font-size:13px; font-weight:800; color:var(--primary); background:var(--primary-light); padding:6px 16px; border-radius:20px;">🎫 Ticket Nº ${order.id}</span>
+          <span style="display:inline-block; font-size:16px; font-weight:900; color:var(--primary); background:var(--primary-light); padding:8px 20px; border-radius:20px; border:2px solid var(--primary); box-shadow: 0 4px 6px rgba(16,185,129,0.1);">🎫 Ticket Nº ${order.id}</span>
         </div>
         <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
           <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">🕐 ${formatData}</span>
@@ -5767,7 +5767,10 @@
         itemDiv.innerHTML = `
           <div class="hist-header">
             <div class="hist-bairro">🏢 ${run.coleta_nome || '—'}</div>
-            <div class="hist-valor">R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span onclick="navigator.clipboard.writeText('${run.id}'); toast('🎫 Ticket #${run.id} copiado!'); playSound('success');" style="font-size:11px; font-weight:800; color:var(--primary); background:var(--primary-light); padding:2px 8px; border-radius:4px; cursor:pointer; border:1px solid rgba(16,185,129,0.25);" title="Copiar Ticket">🎫 Ticket #${run.id}</span>
+              <div class="hist-valor">R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}</div>
+            </div>
           </div>
           <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px; line-height: 1.4;">
             ${destinosText}
