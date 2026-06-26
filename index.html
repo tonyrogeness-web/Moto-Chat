@@ -2355,8 +2355,8 @@
           osc.start(now);
           osc.stop(now + 0.06);
         } else if (type === 'warning') {
-          const gap = 0.35;
-          const dur = 0.3;
+          const gap = 0.25;
+          const dur = 0.25;
           for (let i = 0; i < repeats; i++) {
             const t = now + i * gap;
             const osc = audioCtx.createOscillator();
@@ -2364,10 +2364,10 @@
             osc.connect(gainNode);
             gainNode.connect(audioCtx.destination);
             
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(300, t);
-            osc.frequency.linearRampToValueAtTime(100, t + 0.25);
-            gainNode.gain.setValueAtTime(0.18, t);
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(330, t);
+            osc.frequency.exponentialRampToValueAtTime(180, t + dur);
+            gainNode.gain.setValueAtTime(0.12, t);
             gainNode.gain.exponentialRampToValueAtTime(0.001, t + dur);
             
             osc.start(t);
@@ -3631,6 +3631,7 @@
     let exclusoesPendentes = new Set();
 
     async function deletarPedido(id) {
+      if (!confirm('Deseja realmente EXCLUIR esta corrida?')) return;
       playSound('warning');
       
       // Se já existia uma deleção pendente, executa ela de vez antes de iniciar outra
@@ -6132,17 +6133,18 @@
       }
     }
 
-    async function cancelarCorridaPeloReport(orderId) {
+    async function cancelarCorridaPeloReport(orderId, newStatus = 'cancelado_motoboy') {
       if (!confirm('Deseja realmente marcar esta corrida como CANCELADA?')) return false;
       
       const isLocal = String(orderId).startsWith('local_');
+      const statusToSet = newStatus;
       
       try {
         if (!isLocal) {
           const res = await fetch('/api/orders', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: orderId, status: 'cancelado_motoboy' })
+            body: JSON.stringify({ id: orderId, status: statusToSet })
           });
           
           if (!res.ok) {
@@ -6155,7 +6157,7 @@
         
         const runIdx = currentReportRuns.findIndex(r => String(r.id) === String(orderId));
         if (runIdx !== -1) {
-          currentReportRuns[runIdx].status = 'cancelado_motoboy';
+          currentReportRuns[runIdx].status = statusToSet;
         }
         
         const localHistory = safeParse('mc_historico', []);
@@ -6224,8 +6226,8 @@
         success = await concluirCorridaPeloReport(orderId);
       } else if (newStatus === 'pendente') {
         success = await desistirCorridaPeloReport(orderId);
-      } else if (newStatus === 'cancelado') {
-        success = await cancelarCorridaPeloReport(orderId);
+      } else if (newStatus === 'cancelado' || newStatus === 'cancelado_loja' || newStatus === 'cancelado_motoboy') {
+        success = await cancelarCorridaPeloReport(orderId, newStatus);
       } else if (newStatus === 'aceito') {
         success = await reverterParaAceitoPeloReport(orderId);
       }
