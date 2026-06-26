@@ -1392,7 +1392,7 @@
         </div>
       </div>
       
-      <button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Alternar tema" id="theme-btn">
+      <button class="theme-toggle-btn theme-btn" onclick="toggleTheme()" aria-label="Alternar tema" id="theme-btn">
         <!-- Sun/Moon icon dynamically rendered in JS -->
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
@@ -2005,7 +2005,14 @@
 
   <!-- MOTOBOY ACCEPT VIEW -->
   <div id="motoboy-accept-view" style="display: none; padding: 20px; max-width: 500px; margin: 0 auto; min-height: 100vh;">
-    <div style="text-align: center; margin-bottom: 20px; padding-top: 20px;">
+    <!-- Top Bar with Theme Toggle -->
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+      <button class="theme-toggle-btn theme-btn" onclick="toggleTheme()" aria-label="Alternar tema" style="color: var(--text-main); background: var(--bg-card); border: 1px solid var(--border-color); width: 40px; height: 40px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        <!-- Icon filled on load -->
+      </button>
+    </div>
+    
+    <div style="text-align: center; margin-bottom: 20px; padding-top: 10px;">
       <div style="background: var(--primary-light); display: inline-flex; padding: 12px; border-radius: 16px; margin-bottom: 12px;">
         <svg style="width: 36px; height: 36px; fill: var(--primary);" viewBox="0 0 24 24">
           <path d="M19 15c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-14 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12.5-6H14V5h-3c-.55 0-1 .45-1 1v3H5c-1.1 0-2 .9-2 2v3h2c0-1.66 1.34-3 3-3s3 1.34 3 3h4c0-1.66 1.34-3 3-3s3 1.34 3 3h2v-5c0-1.1-.9-2-2-2zM12 7h2v2h-2V7z"/>
@@ -2045,9 +2052,12 @@
 
   <!-- MOTOBOY REPORT VIEW -->
   <div id="motoboy-report-view" style="display: none; padding: 20px; max-width: 500px; margin: 0 auto; min-height: 100vh;">
-    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; margin-top: 10px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; margin-top: 10px;">
       <button onclick="window.history.back()" class="btn btn-outline btn-small" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; height: auto; width: auto; font-size: 13px; font-weight: 700;">
         ⬅️ Voltar
+      </button>
+      <button class="theme-toggle-btn theme-btn" onclick="toggleTheme()" aria-label="Alternar tema" style="color: var(--text-main); background: var(--bg-card); border: 1px solid var(--border-color); width: 36px; height: 36px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        <!-- Icon filled on load -->
       </button>
     </div>
 
@@ -2408,28 +2418,30 @@
     }
 
     function renderThemeIcon() {
-      const btn = document.getElementById('theme-btn');
-      if (state.theme === 'dark-theme') {
-        btn.innerHTML = `
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="5"></circle>
-            <line x1="12" y1="1" x2="12" y2="3"></line>
-            <line x1="12" y1="21" x2="12" y2="23"></line>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-            <line x1="1" y1="12" x2="3" y2="12"></line>
-            <line x1="21" y1="12" x2="23" y2="12"></line>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-          </svg>
-        `;
-      } else {
-        btn.innerHTML = `
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
-        `;
-      }
+      const btns = document.querySelectorAll('.theme-btn');
+      btns.forEach(btn => {
+        if (state.theme === 'dark-theme') {
+          btn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+          `;
+        } else {
+          btn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          `;
+        }
+      });
     }
 
     // ─── TABS ────────────────────────────────────────────────────────────────────
@@ -3112,12 +3124,19 @@
 
     async function obterLinkConfirmacao(dbId) {
       if (!dbId) return '';
-      // Embed customer data in the URL so the motoboy sees it even without DB tags
+      // Prioriza telefone específico da coleta ativa, senão usa o número geral da loja
+      const activeColetaId = localStorage.getItem('mc_coleta_ativa_id');
+      const coletas = safeParse('mc_coletas', []);
+      const coleta = coletas.find(c => String(c.id) === String(activeColetaId));
+      const coletaTel = (coleta && coleta.telefone) ? String(coleta.telefone).replace(/\D/g, '') : '';
+      const numLoja = coletaTel || (localStorage.getItem('mc_numero') || '').replace(/\D/g, '');
+      
       const cNome = (document.getElementById('cliente-nome')?.value || '').trim();
       const cTel  = (document.getElementById('cliente-tel')?.value  || '').replace(/\D/g, '');
       let extra = '';
       if (cNome) extra += '&cn=' + encodeURIComponent(cNome);
       if (cTel)  extra += '&ct=' + encodeURIComponent(cTel);
+      if (numLoja) extra += '&loja=' + encodeURIComponent(numLoja);
       return `${window.location.origin}${window.location.pathname}?aceitar=true&id=${dbId}${extra}`;
     }
 
@@ -3151,14 +3170,16 @@
 
     async function copiarLinkHistorico(itemId) {
       try {
-        // Build link with customer data from stored order tags
+        // Build link with customer data and store telephone from stored order tags
         const hist = safeParse('mc_historico', []);
         const item = hist.find(h => String(h.id) === String(itemId));
         const ci = item ? getClienteInfo(item) : { nome: '', tel: '' };
+        const numLoja = item ? getLojaTelefone(item) : '';
         const base = `${window.location.origin}${window.location.pathname}?aceitar=true&id=${itemId}`;
         let extra = '';
         if (ci.nome) extra += '&cn=' + encodeURIComponent(ci.nome);
         if (ci.tel)  extra += '&ct=' + encodeURIComponent(ci.tel);
+        if (numLoja) extra += '&loja=' + encodeURIComponent(numLoja);
         const link = base + extra;
         await navigator.clipboard.writeText(link);
         toast('🎫 Ticket #' + itemId + ' copiado! Envie para o motoboy.');
@@ -5424,7 +5445,9 @@
       // Resolve telefone da loja para exibir botão "Conversar" ao motoboy
       const _lojaNumResolve = getLojaTelefone(order);
       const coletaConversarHtml = (_lojaNumResolve && _lojaNumResolve.length >= 8)
-        ? `<a href="https://wa.me/${_lojaNumResolve}?text=${encodeURIComponent('Olá! Sou o entregador e preciso falar sobre a corrida #' + order.id + '.')}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; font-size:12px; color:#fff; font-weight:700; text-decoration:none; background:#25d366; padding:4px 12px; border-radius:20px; box-shadow:0 2px 6px rgba(37,211,102,0.35); white-space:nowrap;">💬 Conversar</a>`
+        ? `<a href="https://wa.me/${_lojaNumResolve}?text=${encodeURIComponent('Olá! Sou o entregador e preciso falar sobre a corrida #' + order.id + '.')}" target="_blank" style="display:inline-flex; align-items:center; gap:4.5px; background:#25d366; color:#fff; padding:4.5px 10px; border-radius:6px; text-decoration:none; font-weight:700; font-size:11.5px; box-shadow: 0 2px 5px rgba(37,211,102,0.25); white-space:nowrap; vertical-align:middle; line-height:1.2; margin-left:6px;" title="Conversar no WhatsApp">
+            <svg width="11.5" height="11.5" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.504-5.724-1.466L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.864.002-2.637-1.019-5.117-2.877-6.979C16.6 1.895 14.12 .874 11.487.874c-5.441 0-9.866 4.423-9.87 9.868-.001 1.8.49 3.555 1.42 5.11L1.965 22.025l6.347-1.662c-1.536.837-1.637.797-1.665.791z"/></svg> Conversar
+           </a>`
         : '';
 
       // Cliente info
