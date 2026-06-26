@@ -1907,6 +1907,11 @@
           <label for="c-comp">Complemento / Referência (opcional)</label>
           <textarea id="c-comp" placeholder="Ex: Ao lado da farmácia..." style="min-height:80px"></textarea>
         </div>
+        <div class="field">
+          <label for="c-telefone">📱 Telefone WhatsApp da Loja (opcional)</label>
+          <input type="tel" id="c-telefone" placeholder="Ex: 75999990000" style="letter-spacing:0.5px;">
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Aparecerá como botão "Conversar" para o motoboy nesta coleta.</div>
+        </div>
         <div class="modal-actions">
           <button class="btn btn-outline" onclick="mostrarListColeta()">Voltar</button>
           <button class="btn btn-green" onclick="salvarColeta()">Salvar Coleta</button>
@@ -2488,12 +2493,14 @@
           document.getElementById('c-nome').value = c.nome;
           document.getElementById('c-end').value = c.end;
           document.getElementById('c-comp').value = c.comp || '';
+          document.getElementById('c-telefone').value = c.telefone || '';
         }
       } else {
         document.getElementById('c-id').value = '';
         document.getElementById('c-nome').value = '';
         document.getElementById('c-end').value = '';
         document.getElementById('c-comp').value = '';
+        document.getElementById('c-telefone').value = '';
       }
       playSound('click');
     }
@@ -2510,17 +2517,18 @@
       const nome = document.getElementById('c-nome').value.trim();
       const end = document.getElementById('c-end').value.trim();
       const comp = document.getElementById('c-comp').value.trim();
+      const telefone = (document.getElementById('c-telefone').value || '').replace(/\D/g, '');
       
       if (!nome) { toast('⚠️ Informe o nome do estabelecimento'); playSound('warning'); return; }
       
       if (id) {
         const idx = state.coletas.findIndex(x => x.id === id);
         if (idx !== -1) {
-          state.coletas[idx] = { id, nome, end, comp };
+          state.coletas[idx] = { id, nome, end, comp, telefone };
         }
       } else {
         const newId = 'coleta_' + Date.now();
-        state.coletas.push({ id: newId, nome, end, comp });
+        state.coletas.push({ id: newId, nome, end, comp, telefone });
         if (state.coletas.length === 1) {
           state.coletaAtivaId = newId;
           localStorage.setItem('mc_coleta_ativa_id', newId);
@@ -2941,7 +2949,9 @@
         obs: document.getElementById('obs').value.trim(),
         tags: (() => {
           const t = getSelectedTags();
-          const numLoja = (localStorage.getItem('mc_numero') || '').replace(/\D/g, '');
+          // Prioriza telefone específico da coleta ativa, senão usa o número geral da loja
+          const coletaTel = (coleta && coleta.telefone) ? String(coleta.telefone).replace(/\D/g, '') : '';
+          const numLoja = coletaTel || (localStorage.getItem('mc_numero') || '').replace(/\D/g, '');
           if (numLoja) t.push('loja_tel:' + numLoja);
           return t;
         })()
@@ -5246,6 +5256,12 @@
       
       const coletaMapsUrl = order.coleta_endereco ? `https://maps.google.com/?q=${encodeURIComponent(order.coleta_nome + ' ' + order.coleta_endereco + ' Feira de Santana BA')}` : null;
       
+      // Resolve telefone da loja para exibir botão "Conversar" ao motoboy
+      const _lojaNumResolve = getLojaTelefone(order);
+      const coletaConversarHtml = (_lojaNumResolve && _lojaNumResolve.length >= 8)
+        ? `<a href="https://wa.me/${_lojaNumResolve}?text=${encodeURIComponent('Olá! Sou o entregador e preciso falar sobre a corrida #' + order.id + '.')}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; font-size:12px; color:#fff; font-weight:700; text-decoration:none; background:#25d366; padding:4px 12px; border-radius:20px; box-shadow:0 2px 6px rgba(37,211,102,0.35); white-space:nowrap;">💬 Conversar</a>`
+        : '';
+
       card.innerHTML = `
         <div style="text-align:center; margin-bottom:12px;">
           <span style="display:inline-block; font-size:16px; font-weight:900; color:var(--primary); background:var(--primary-light); padding:8px 20px; border-radius:20px; border:2px solid var(--primary); box-shadow: 0 4px 6px rgba(16,185,129,0.1);">🎫 Ticket Nº ${order.id}</span>
@@ -5256,7 +5272,10 @@
         </div>
         <div style="background: var(--bg-input); padding: 12px; border-radius: 10px; margin-bottom: 16px; border: 1px solid var(--border-color);">
           <div style="font-size: 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">🏢 Ponto de Coleta</div>
-          <div style="font-weight: 800; font-size: 15px; color: var(--primary); margin-top: 4px;">${escapeHtml(order.coleta_nome) || '—'}</div>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top: 4px;">
+            <span style="font-weight: 800; font-size: 15px; color: var(--primary);">${escapeHtml(order.coleta_nome) || '—'}</span>
+            ${coletaConversarHtml}
+          </div>
           <div style="font-size: 13px; color: var(--text-main); margin-top: 2px;">${escapeHtml(order.coleta_endereco) || ''}</div>
           ${order.coleta_complemento ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">ℹ️ ${escapeHtml(order.coleta_complemento)}</div>` : ''}
           ${coletaMapsUrl ? `
