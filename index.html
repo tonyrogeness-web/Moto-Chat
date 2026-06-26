@@ -5318,6 +5318,9 @@
             <button class="btn btn-green" onclick="window.open('${whatsappUrl}', '_blank')" style="background:#059669; border-color:#059669; color:#fff; font-size:15px; padding:12px; width:100%; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; border-radius:8px; border:1px solid #059669; font-weight:bold;">
               💬 Avisar Logista no WhatsApp (Opcional)
             </button>
+            <button class="btn btn-outline" onclick="desistirCorrida('${order.id}')" style="border:1.5px solid var(--accent); color:var(--accent); background:none; font-size:14px; padding:12px; width:100%; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; border-radius:8px; font-weight:bold; margin-top:8px;">
+              ❌ Desistir da Corrida
+            </button>
           `;
         } else if (order.status === 'concluido') {
           const isLocal = String(order.id).startsWith('local_');
@@ -5717,6 +5720,54 @@
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = '✅ Corrida Confirmada';
+      }
+    }
+
+    async function desistirCorrida(orderId) {
+      if (!confirm('Deseja realmente DESISTIR desta corrida?')) return;
+      const motivo = prompt('Por favor, informe o motivo da desistência:');
+      if (motivo === null) return;
+      
+      const cleanMotivo = motivo.trim();
+      if (!cleanMotivo) {
+        toast('⚠️ Você precisa informar um motivo para desistir.');
+        playSound('warning');
+        return;
+      }
+      
+      const btn = document.querySelector('#accept-form-card button:last-child');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⚙️ Processando...';
+      }
+      
+      try {
+        const res = await fetch('/api/giveup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, motivo: cleanMotivo })
+        });
+        
+        if (res.ok) {
+          toast('✅ Desistência registrada!');
+          playSound('success');
+          carregarDetalhesCorrida(orderId);
+        } else {
+          const data = await res.json();
+          toast('⚠️ Erro ao desistir: ' + (data.error || 'Erro desconhecido'));
+          playSound('warning');
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '❌ Desistir da Corrida';
+          }
+        }
+      } catch (e) {
+        toast('⚠️ Erro de rede ao registrar desistência');
+        playSound('warning');
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '❌ Desistir da Corrida';
+        }
       }
     }
 
