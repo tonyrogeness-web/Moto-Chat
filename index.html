@@ -1571,7 +1571,25 @@
         </div>
       </div>
 
+      <!-- DADOS DO CLIENTE -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+          Dados do Cliente <span style="font-size:11px; font-weight:400; color:var(--text-muted);">(opcional)</span>
+        </div>
+        <div class="field">
+          <label for="cliente-nome">👤 Nome do Cliente</label>
+          <input type="text" id="cliente-nome" placeholder="Ex: João Silva" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="cliente-tel">📱 Telefone / WhatsApp do Cliente</label>
+          <input type="tel" id="cliente-tel" placeholder="Ex: 75999990000" autocomplete="off">
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Motoboy verá botões para Ligar e WhatsApp.</div>
+        </div>
+      </div>
+
       <!-- DETALHES EXTRAS -->
+
       <div class="card">
         <div class="card-title">
           <svg viewBox="0 0 24 24"><path d="M14 17H4v2h10v-2zm6-8H4v2h16V9zM4 15h16v-2H4v2zM4 5v2h16V5H4z"/></svg>
@@ -2223,6 +2241,17 @@
         lojaTel = localStorage.getItem('mc_numero') || '';
       }
       return String(lojaTel).replace(/\D/g, '');
+    }
+
+    function getClienteInfo(order) {
+      const tags = (order && order.tags) ? order.tags : [];
+      let nome = '', tel = '';
+      for (const t of tags) {
+        const s = String(t);
+        if (s.startsWith('cliente_nome:')) nome = s.split(':').slice(1).join(':').trim();
+        if (s.startsWith('cliente_tel:'))  tel  = s.split(':').slice(1).join(':').replace(/\D/g, '');
+      }
+      return { nome, tel };
     }
 
     function atualizarBotaoTicket() {
@@ -2953,6 +2982,11 @@
           const coletaTel = (coleta && coleta.telefone) ? String(coleta.telefone).replace(/\D/g, '') : '';
           const numLoja = coletaTel || (localStorage.getItem('mc_numero') || '').replace(/\D/g, '');
           if (numLoja) t.push('loja_tel:' + numLoja);
+          // Dados do cliente
+          const cNome = (document.getElementById('cliente-nome')?.value || '').trim();
+          const cTel  = (document.getElementById('cliente-tel')?.value  || '').replace(/\D/g, '');
+          if (cNome) t.push('cliente_nome:' + cNome);
+          if (cTel)  t.push('cliente_tel:' + cTel);
           return t;
         })()
       };
@@ -3247,6 +3281,11 @@
       document.getElementById('obs').value = '';
       document.getElementById('valor-custom').value = '';
       document.getElementById('bairro-custom').value = '';
+      // Limpar dados do cliente
+      const cNomeEl = document.getElementById('cliente-nome');
+      const cTelEl  = document.getElementById('cliente-tel');
+      if (cNomeEl) cNomeEl.value = '';
+      if (cTelEl)  cTelEl.value  = '';
       state.bairroSel = ''; 
       state.areaSel = null;
       document.getElementById('retorno-toggle').checked = false;
@@ -3830,6 +3869,7 @@
           <div class="hist-info">📍 ${info.rua}</div>
           ${destHtml}
           ${motoboyInfo}
+          ${(() => { const ci = getClienteInfo(item); if (!ci.nome && !ci.tel) return ''; const waBtn = ci.tel ? ` <a href="https://wa.me/${ci.tel}" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;background:#25d366;color:#fff;padding:2px 8px;border-radius:6px;text-decoration:none;font-weight:700;font-size:11px;">💬 WhatsApp</a>` : ''; return `<div style="margin-top:5px; font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">👤 <b style="color:var(--text-main);">${escapeHtml(ci.nome || '—')}</b>${ci.tel ? ` <span style="color:var(--text-muted);">${ci.tel}</span>` : ''}${waBtn}</div>`; })()}
           <div class="hist-info" style="margin-top:8px;">🕐 ${formatData} &nbsp;•&nbsp; Retorno: ${item.retorno ? 'Sim' : 'Não'}</div>
           ${item.obs ? `<div class="hist-obs">💬 ${escapeHtml(item.obs)}</div>` : ''}
           <div style="margin-top:8px;"><span class="badge ${badges[item.status] || 'badge-pendente'}">${labels[item.status] || item.status}</span></div>
@@ -4574,7 +4614,26 @@
           }
         }
       }
-      return { rua: limpar(rua), bairro: limpar(bairro), comp: limpar(comp || ''), cep, valor };
+
+      // ── Detecção de Telefone e Nome do Cliente ───────────────────────
+      let clienteTel = '', clienteNome = '';
+      const reTelefone = /(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)(?:9\s?)?\d{4}[-\s]?\d{4}/g;
+      const telefonesEncontrados = textoNorm.match(reTelefone);
+      if (telefonesEncontrados && telefonesEncontrados.length > 0) {
+        clienteTel = telefonesEncontrados[0].replace(/\D/g, '');
+      }
+      // Nome: primeira linha curta sem número de rua e que não seja endereço
+      const reNomeInvalido = /\b(rua|av\.|avenida|travessa|estrada|setor|bairro|cep|\d{4,}|entrega|pedido|total|frete|taxa|valor|pago|obs|complemento)\b/i;
+      for (const linha of linhas) {
+        const clean = linha.trim();
+        if (clean.length >= 3 && clean.length <= 60 && !reNomeInvalido.test(clean) && !/^\d/.test(clean) && !reTelefone.test(clean)) {
+          clienteNome = clean;
+          break;
+        }
+      }
+      reTelefone.lastIndex = 0; // reset regex state
+
+      return { rua: limpar(rua), bairro: limpar(bairro), comp: limpar(comp || ''), cep, valor, clienteNome, clienteTel };
     }
 
     let _ocrScriptLoaded = false;
@@ -4790,9 +4849,17 @@
           if (statusEl) { statusEl.textContent = 'Preenchido!'; statusEl.style.color = 'var(--primary)'; }
           if (checkEl) checkEl.style.display = 'block';
           
+          // Preenche dados do cliente se detectados
+          const clienteNomeEl = document.getElementById('cliente-nome');
+          const clienteTelEl = document.getElementById('cliente-tel');
+          if (parsed.clienteNome && clienteNomeEl && !clienteNomeEl.value) clienteNomeEl.value = parsed.clienteNome;
+          if (parsed.clienteTel && clienteTelEl && !clienteTelEl.value) clienteTelEl.value = parsed.clienteTel;
+
           let msg = '✅ Endereço detectado no texto!';
-          if (parsed.cep) msg += ' CEP: ' + parsed.cep;
-          if (parsed.valor !== null) msg += ' Taxa: R$ ' + parsed.valor.toFixed(2).replace('.', ',');
+          if (parsed.clienteNome) msg += ' | 👤 ' + parsed.clienteNome;
+          if (parsed.clienteTel) msg += ' | 📞 ' + parsed.clienteTel;
+          if (parsed.cep) msg += ' | CEP: ' + parsed.cep;
+          if (parsed.valor !== null) msg += ' | Taxa: R$ ' + parsed.valor.toFixed(2).replace('.', ',');
           toast(msg);
         } else {
           if (statusEl) { statusEl.textContent = 'Nenhum endereço.'; statusEl.style.color = 'var(--accent)'; }
@@ -5145,9 +5212,13 @@
               Obrigado pelo excelente trabalho! 🙌
             </div>
             ${whatsappBtnHtml}
-            <div style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.8px; color:var(--primary); margin-bottom:10px; border-top:1px dashed var(--border-color); padding-top:14px;">📊 Suas Corridas — Últimos 7 dias</div>
-            <div id="inline-report-list">
-              <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:13px;">⏳ Carregando histórico...</div>
+            <div style="border-top:1px dashed var(--border-color); padding-top:14px; margin-top:4px;">
+              <button onclick="(function(btn){const panel=document.getElementById('inline-report-panel');const isOpen=panel.style.display!=='none';panel.style.display=isOpen?'none':'block';btn.innerHTML=isOpen?'📊 Ver Minhas Corridas ▼':'📊 Ocultar Corridas ▲';})(this)" style="width:100%; background:var(--bg-input); border:1px solid var(--border-color); border-radius:10px; padding:10px 14px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.6px; color:var(--primary); cursor:pointer; text-align:center;">📊 Ver Minhas Corridas ▼</button>
+              <div id="inline-report-panel" style="display:none; margin-top:10px;">
+                <div id="inline-report-list">
+                  <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:13px;">⏳ Carregando histórico...</div>
+                </div>
+              </div>
             </div>
           `;
           _carregarRelatorioInline(order.motoboy_telefone);
@@ -5262,6 +5333,18 @@
         ? `<a href="https://wa.me/${_lojaNumResolve}?text=${encodeURIComponent('Olá! Sou o entregador e preciso falar sobre a corrida #' + order.id + '.')}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; font-size:12px; color:#fff; font-weight:700; text-decoration:none; background:#25d366; padding:4px 12px; border-radius:20px; box-shadow:0 2px 6px rgba(37,211,102,0.35); white-space:nowrap;">💬 Conversar</a>`
         : '';
 
+      // Cliente info
+      const _cli = getClienteInfo(order);
+      const clienteBlockHtml = (_cli.nome || _cli.tel) ? `
+        <div style="background: var(--bg-input); padding: 12px; border-radius: 10px; margin-bottom: 16px; border: 1px solid var(--border-color);">
+          <div style="font-size: 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">👤 Cliente</div>
+          ${_cli.nome ? `<div style="font-weight: 800; font-size: 15px; color: var(--text-main); margin-bottom: 8px;">${escapeHtml(_cli.nome)}</div>` : ''}
+          ${_cli.tel ? `<div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <a href="tel:${_cli.tel}" style="display:inline-flex; align-items:center; gap:5px; font-size:13px; color:#fff; font-weight:700; text-decoration:none; background:#3b82f6; padding:7px 16px; border-radius:20px; box-shadow:0 2px 6px rgba(59,130,246,0.3);">📞 Ligar</a>
+            <a href="https://wa.me/${_cli.tel}?text=${encodeURIComponent('Olá! Sou o entregador da sua corrida #' + order.id + '.')}" target="_blank" style="display:inline-flex; align-items:center; gap:5px; font-size:13px; color:#fff; font-weight:700; text-decoration:none; background:#25d366; padding:7px 16px; border-radius:20px; box-shadow:0 2px 6px rgba(37,211,102,0.3);">💬 WhatsApp</a>
+          </div>` : ''}
+        </div>` : '';
+
       card.innerHTML = `
         <div style="text-align:center; margin-bottom:12px;">
           <span style="display:inline-block; font-size:16px; font-weight:900; color:var(--primary); background:var(--primary-light); padding:8px 20px; border-radius:20px; border:2px solid var(--primary); box-shadow: 0 4px 6px rgba(16,185,129,0.1);">🎫 Ticket Nº ${order.id}</span>
@@ -5283,7 +5366,9 @@
             <a href="${coletaMapsUrl}" target="_blank" style="display:inline-flex; align-items:center; gap:5px; font-size:12px; color:#fff; font-weight:700; text-decoration:none; background:#10b981; padding:6px 14px; border-radius:20px; box-shadow: 0 2px 8px rgba(16,185,129,0.3);">🗺️ Ver coleta no mapa</a>
           </div>` : ''}
         </div>
-        
+
+        ${clienteBlockHtml}
+
         <div style="font-size: 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">📍 Destino(s)</div>
         ${destinosHtml}
         
