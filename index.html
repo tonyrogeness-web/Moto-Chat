@@ -1649,7 +1649,7 @@
       </div>
 
       <div class="btn-row" style="margin-bottom:12px">
-          <button class="btn btn-outline" onclick="copiarLinkConfirmacaoAtual()" style="border-color: #a855f7; color: #a855f7;">
+          <button class="btn btn-outline" id="btn-copiar-ticket-solicitante" onclick="copiarLinkConfirmacaoAtual()" style="border-color: #a855f7; color: #a855f7;">
             🏁 Ticket do Moto Boy
           </button>
       </div>
@@ -2218,6 +2218,22 @@
         lojaTel = localStorage.getItem('mc_numero') || '';
       }
       return String(lojaTel).replace(/\D/g, '');
+    }
+
+    function atualizarBotaoTicket() {
+      const btn = document.getElementById('btn-copiar-ticket-solicitante');
+      if (!btn) return;
+      if (currentOrderState.id) {
+        btn.innerHTML = `🎫 Copiar Ticket #${currentOrderState.id}`;
+        btn.style.borderColor = 'var(--primary)';
+        btn.style.color = 'var(--primary)';
+        btn.style.fontWeight = '900';
+      } else {
+        btn.innerHTML = `🏁 Ticket do Moto Boy`;
+        btn.style.borderColor = '#a855f7';
+        btn.style.color = '#a855f7';
+        btn.style.fontWeight = 'normal';
+      }
     }
 
     // ─── SEGURANÇA: DECODE BASE64 UTF-8 SEGURO ───────────────────────────────────
@@ -2983,6 +2999,7 @@
             currentOrderState.id = savedOrder.id;
             currentOrderState.saved = true;
             _apiAvailable = true;
+            atualizarBotaoTicket();
             getMensagem(savedOrder.id).then(m => { const el = document.getElementById('preview-msg'); if(el) el.textContent = m; });
             await carregarHistoricoServidor();
             return savedOrder.id;
@@ -2995,6 +3012,7 @@
         const localId = _salvarLocalFallback(orderData);
         currentOrderState.id = localId;
         currentOrderState.saved = true;
+        atualizarBotaoTicket();
         getMensagem(localId).then(m => { const el = document.getElementById('preview-msg'); if(el) el.textContent = m; });
         renderHistorico();
         return localId;
@@ -3793,7 +3811,7 @@
           <div class="hist-header">
             <div class="hist-bairro"><span class="bairro-dot" style="background:${color};"></span>${icon} ${info.bairro}${typeLabel}</div>
             <div style="display:flex;align-items:center;gap:6px;">
-              <span onclick="copiarTicketId('${item.id}', event)" style="font-size:11px; font-weight:800; color:var(--primary); background:var(--primary-light); padding:2px 8px; border-radius:4px; cursor:pointer; border:1px solid rgba(16,185,129,0.25);" title="Copiar nº do ticket">🎫 Ticket #${item.id}</span>
+              <span onclick="copiarTicketId('${item.id}', event)" style="font-size:12.5px; font-weight:900; color:var(--primary); background:var(--primary-light); padding:3px 10px; border-radius:6px; cursor:pointer; border:1.5px solid var(--primary); box-shadow: 0 2px 4px rgba(16,185,129,0.12);" title="Copiar nº do ticket">🎫 Ticket #${item.id}</span>
               ${timerBadge}
               <div class="hist-valor">R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}</div>
             </div>
@@ -4819,6 +4837,7 @@
       if (currentOrderState.saved) {
         currentOrderState.saved = false;
         currentOrderState.id = null;
+        atualizarBotaoTicket();
         gerarPreview();
       }
     }
