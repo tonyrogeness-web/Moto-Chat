@@ -4112,28 +4112,46 @@
       const map = new Map();
       comMotoboy.forEach(h => {
         const k = h.motoboy_nome;
-        if (!map.has(k)) map.set(k, { nome: k, corridas: 0, total: 0 });
+        if (!map.has(k)) map.set(k, { nome: k, telefone: h.motoboy_telefone || '', corridas: 0, total: 0 });
         const e = map.get(k);
         e.corridas++;
         e.total += Number(h.valor_total);
+        if (h.motoboy_telefone && !e.telefone) {
+          e.telefone = h.motoboy_telefone;
+        }
       });
       const lista = [...map.values()].sort((a, b) => b.corridas - a.corridas);
 
       el.innerHTML = `
         <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:8px;">🏍️ Motoboys — ${document.getElementById('periodo-label')?.textContent || ''}</div>
         <div style="display:flex; flex-direction:column; gap:6px;">
-          ${lista.map((m, i) => `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px; padding:8px 12px;">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span style="font-size:13px; font-weight:800; color:var(--primary);">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`}</span>
-                <div>
-                  <div style="font-size:13px; font-weight:700;">${escapeHtml(m.nome)}</div>
-                  <div style="font-size:11px; color:var(--text-muted);">${m.corridas} corrida${m.corridas > 1 ? 's' : ''}</div>
+          ${lista.map((m, i) => {
+            let waLinkHtml = '';
+            if (m.telefone) {
+              const cleanTel = String(m.telefone).replace(/\D/g, '');
+              if (cleanTel.length >= 8) {
+                const waText = encodeURIComponent(`Olá ${m.nome}, gostaria de falar com você.`);
+                waLinkHtml = `<a href="https://wa.me/${cleanTel}?text=${waText}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; background:#25d366; color:#fff; padding:4px 8px; border-radius:6px; text-decoration:none; font-weight:700; font-size:11px;" title="Conversar no WhatsApp" onclick="event.stopPropagation();">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.504-5.724-1.466L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.864.002-2.637-1.019-5.117-2.877-6.979C16.6 1.895 14.12 .874 11.487.874c-5.441 0-9.866 4.423-9.87 9.868-.001 1.8.49 3.555 1.42 5.11L1.965 22.025l6.347-1.662c-1.536.837-1.637.797-1.665.791z"/></svg> Conversar
+                </a>`;
+              }
+            }
+            return `
+              <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px; padding:8px 12px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:13px; font-weight:800; color:var(--primary);">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`}</span>
+                  <div>
+                    <div style="font-size:13px; font-weight:700;">${escapeHtml(m.nome)}</div>
+                    <div style="font-size:11px; color:var(--text-muted);">${m.corridas} corrida${m.corridas > 1 ? 's' : ''}</div>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  ${waLinkHtml}
+                  <div style="font-size:13px; font-weight:800; color:#10b981; min-width:65px; text-align:right;">R$ ${m.total.toFixed(2).replace('.', ',')}</div>
                 </div>
               </div>
-              <div style="font-size:13px; font-weight:800; color:#10b981;">R$ ${m.total.toFixed(2).replace('.', ',')}</div>
-            </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
       `;
     }
