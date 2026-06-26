@@ -1462,6 +1462,22 @@
         </div>
       </div>
 
+      <!-- DADOS DO CLIENTE -->
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+          Dados do Cliente <span style="font-size:11px; font-weight:400; color:var(--text-muted);">(opcional)</span>
+        </div>
+        <div class="field">
+          <label for="cliente-nome">👤 Nome do Cliente</label>
+          <input type="text" id="cliente-nome" placeholder="Ex: João Silva" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="cliente-tel">📱 Telefone / WhatsApp do Cliente</label>
+          <input type="tel" id="cliente-tel" placeholder="Ex: 75999990000" autocomplete="off">
+        </div>
+      </div>
+
       <!-- ENDEREÇO + BAIRRO UNIFICADO -->
       <div class="card">
         <div class="card-title">
@@ -1568,23 +1584,6 @@
           <button class="btn btn-outline" onclick="adicionarDestinoAoRoteiro()" style="border-style: dashed; color: var(--primary); border-color: var(--primary);">
             ➕ Adicionar ao Roteiro
           </button>
-        </div>
-      </div>
-
-      <!-- DADOS DO CLIENTE -->
-      <div class="card">
-        <div class="card-title">
-          <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-          Dados do Cliente <span style="font-size:11px; font-weight:400; color:var(--text-muted);">(opcional)</span>
-        </div>
-        <div class="field">
-          <label for="cliente-nome">👤 Nome do Cliente</label>
-          <input type="text" id="cliente-nome" placeholder="Ex: João Silva" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="cliente-tel">📱 Telefone / WhatsApp do Cliente</label>
-          <input type="tel" id="cliente-tel" placeholder="Ex: 75999990000" autocomplete="off">
-          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Motoboy verá botões para Ligar e WhatsApp.</div>
         </div>
       </div>
 
@@ -2244,12 +2243,19 @@
     }
 
     function getClienteInfo(order) {
+      // Priority 1: order tags (from DB)
       const tags = (order && order.tags) ? order.tags : [];
       let nome = '', tel = '';
       for (const t of tags) {
         const s = String(t);
         if (s.startsWith('cliente_nome:')) nome = s.split(':').slice(1).join(':').trim();
         if (s.startsWith('cliente_tel:'))  tel  = s.split(':').slice(1).join(':').replace(/\D/g, '');
+      }
+      // Priority 2: URL params (?cn=&ct=) — set when link is built with customer data
+      if (!nome || !tel) {
+        const up = new URLSearchParams(window.location.search);
+        if (!nome && up.get('cn')) nome = decodeURIComponent(up.get('cn'));
+        if (!tel  && up.get('ct')) tel  = decodeURIComponent(up.get('ct')).replace(/\D/g, '');
       }
       return { nome, tel };
     }
@@ -3112,7 +3118,13 @@
 
     async function obterLinkConfirmacao(dbId) {
       if (!dbId) return '';
-      return `${window.location.origin}${window.location.pathname}?aceitar=true&id=${dbId}`;
+      // Embed customer data in the URL so the motoboy sees it even without DB tags
+      const cNome = (document.getElementById('cliente-nome')?.value || '').trim();
+      const cTel  = (document.getElementById('cliente-tel')?.value  || '').replace(/\D/g, '');
+      let extra = '';
+      if (cNome) extra += '&cn=' + encodeURIComponent(cNome);
+      if (cTel)  extra += '&ct=' + encodeURIComponent(cTel);
+      return `${window.location.origin}${window.location.pathname}?aceitar=true&id=${dbId}${extra}`;
     }
 
     async function copiarLinkConfirmacaoAtual() {
@@ -3145,7 +3157,15 @@
 
     async function copiarLinkHistorico(itemId) {
       try {
-        const link = await obterLinkConfirmacao(itemId);
+        // Build link with customer data from stored order tags
+        const hist = safeParse('mc_historico', []);
+        const item = hist.find(h => String(h.id) === String(itemId));
+        const ci = item ? getClienteInfo(item) : { nome: '', tel: '' };
+        const base = `${window.location.origin}${window.location.pathname}?aceitar=true&id=${itemId}`;
+        let extra = '';
+        if (ci.nome) extra += '&cn=' + encodeURIComponent(ci.nome);
+        if (ci.tel)  extra += '&ct=' + encodeURIComponent(ci.tel);
+        const link = base + extra;
         await navigator.clipboard.writeText(link);
         toast('🎫 Ticket #' + itemId + ' copiado! Envie para o motoboy.');
         playSound('success');
