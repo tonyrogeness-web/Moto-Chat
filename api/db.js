@@ -77,24 +77,56 @@ if (process.env.DATABASE_URL) {
 
       if (text.includes('CREATE TABLE') || text.includes('ALTER TABLE')) return { rows: [] };
 
+      // 1. SELECT by specific id
       if (text.includes('WHERE id = $1') && text.startsWith('SELECT')) {
         return { rows: db.filter(x => String(x.id) === String(params[0])) };
       }
-      if (text.includes('motoboy_telefone = $1')) {
-        const cut = Date.now() - 7 * 24 * 3600000;
+
+      // 2. SELECT by motoboy_telefone
+      if (text.includes('motoboy_telefone') && text.startsWith('SELECT')) {
+        const cut = Date.now() - 30 * 24 * 3600000; // 30 days interval
         const rows = db.filter(x =>
           String(x.motoboy_telefone) === String(params[0]) &&
-          ['aceito','concluido'].includes(x.status) &&
+          ['aceito','concluido','cancelado','cancelado_loja','cancelado_motoboy'].includes(x.status) &&
           new Date(x.created_at||0).getTime() > cut
         ).sort((a,b) => new Date(b.created_at)-new Date(a.created_at)).slice(0,100);
         return { rows };
       }
+
+      // 3. SELECT all (with filter parameters)
       if (text.startsWith('SELECT')) {
-        const cut = Date.now() - 48 * 3600000;
-        let rows = db.filter(x => new Date(x.created_at||0).getTime() > cut);
+        let rows = [...db];
+        let statusParam = null;
+        let searchParam = null;
+
+        for (const p of params) {
+          if (typeof p === 'string' && p.startsWith('%') && p.endsWith('%')) {
+            searchParam = p.slice(1, -1).toLowerCase();
+          } else if (typeof p === 'string') {
+            statusParam = p;
+          }
+        }
+
+        const cut = Date.now() - 48 * 3600 * 1000; // 48 hours interval
+        rows = rows.filter(x => new Date(x.created_at||0).getTime() > cut);
+
+        if (statusParam) {
+          rows = rows.filter(x => x.status === statusParam);
+        }
+        if (searchParam) {
+          rows = rows.filter(x => {
+            const coletaOk = String(x.coleta_nome).toLowerCase().includes(searchParam);
+            const obsOk = String(x.obs || '').toLowerCase().includes(searchParam);
+            const destinosOk = JSON.stringify(x.destinos || []).toLowerCase().includes(searchParam);
+            return coletaOk || obsOk || destinosOk;
+          });
+        }
+
         rows.sort((a,b) => new Date(b.created_at)-new Date(a.created_at));
         return { rows: rows.slice(0,100) };
       }
+
+      // 4. INSERT order
       if (text.startsWith('INSERT')) {
         const [cn,ce,cc,dj,vt,rt,ob,tj] = params;
         const rec = {
@@ -108,30 +140,132 @@ if (process.env.DATABASE_URL) {
         db.unshift(rec); save();
         return { rows: [rec] };
       }
+
+      // 5. UPDATE - accept order
+      if (text.includes("status='aceito'") || text.includes("status = 'aceito'")) {
+        const [mn, mt, id] = params;
+        const r = db.find(x => String(x.id) === String(id));
+        if (r && r.status === 'pendente') {
+          Object.assign(r, {
+            status: 'aceito',
+            motoboy_nome: mn,
+            motoboy_telefone: mt,
+            accepted_at: new Date().toISOString()
+          });
+          save();
+          return { rows: [r] };
+        }
+        return { rows: [] };
+      }
+
+      // 6. UPDATE - auto-concluir single expired order
+      if (text.includes("status='concluido'") && text.includes('WHERE id=$1')) {
+        const [id] = params;
+        const r = db.find(x => String(x.id) === String(id));
+        if (r && r.status === 'aceito') {
+          r.status = 'concluido';
+          r.completed_at = new Date().toISOString();
+          save();
+          return { rows: [r] };
+        }
+        return { rows: [] };
+      }
+
+      // 7. UPDATE - auto-concluir all expired orders (interval)
+      if (text.includes("status='concluido'") && text.includes("status='aceito'") && !text.includes('WHERE id')) {
+        const cut = Date.now() - 80 * 60 * 1000;
+        let count = 0;
+        for (const r of db) {
+          if (r.status === 'aceito' && r.accepted_at && new Date(r.accepted_at).getTime() < cut) {
+            r.status = 'concluido';
+            r.completed_at = new Date().toISOString();
+            count++;
+          }
+        }
+        if (count > 0) save();
+        return { rows: [], rowCount: count };
+      }
+
+      // 8. UPDATE - cron auto-concluir previous days
+      if (text.includes("status IN ('pendente', 'aceito')") && text.includes('America/Sao_Paulo')) {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        let count = 0;
+        for (const r of db) {
+          if (['pendente', 'aceito'].includes(r.status) && new Date(r.created_at).getTime() < startOfToday) {
+            r.status = 'concluido';
+            r.completed_at = r.completed_at || new Date().toISOString();
+            count++;
+          }
+        }
+        if (count > 0) save();
+        return { rows: [], rowCount: count };
+      }
+
+      // 9. UPDATE - generic PUT status change
+      if (text.includes('SET status = $1') && text.includes('id = $2')) {
+        const [status, id] = params;
+        const r = db.find(x => String(x.id) === String(id));
+        if (r) {
+          r.status = status;
+          if (status === 'concluido') {
+            r.completed_at = new Date().toISOString();
+          } else if (status === 'pendente') {
+            r.motoboy_nome = null;
+            r.motoboy_telefone = null;
+            r.accepted_at = null;
+          }
+          save();
+          return { rows: [r] };
+        }
+        return { rows: [] };
+      }
+
+      // 10. UPDATE - legacy concluido by motoboy
       if (text.includes("status = 'concluido'") && text.includes('motoboy_nome')) {
         const [mn, mt, id] = params;
         const r = db.find(x => String(x.id) === String(id));
-        if (r) { Object.assign(r, { status:'concluido', motoboy_nome:mn, motoboy_telefone:mt, completed_at:new Date().toISOString() }); save(); return { rows:[r] }; }
-        return { rows:[] };
+        if (r) {
+          Object.assign(r, {
+            status: 'concluido',
+            motoboy_nome: mn,
+            motoboy_telefone: mt,
+            completed_at: new Date().toISOString()
+          });
+          save();
+          return { rows: [r] };
+        }
+        return { rows: [] };
       }
-      if (text.startsWith('UPDATE')) {
-        const [status, id] = params;
-        const r = db.find(x => String(x.id) === String(id));
-        if (r) { r.status=status; if(status==='concluido') r.completed_at=new Date().toISOString(); save(); return { rows:[r] }; }
-        return { rows:[] };
-      }
+
+      // 11. DELETE - single order by id
       if (text.includes('DELETE FROM entregas WHERE id')) {
         const i = db.findIndex(x => String(x.id) === String(params[0]));
-        if (i!==-1) { const [d]=db.splice(i,1); save(); return { rows:[d] }; }
-        return { rows:[] };
+        if (i !== -1) {
+          const [d] = db.splice(i, 1);
+          save();
+          return { rows: [d] };
+        }
+        return { rows: [] };
       }
+
+      // 12. DELETE - clear all orders
+      if (text.includes('DELETE FROM entregas') && !text.includes('WHERE')) {
+        const count = db.length;
+        db = [];
+        save();
+        return { rows: [], rowCount: count };
+      }
+
+      // 13. DELETE - cron cleanup older than 7 days
       if (text.includes('DELETE FROM entregas WHERE created_at')) {
-        const cut = new Date(Date.now()-7*24*3600000).toISOString();
+        const cut = new Date(Date.now() - 7 * 24 * 3600000).toISOString();
         const rem = db.filter(x => x.created_at >= cut);
         fs.writeFileSync(mockDbPath, JSON.stringify(rem, null, 2));
-        return { rows:[], rowCount: db.length - rem.length };
+        return { rows: [], rowCount: db.length - rem.length };
       }
-      return { rows:[] };
+
+      return { rows: [] };
     },
     async connect() { return { query: this.query.bind(this), release(){} }; }
   };

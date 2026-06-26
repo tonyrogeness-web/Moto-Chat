@@ -5657,12 +5657,12 @@
         return;
       }
       // Summary line
-      const total = runs.reduce((s, r) => s + Number(r.valor_total), 0);
+      const total = runs.reduce((s, r) => r.status === 'concluido' ? s + Number(r.valor_total) : s, 0);
       let html = `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--primary-light);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-weight:800;">
         <span>💰 Total Ganho:</span><span style="color:var(--primary);font-size:16px;">R$ ${total.toFixed(2).replace('.',',')}</span>
       </div>`;
       runs.forEach(run => {
-        const dt = new Date(run.created_at).toLocaleString('pt-BR');
+        const dt = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now()).toLocaleString('pt-BR');
         const isConcluido = run.status === 'concluido';
         const isCancel = ['cancelado', 'cancelado_loja', 'cancelado_motoboy'].includes(run.status);
         const borderColor = isConcluido ? '#3b82f6' : (isCancel ? '#ef4444' : '#10b981');
@@ -5842,7 +5842,7 @@
       }
       
       const totalCount = runs.length;
-      const totalEarnings = runs.reduce((acc, curr) => acc + Number(curr.valor_total), 0);
+      const totalEarnings = runs.reduce((acc, curr) => curr.status === 'concluido' ? acc + Number(curr.valor_total) : acc, 0);
       
       const hoje = new Date();
       const hojeInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).getTime();
@@ -5851,7 +5851,7 @@
         return time && time >= hojeInicio;
       });
       const todayCount = runsHoje.length;
-      const todayEarnings = runsHoje.reduce((acc, curr) => acc + Number(curr.valor_total), 0);
+      const todayEarnings = runsHoje.reduce((acc, curr) => curr.status === 'concluido' ? acc + Number(curr.valor_total) : acc, 0);
 
       const todayRunsEl = document.getElementById('report-today-runs');
       const todayEarningsEl = document.getElementById('report-today-earnings');
@@ -5864,7 +5864,7 @@
       
       listEl.innerHTML = '';
       runs.forEach(run => {
-        const formatData = new Date(run.created_at).toLocaleString('pt-BR');
+        const formatData = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now()).toLocaleString('pt-BR');
         
         let statusBadgeClass = 'badge-aceito';
         let statusLabel = 'Assumida (Ativa)';

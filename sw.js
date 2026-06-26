@@ -18,6 +18,7 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
   if (e.request.url.includes('/api/')) return; // API sempre da rede
   e.respondWith(
     fetch(e.request)
