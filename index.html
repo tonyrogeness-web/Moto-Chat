@@ -5743,7 +5743,6 @@
             <select onchange="updateStatusPeloReport('${run.id}', this.value, this)" class="status-select status-${run.status}">
               <option value="aceito" ${run.status === 'aceito' ? 'selected' : ''}>🏍️ Assumida (Ativa)</option>
               <option value="concluido" ${run.status === 'concluido' ? 'selected' : ''}>✅ Concluída</option>
-              <option value="pendente" ${run.status === 'pendente' ? 'selected' : ''}>🔄 Desistir (Liberar)</option>
               ${run.status === 'cancelado_loja' ? `<option value="cancelado_loja" selected>❌ Cancelado pela Loja</option>` : ''}
               ${run.status === 'cancelado_motoboy' ? `<option value="cancelado_motoboy" selected>❌ Cancelado pelo Motoboy</option>` : ''}
               ${run.status !== 'cancelado_loja' && run.status !== 'cancelado_motoboy' ? `<option value="cancelado_motoboy" ${run.status === 'cancelado' ? 'selected' : ''}>❌ Cancelar Corrida</option>` : ''}
