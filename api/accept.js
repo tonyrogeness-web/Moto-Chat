@@ -9,15 +9,15 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { orderId, motoboy_nome, motoboy_telefone } = req.body;
+    const { orderId, motoboy_nome, motoboy_telefone, motoboy_pix } = req.body;
     if (!orderId || !motoboy_nome || !motoboy_telefone)
       return res.status(400).json({ error: 'Faltam dados obrigatórios' });
 
     const { rows } = await pool.query(
-      `UPDATE entregas SET status='aceito', motoboy_nome=$1, motoboy_telefone=$2,
+      `UPDATE entregas SET status='aceito', motoboy_nome=$1, motoboy_telefone=$2, motoboy_pix=$3,
        accepted_at=CURRENT_TIMESTAMP
-       WHERE id=$3 AND status='pendente' RETURNING *`,
-      [motoboy_nome, motoboy_telefone, orderId]
+       WHERE id=$4 AND status='pendente' RETURNING *`,
+      [motoboy_nome, motoboy_telefone, motoboy_pix || null, orderId]
     );
 
     if (rows.length) {

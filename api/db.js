@@ -20,10 +20,12 @@ const CREATE_SQL = `
     status VARCHAR(50) DEFAULT 'pendente',
     motoboy_nome VARCHAR(255),
     motoboy_telefone VARCHAR(50),
+    motoboy_pix VARCHAR(255),
     accepted_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE
   );
   ALTER TABLE entregas ADD COLUMN IF NOT EXISTS tags JSONB DEFAULT '[]';
+  ALTER TABLE entregas ADD COLUMN IF NOT EXISTS motoboy_pix VARCHAR(255);
   CREATE INDEX IF NOT EXISTS idx_entregas_created_at ON entregas (created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_entregas_status ON entregas (status);
   CREATE INDEX IF NOT EXISTS idx_entregas_motoboy_telefone ON entregas (motoboy_telefone);
@@ -143,13 +145,17 @@ if (process.env.DATABASE_URL) {
 
       // 5. UPDATE - accept order
       if (text.includes("status='aceito'") || text.includes("status = 'aceito'")) {
-        const [mn, mt, id] = params;
+        const mn = params[0];
+        const mt = params[1];
+        const mp = params.length === 4 ? params[2] : null;
+        const id = params.length === 4 ? params[3] : params[2];
         const r = db.find(x => String(x.id) === String(id));
         if (r && r.status === 'pendente') {
           Object.assign(r, {
             status: 'aceito',
             motoboy_nome: mn,
             motoboy_telefone: mt,
+            motoboy_pix: mp,
             accepted_at: new Date().toISOString()
           });
           save();

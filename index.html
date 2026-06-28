@@ -3898,9 +3898,28 @@
             }
           }
           
-          motoboyInfo = `<div style="margin-top:6px; padding:8px 10px; background:rgba(16,185,129,0.08); border-radius:8px; border:1px solid rgba(16,185,129,0.2); font-size:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px;">
+          let pixBadgeHtml = '';
+          if (item.motoboy_pix) {
+            pixBadgeHtml = `
+              <div style="margin-top:4px; padding:6px 10px; background:rgba(59,130,246,0.06); border-radius:8px; border:1px solid rgba(59,130,246,0.15); font-size:11.5px; display:flex; align-items:center; justify-content:space-between; gap:6px; width:100%;">
+                <div>💳 <b>PIX:</b> <span style="font-family:'JetBrains Mono',monospace; font-weight:600; color:var(--text-main);">${escapeHtml(item.motoboy_pix)}</span></div>
+                <button onclick="navigator.clipboard.writeText('${escapeHtml(item.motoboy_pix)}').then(() => { toast('📋 PIX copiado!'); playSound('success'); }); event.stopPropagation();" style="background:var(--primary-light); color:var(--primary); border:1.5px solid var(--primary); padding:3px 8px; border-radius:6px; font-weight:700; font-size:10.5px; cursor:pointer; display:inline-flex; align-items:center; gap:3px; height:auto; line-height:1;" title="Copiar Chave PIX">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar PIX
+                </button>
+              </div>
+            `;
+          } else if (item.status === 'concluido') {
+            pixBadgeHtml = `
+              <div style="margin-top:4px; padding:6px 10px; background:rgba(239,68,68,0.05); border-radius:8px; border:1.5px dashed rgba(239,68,68,0.15); font-size:11px; color:#ef4444; width:100%;">
+                ⚠️ <i>Motoboy não informou chave PIX no aceite.</i>
+              </div>
+            `;
+          }
+          
+          motoboyInfo = `<div style="margin-top:6px; padding:8px 10px; background:rgba(16,185,129,0.08); border-radius:8px; border:1px solid rgba(16,185,129,0.2); font-size:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px; width:100%;">
             <div>🏁 <b>Confirmada por:</b> ${item.motoboy_nome}${ratingHtml} <span style="color:var(--text-muted)">(${item.motoboy_telefone})</span></div>
             ${waLinkHtml}
+            ${pixBadgeHtml}
           </div>`;
         }
 
@@ -5339,6 +5358,22 @@
             `;
           }
 
+          const pixSalvo = order.motoboy_pix || localStorage.getItem('mc_motoboy_pix') || '';
+          const pixSectionHtml = pixSalvo ? `
+            <div style="background:var(--bg-input); border:1.5px solid var(--border-color); border-radius:12px; padding:12px; margin-bottom:16px; text-align:center; box-shadow:var(--shadow-sm);">
+              <div style="font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">🔑 Sua Chave PIX cadastrada:</div>
+              <div style="font-size:14px; font-weight:800; color:var(--text-main); font-family:'JetBrains Mono',monospace; word-break:break-all; padding:4px 8px; background:rgba(0,0,0,0.02); border-radius:6px; margin-bottom:8px;">${escapeHtml(pixSalvo)}</div>
+              <button onclick="navigator.clipboard.writeText('${escapeHtml(pixSalvo)}').then(() => { toast('📋 Chave PIX copiada!'); playSound('success'); })" class="btn btn-outline" style="width:auto; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-size:12px; padding:6px 14px; border-radius:8px; border-color:var(--primary); color:var(--primary); font-weight:700; background:none; cursor:pointer; height:auto; line-height:1.2;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar Chave PIX
+              </button>
+            </div>
+          ` : `
+            <div style="background:rgba(239,68,68,0.05); border:1.5px dashed rgba(239,68,68,0.25); border-radius:12px; padding:12px; margin-bottom:16px; text-align:center; color:var(--accent);">
+              <div style="font-size:12px; font-weight:700; margin-bottom:4px;">⚠️ Nenhuma chave PIX cadastrada</div>
+              <div style="font-size:11px; color:var(--text-muted); line-height:1.4;">Para facilitar seus próximos pagamentos, configure sua chave Pix na próxima corrida!</div>
+            </div>
+          `;
+
           acceptFormCard.innerHTML = `
             <div style="text-align:center; padding:16px 0 10px;">
               <div style="font-size:52px; margin-bottom:6px;">🎉</div>
@@ -5350,8 +5385,12 @@
                 ${order.completed_at ? `<span style="font-size:11px;">🕒 ${new Date(order.completed_at).toLocaleString('pt-BR')}</span>` : ''}
               </div>
             </div>
-            <div style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.25); color:#2563eb; padding:10px 14px; border-radius:10px; text-align:center; font-weight:700; margin-bottom:20px; font-size:13px;">
+            <div style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.25); color:#2563eb; padding:10px 14px; border-radius:10px; text-align:center; font-weight:700; margin-bottom:14px; font-size:13px;">
               Obrigado pelo excelente trabalho! 🙌
+            </div>
+            ${pixSectionHtml}
+            <div style="font-size:11px; color:var(--text-muted); text-align:center; line-height:1.5; margin-bottom:16px; background:rgba(0,0,0,0.02); border-radius:8px; padding:8px 10px;">
+              💡 <b>Lembrete:</b> O lojista foi notificado da conclusão e usará sua chave PIX para realizar o pagamento. Se necessário, envie o comprovante no WhatsApp.
             </div>
             ${whatsappBtnHtml}
             <div style="border-top:1px dashed var(--border-color); padding-top:14px; margin-top:4px;">
@@ -5559,7 +5598,7 @@
           const res = await fetch('/api/accept', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId, motoboy_nome: nome, motoboy_telefone: telefone })
+            body: JSON.stringify({ orderId, motoboy_nome: nome, motoboy_telefone: telefone, motoboy_pix: pix })
           });
           
           if (res.ok) {
@@ -5637,6 +5676,7 @@
         localHistory[idx].status = 'concluido';
         localHistory[idx].motoboy_nome = nome;
         localHistory[idx].motoboy_telefone = telefone;
+        localHistory[idx].motoboy_pix = pix;
         localHistory[idx].accepted_at = localHistory[idx].accepted_at || new Date().toISOString();
         localHistory[idx].completed_at = new Date().toISOString();
         localStorage.setItem('mc_historico', JSON.stringify(localHistory));
@@ -5702,6 +5742,7 @@
             const order = safeBase64Decode(dataParam);
             order.id = orderId;
             order.status = 'concluido';
+            order.motoboy_pix = order.motoboy_pix || localStorage.getItem('mc_motoboy_pix') || '';
             order.completed_at = new Date().toISOString();
             localHistory.unshift(order);
             localStorage.setItem('mc_historico', JSON.stringify(localHistory));
