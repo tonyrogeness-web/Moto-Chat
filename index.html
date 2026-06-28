@@ -5513,15 +5513,11 @@
             </div>
             ${whatsappBtnHtml}
             <div style="border-top:1px dashed var(--border-color); padding-top:14px; margin-top:4px;">
-              <button onclick="(function(btn){const panel=document.getElementById('inline-report-panel');const isOpen=panel.style.display!=='none';panel.style.display=isOpen?'none':'block';btn.innerHTML=isOpen?'📊 Ver Minhas Corridas ▼':'📊 Ocultar Corridas ▲';})(this)" style="width:100%; background:var(--bg-input); border:1px solid var(--border-color); border-radius:10px; padding:10px 14px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.6px; color:var(--primary); cursor:pointer; text-align:center;">📊 Ver Minhas Corridas ▼</button>
-              <div id="inline-report-panel" style="display:none; margin-top:10px;">
-                <div id="inline-report-list">
-                  <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:13px;">⏳ Carregando histórico...</div>
-                </div>
-              </div>
+              <button onclick="abrirRelatorioMotoboyDireto()" style="width:100%; background:var(--primary-light); border:1.5px solid var(--primary); border-radius:10px; padding:11px 14px; font-size:13px; font-weight:800; color:var(--primary); cursor:pointer; text-align:center; display:flex; align-items:center; justify-content:center; gap:7px;">
+                📊 Ver Meu Extrato de Corridas
+              </button>
             </div>
           `;
-          _carregarRelatorioInline(order.motoboy_telefone);
 
         } else if (order.status === 'cancelado' || order.status === 'cancelado_loja' || order.status === 'cancelado_motoboy') {
           let cancelLabel = '❌ Corrida Cancelada';
