@@ -42,7 +42,7 @@ module.exports = async (req, res) => {
 
       let queryText = 'SELECT * FROM entregas';
       let queryParams = [];
-      let where = ["created_at > NOW() - INTERVAL '48 hours'"];
+      let where = ["created_at > NOW() - INTERVAL '48 hours'", "COALESCE(loja_ocultado, FALSE) = FALSE"];
 
       if (status && status !== 'todos') {
         where.push(`status = $${queryParams.length + 1}`);
@@ -97,7 +97,7 @@ module.exports = async (req, res) => {
     try {
       const { id, clearAll } = req.body;
       if (clearAll) {
-        await pool.query('DELETE FROM entregas');
+        await pool.query('UPDATE entregas SET loja_ocultado = TRUE WHERE COALESCE(loja_ocultado, FALSE) = FALSE');
         return res.status(200).json({ success: true });
       }
       if (!id) return res.status(400).json({ error: 'ID é obrigatório' });

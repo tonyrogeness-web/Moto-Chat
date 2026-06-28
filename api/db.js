@@ -21,11 +21,15 @@ const CREATE_SQL = `
     motoboy_nome VARCHAR(255),
     motoboy_telefone VARCHAR(50),
     motoboy_pix VARCHAR(255),
+    motoboy_ocultado BOOLEAN DEFAULT FALSE,
+    loja_ocultado BOOLEAN DEFAULT FALSE,
     accepted_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE
   );
   ALTER TABLE entregas ADD COLUMN IF NOT EXISTS tags JSONB DEFAULT '[]';
   ALTER TABLE entregas ADD COLUMN IF NOT EXISTS motoboy_pix VARCHAR(255);
+  ALTER TABLE entregas ADD COLUMN IF NOT EXISTS motoboy_ocultado BOOLEAN DEFAULT FALSE;
+  ALTER TABLE entregas ADD COLUMN IF NOT EXISTS loja_ocultado BOOLEAN DEFAULT FALSE;
   CREATE INDEX IF NOT EXISTS idx_entregas_created_at ON entregas (created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_entregas_status ON entregas (status);
   CREATE INDEX IF NOT EXISTS idx_entregas_motoboy_telefone ON entregas (motoboy_telefone);
@@ -90,6 +94,7 @@ if (process.env.DATABASE_URL) {
         const rows = db.filter(x =>
           String(x.motoboy_telefone) === String(params[0]) &&
           ['aceito','concluido','cancelado','cancelado_loja','cancelado_motoboy'].includes(x.status) &&
+          !x.motoboy_ocultado &&
           new Date(x.created_at||0).getTime() > cut
         ).sort((a,b) => new Date(b.created_at)-new Date(a.created_at)).slice(0,100);
         return { rows };
@@ -97,7 +102,7 @@ if (process.env.DATABASE_URL) {
 
       // 3. SELECT all (with filter parameters)
       if (text.startsWith('SELECT')) {
-        let rows = [...db];
+        let rows = db.filter(x => !x.loja_ocultado);
         let statusParam = null;
         let searchParam = null;
 
@@ -137,6 +142,7 @@ if (process.env.DATABASE_URL) {
           destinos: JSON.parse(dj), valor_total: parseFloat(vt),
           retorno: !!rt, obs: ob, tags: tj ? JSON.parse(tj) : [],
           status: 'pendente', motoboy_nome: null, motoboy_telefone: null,
+          motoboy_ocultado: false, loja_ocultado: false,
           accepted_at: null, completed_at: null
         };
         db.unshift(rec); save();
@@ -242,6 +248,33 @@ if (process.env.DATABASE_URL) {
           return { rows: [r] };
         }
         return { rows: [] };
+      }
+
+      // UPDATE - hide motoboy runs (soft delete)
+      if (text.includes('motoboy_ocultado=TRUE') || text.includes('motoboy_ocultado = TRUE')) {
+        const [tel] = params;
+        let count = 0;
+        for (const r of db) {
+          if (String(r.motoboy_telefone) === String(tel) && !r.motoboy_ocultado) {
+            r.motoboy_ocultado = true;
+            count++;
+          }
+        }
+        if (count > 0) save();
+        return { rows: [], rowCount: count };
+      }
+
+      // UPDATE - hide store runs (soft delete clearAll)
+      if (text.includes('loja_ocultado = TRUE') || text.includes('loja_ocultado=TRUE')) {
+        let count = 0;
+        for (const r of db) {
+          if (!r.loja_ocultado) {
+            r.loja_ocultado = true;
+            count++;
+          }
+        }
+        if (count > 0) save();
+        return { rows: [], rowCount: count };
       }
 
       // 11. DELETE - single order by id
