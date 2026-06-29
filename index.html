@@ -2213,8 +2213,9 @@
       <div style="font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px;">🔍 Filtrar Extrato</div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <div style="display: flex; gap: 6px; margin-bottom: 4px; flex-wrap: wrap;">
+          <button class="hist-btn" id="report-filter-period-hoje" onclick="filtrarPeriodoReport('hoje')" style="flex: 1; justify-content: center; border-color:var(--primary); color:var(--primary); background:var(--primary-glow);">Hoje</button>
           <button class="hist-btn" id="report-filter-period-ontem" onclick="filtrarPeriodoReport('ontem')" style="flex: 1; justify-content: center;">Ontem</button>
-          <button class="hist-btn" id="report-filter-period-semana" onclick="filtrarPeriodoReport('semana')" style="flex: 1; justify-content: center; border-color:var(--primary); color:var(--primary); background:var(--primary-glow);">Esta Semana</button>
+          <button class="hist-btn" id="report-filter-period-semana" onclick="filtrarPeriodoReport('semana')" style="flex: 1; justify-content: center;">Esta Semana</button>
           <button class="hist-btn" id="report-filter-period-todos" onclick="filtrarPeriodoReport('todos')" style="flex: 1; justify-content: center;">Todos</button>
         </div>
         <input type="text" id="report-search" placeholder="🔍 Buscar por rua, bairro ou ticket..." oninput="filtrarERenderizarRelatorio()">
@@ -6249,10 +6250,10 @@
       selectLoja.value = 'todos';
     }
 
-    let _reportPeriodoFilter = 'semana';
+    let _reportPeriodoFilter = 'hoje';
     function filtrarPeriodoReport(p) {
       _reportPeriodoFilter = p;
-      ['ontem', 'semana', 'todos'].forEach(id => {
+      ['hoje', 'ontem', 'semana', 'todos'].forEach(id => {
         const el = document.getElementById('report-filter-period-' + id);
         if (!el) return;
         const isActive = id === p;
@@ -6277,8 +6278,11 @@
           const runTime = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now()).getTime();
           const now = new Date();
           const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-          
-          if (_reportPeriodoFilter === 'ontem') {
+          const endOfToday = startOfToday + 24 * 60 * 60 * 1000;
+
+          if (_reportPeriodoFilter === 'hoje') {
+            if (!runTime || runTime < startOfToday || runTime >= endOfToday) return false;
+          } else if (_reportPeriodoFilter === 'ontem') {
             const startOfYesterday = startOfToday - 24 * 60 * 60 * 1000;
             if (!runTime || runTime < startOfYesterday || runTime >= startOfToday) return false;
           } else if (_reportPeriodoFilter === 'semana') {
@@ -6317,63 +6321,75 @@
     }
 
     function copiarResumoFinanceiroMotoboy() {
-      // Usa os runs filtrados atuais
-      const filtered = (() => {
-        const searchInput = document.getElementById('report-search');
-        const statusSelect = document.getElementById('report-filter-status');
-        const lojaSelect = document.getElementById('report-filter-loja');
-        const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
-        const filterStatus = statusSelect ? statusSelect.value : 'todos';
-        const filterLoja = lojaSelect ? lojaSelect.value : 'todos';
-        return currentReportRuns.filter(run => {
-          if (_reportPeriodoFilter !== 'todos') {
-            const runTime = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now()).getTime();
-            const now = new Date();
-            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-            if (_reportPeriodoFilter === 'ontem') {
-              const startOfYesterday = startOfToday - 24 * 60 * 60 * 1000;
-              if (!runTime || runTime < startOfYesterday || runTime >= startOfToday) return false;
-            } else if (_reportPeriodoFilter === 'semana') {
-              const startOfWeek = startOfToday - 6 * 24 * 60 * 60 * 1000;
-              if (!runTime || runTime < startOfWeek) return false;
-            }
+      // Pega os runs já filtrados e exibidos na tela
+      const searchInput = document.getElementById('report-search');
+      const statusSelect = document.getElementById('report-filter-status');
+      const lojaSelect = document.getElementById('report-filter-loja');
+      const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+      const filterStatus = statusSelect ? statusSelect.value : 'todos';
+      const filterLoja = lojaSelect ? lojaSelect.value : 'todos';
+
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const endOfToday = startOfToday + 24 * 60 * 60 * 1000;
+
+      const filtered = currentReportRuns.filter(run => {
+        // --- Filtro de período ---
+        if (_reportPeriodoFilter !== 'todos') {
+          const runTime = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now()).getTime();
+          if (_reportPeriodoFilter === 'hoje') {
+            if (!runTime || runTime < startOfToday || runTime >= endOfToday) return false;
+          } else if (_reportPeriodoFilter === 'ontem') {
+            const startOfYesterday = startOfToday - 24 * 60 * 60 * 1000;
+            if (!runTime || runTime < startOfYesterday || runTime >= startOfToday) return false;
+          } else if (_reportPeriodoFilter === 'semana') {
+            const startOfWeek = startOfToday - 6 * 24 * 60 * 60 * 1000;
+            if (!runTime || runTime < startOfWeek) return false;
           }
-          if (query) {
-            const idMatch = String(run.id).toLowerCase().includes(query);
-            const coletaMatch = (run.coleta_nome || '').toLowerCase().includes(query);
-            const destinosMatch = (run.destinos || []).some(d => (d.rua || '').toLowerCase().includes(query) || (d.bairro || '').toLowerCase().includes(query));
-            if (!idMatch && !coletaMatch && !destinosMatch) return false;
-          }
-          if (filterStatus !== 'todos') {
-            if (filterStatus === 'canceladas') {
-              const isCancel = run.status === 'cancelado' || run.status === 'cancelado_loja' || run.status === 'cancelado_motoboy';
-              if (!isCancel) return false;
-            } else if (run.status !== filterStatus) return false;
-          }
-          if (filterLoja !== 'todos' && (run.coleta_nome || '').trim() !== filterLoja) return false;
-          return true;
-        });
-      })();
+        }
+        // --- Filtro de busca ---
+        if (query) {
+          const idMatch = String(run.id).toLowerCase().includes(query);
+          const coletaMatch = (run.coleta_nome || '').toLowerCase().includes(query);
+          const destinosMatch = (run.destinos || []).some(d => (d.rua || '').toLowerCase().includes(query) || (d.bairro || '').toLowerCase().includes(query));
+          if (!idMatch && !coletaMatch && !destinosMatch) return false;
+        }
+        // --- Filtro de status ---
+        if (filterStatus !== 'todos') {
+          if (filterStatus === 'canceladas') {
+            const isCancel = run.status === 'cancelado' || run.status === 'cancelado_loja' || run.status === 'cancelado_motoboy';
+            if (!isCancel) return false;
+          } else if (run.status !== filterStatus) return false;
+        }
+        // --- Filtro de loja ---
+        if (filterLoja !== 'todos' && (run.coleta_nome || '').trim() !== filterLoja) return false;
+        return true;
+      });
 
       const concluidas = filtered.filter(r => r.status === 'concluido');
       if (concluidas.length === 0) {
-        toast('⚠️ Nenhuma corrida concluída para copiar!');
+        toast('⚠️ Nenhuma corrida concluída no período selecionado!');
         playSound('warning');
         return;
       }
 
       const nome = localStorage.getItem('mc_motoboy_nome') || 'Entregador';
-      const periodoLabels = { ontem: 'Ontem', semana: 'Esta Semana', todos: 'Período Completo' };
+      const periodoLabels = {
+        hoje: 'Hoje (' + now.toLocaleDateString('pt-BR') + ')',
+        ontem: 'Ontem',
+        semana: 'Esta Semana',
+        todos: 'Período Completo'
+      };
       const periodoLabel = periodoLabels[_reportPeriodoFilter] || 'Período';
-      const hoje = new Date().toLocaleDateString('pt-BR');
 
       let total = 0;
       let resumo = `🏍️ *RESUMO FINANCEIRO — ${nome.toUpperCase()}*\n`;
-      resumo += `📅 Período: ${periodoLabel} (gerado em ${hoje})\n`;
+      resumo += `📅 Período: ${periodoLabel}\n`;
       resumo += `----------------------------------\n`;
       concluidas.forEach(run => {
         const dest = (run.destinos && run.destinos[0]) ? run.destinos[0].bairro : (run.coleta_nome || 'Entrega');
-        resumo += `🛵 Corrida #${run.id}: ${run.coleta_nome || dest} → ${dest} — R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n`;
+        const horario = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        resumo += `🛵 #${run.id} • ${run.coleta_nome || dest} → ${dest} • ${horario} — R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n`;
         total += Number(run.valor_total);
       });
       resumo += `----------------------------------\n`;
@@ -6381,7 +6397,7 @@
       resumo += `📦 *Corridas Concluídas:* ${concluidas.length}`;
 
       navigator.clipboard.writeText(resumo).then(() => {
-        toast('📊 Resumo financeiro copiado!');
+        toast('📊 Resumo copiado — ' + periodoLabel + '!');
         playSound('success');
       }).catch(() => {
         toast('⚠️ Falha ao copiar resumo');
