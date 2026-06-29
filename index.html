@@ -2148,7 +2148,7 @@
         </div>
 
         <!-- Primary action button -->
-        <div style="padding:0 16px 16px;">
+        <div style="padding:0 16px 12px;">
           <button onclick="consultarRelatorioMotoboy()" class="btn btn-green" style="width:100%; font-size:14px; font-weight:800; padding:13px;">
             🔍 Consultar Minhas Corridas
           </button>
@@ -2156,17 +2156,25 @@
           <input type="hidden" id="report-telefone">
         </div>
 
-        <!-- Secondary: buscar outro -->
+        <!-- Botão "Não sou eu!" -->
         <div style="border-top:1px solid var(--border-color); padding:10px 16px;">
-          <button onclick="toggleBuscarOutro()" style="background:none; border:none; cursor:pointer; font-size:11px; font-weight:600; color:var(--text-muted); display:flex; align-items:center; gap:4px; width:100%; justify-content:center; padding:2px 0;">
-            <svg id="outro-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
-            Consultar corridas de outro entregador
+          <button onclick="toggleBuscarOutro()" style="
+            width:100%; display:flex; align-items:center; justify-content:center; gap:8px;
+            background:rgba(239,68,68,0.06); border:1.5px solid rgba(239,68,68,0.3);
+            border-radius:10px; padding:10px 14px;
+            font-size:13px; font-weight:700; color:#ef4444; cursor:pointer;
+            transition:all 0.18s;
+          " onmouseover="this.style.background='rgba(239,68,68,0.12)'" onmouseout="this.style.background='rgba(239,68,68,0.06)'">
+            🙋 Não sou eu! — Buscar outro entregador
           </button>
-          <div id="buscar-outro-panel" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border-color);">
-            <input type="tel" id="report-telefone-outro" placeholder="WhatsApp do entregador (apenas números)" style="width:100%; box-sizing:border-box; margin-bottom:8px;">
-            <button onclick="consultarRelatorioOutro()" class="btn" style="width:100%; background:var(--bg-input); border:1.5px solid var(--border-color); color:var(--text-main); font-weight:700; font-size:13px;">
-              🔍 Buscar
-            </button>
+          <div id="buscar-outro-panel" style="display:none; margin-top:10px;">
+            <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px; font-weight:600;">📞 Digite o WhatsApp do entregador para gerar o extrato:</div>
+            <div style="display:flex; gap:8px;">
+              <input type="tel" id="report-telefone-outro" placeholder="DDD + número (ex: 75999990000)" style="flex:1; box-sizing:border-box;" oninput="this.value=this.value.replace(/\D/g,'')">
+              <button onclick="consultarRelatorioOutro()" class="btn btn-green" style="width:auto; padding:0 16px; height:44px; font-weight:700; font-size:13px; flex-shrink:0;">
+                🔍 Buscar
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -2221,7 +2229,7 @@
             <option value="todos">Todas as Lojas</option>
           </select>
         </div>
-        <div style="margin-top: 12px; border-top: 1px dashed var(--border-color); padding-top: 12px;">
+        <div style="margin-top: 4px; border-top: 1px dashed var(--border-color); padding-top: 10px;">
           <button class="btn" onclick="limparRelatorioMotoboy()" style="width: 100%; background: rgba(239,68,68,0.1); border: 1.5px solid #ef4444; color: #ef4444; font-weight: 700; font-size: 13px;">
             🗑️ Limpar Meu Extrato
           </button>
@@ -2230,7 +2238,7 @@
     </div>
 
     <!-- Summary Statistics Grid -->
-    <div class="resumo-grid" id="report-summary-grid" style="display: none; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px;">
+    <div class="resumo-grid" id="report-summary-grid" style="display: none; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px;">
       <div class="resumo-card" style="padding: 12px; text-align: center;">
         <div style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Hoje</div>
         <div class="resumo-valor" id="report-today-earnings" style="font-size: 18px; font-weight: 800; color: #10b981; margin: 4px 0;">R$ 0,00</div>
@@ -2241,6 +2249,21 @@
         <div class="resumo-valor" id="report-total-earnings" style="font-size: 18px; font-weight: 800; color: var(--primary); margin: 4px 0;">R$ 0,00</div>
         <div style="font-size: 11px; color: var(--text-muted);"><span id="report-total-runs">0</span> corridas</div>
       </div>
+    </div>
+
+    <!-- Botão Resumo Financeiro (sempre visível após consulta) -->
+    <div id="report-copy-resumo-wrap" style="display:none; margin-bottom:16px;">
+      <button class="btn btn-outline" onclick="copiarResumoFinanceiroMotoboy()" style="
+        width:100%; height:auto; padding:12px;
+        border-style:dashed; border-width:2px;
+        color:var(--primary); border-color:var(--primary);
+        font-weight:800; font-size:14px;
+        display:flex; align-items:center; justify-content:center; gap:8px;
+        background:var(--primary-glow);
+        border-radius:12px;
+      ">
+        📊 Copiar Resumo Financeiro
+      </button>
     </div>
 
     <!-- Report List of Runs -->
@@ -6128,10 +6151,13 @@
 
     function toggleBuscarOutro() {
       const panel = document.getElementById('buscar-outro-panel');
-      const chevron = document.getElementById('outro-chevron');
+      if (!panel) return;
       const open = panel.style.display === 'none';
       panel.style.display = open ? 'block' : 'none';
-      if (chevron) chevron.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+      if (open) {
+        const input = document.getElementById('report-telefone-outro');
+        if (input) setTimeout(() => input.focus(), 100);
+      }
     }
 
     async function consultarRelatorioOutro() {
@@ -6162,6 +6188,8 @@
       
       if (filtersCard) filtersCard.style.display = 'none';
       if (summaryGrid) summaryGrid.style.display = 'none';
+      const resumoWrapInit = document.getElementById('report-copy-resumo-wrap');
+      if (resumoWrapInit) resumoWrapInit.style.display = 'none';
       listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">Consultando corridas no banco...</div>';
       
       let fetchedRuns = [];
@@ -6181,6 +6209,17 @@
       }
       
       currentReportRuns = fetchedRuns;
+
+      // ── Melhoria de nome: se não tem nome salvo, tenta obter da primeira corrida ──
+      const nomeSalvo = localStorage.getItem('mc_motoboy_nome') || '';
+      if (!nomeSalvo && fetchedRuns.length > 0) {
+        const primeiraComNome = fetchedRuns.find(r => r.motoboy_nome && r.motoboy_nome.trim());
+        if (primeiraComNome) {
+          localStorage.setItem('mc_motoboy_nome', primeiraComNome.motoboy_nome.trim());
+          atualizarCardPerfilCompacto();
+          toast('👤 Nome identificado: ' + primeiraComNome.motoboy_nome.trim());
+        }
+      }
       
       if (fetchedRuns.length > 0) {
         atualizarFiltrosEstabelecimento(fetchedRuns);
@@ -6277,6 +6316,79 @@
       renderReportRunsHtml(filtered);
     }
 
+    function copiarResumoFinanceiroMotoboy() {
+      // Usa os runs filtrados atuais
+      const filtered = (() => {
+        const searchInput = document.getElementById('report-search');
+        const statusSelect = document.getElementById('report-filter-status');
+        const lojaSelect = document.getElementById('report-filter-loja');
+        const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+        const filterStatus = statusSelect ? statusSelect.value : 'todos';
+        const filterLoja = lojaSelect ? lojaSelect.value : 'todos';
+        return currentReportRuns.filter(run => {
+          if (_reportPeriodoFilter !== 'todos') {
+            const runTime = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now()).getTime();
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            if (_reportPeriodoFilter === 'ontem') {
+              const startOfYesterday = startOfToday - 24 * 60 * 60 * 1000;
+              if (!runTime || runTime < startOfYesterday || runTime >= startOfToday) return false;
+            } else if (_reportPeriodoFilter === 'semana') {
+              const startOfWeek = startOfToday - 6 * 24 * 60 * 60 * 1000;
+              if (!runTime || runTime < startOfWeek) return false;
+            }
+          }
+          if (query) {
+            const idMatch = String(run.id).toLowerCase().includes(query);
+            const coletaMatch = (run.coleta_nome || '').toLowerCase().includes(query);
+            const destinosMatch = (run.destinos || []).some(d => (d.rua || '').toLowerCase().includes(query) || (d.bairro || '').toLowerCase().includes(query));
+            if (!idMatch && !coletaMatch && !destinosMatch) return false;
+          }
+          if (filterStatus !== 'todos') {
+            if (filterStatus === 'canceladas') {
+              const isCancel = run.status === 'cancelado' || run.status === 'cancelado_loja' || run.status === 'cancelado_motoboy';
+              if (!isCancel) return false;
+            } else if (run.status !== filterStatus) return false;
+          }
+          if (filterLoja !== 'todos' && (run.coleta_nome || '').trim() !== filterLoja) return false;
+          return true;
+        });
+      })();
+
+      const concluidas = filtered.filter(r => r.status === 'concluido');
+      if (concluidas.length === 0) {
+        toast('⚠️ Nenhuma corrida concluída para copiar!');
+        playSound('warning');
+        return;
+      }
+
+      const nome = localStorage.getItem('mc_motoboy_nome') || 'Entregador';
+      const periodoLabels = { ontem: 'Ontem', semana: 'Esta Semana', todos: 'Período Completo' };
+      const periodoLabel = periodoLabels[_reportPeriodoFilter] || 'Período';
+      const hoje = new Date().toLocaleDateString('pt-BR');
+
+      let total = 0;
+      let resumo = `🏍️ *RESUMO FINANCEIRO — ${nome.toUpperCase()}*\n`;
+      resumo += `📅 Período: ${periodoLabel} (gerado em ${hoje})\n`;
+      resumo += `----------------------------------\n`;
+      concluidas.forEach(run => {
+        const dest = (run.destinos && run.destinos[0]) ? run.destinos[0].bairro : (run.coleta_nome || 'Entrega');
+        resumo += `🛵 Corrida #${run.id}: ${run.coleta_nome || dest} → ${dest} — R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n`;
+        total += Number(run.valor_total);
+      });
+      resumo += `----------------------------------\n`;
+      resumo += `💰 *Total Ganho:* R$ ${total.toFixed(2).replace('.', ',')}\n`;
+      resumo += `📦 *Corridas Concluídas:* ${concluidas.length}`;
+
+      navigator.clipboard.writeText(resumo).then(() => {
+        toast('📊 Resumo financeiro copiado!');
+        playSound('success');
+      }).catch(() => {
+        toast('⚠️ Falha ao copiar resumo');
+        playSound('warning');
+      });
+    }
+
     function renderReportRunsHtml(runs) {
       const listEl = document.getElementById('report-runs-list');
       const summaryGrid = document.getElementById('report-summary-grid');
@@ -6285,6 +6397,8 @@
       
       if (runs.length === 0) {
         summaryGrid.style.display = 'none';
+        const resumoWrap = document.getElementById('report-copy-resumo-wrap');
+        if (resumoWrap) resumoWrap.style.display = 'none';
         const hasFilters = (document.getElementById('report-search')?.value || '').trim() !== '' || 
                            (document.getElementById('report-filter-status')?.value || 'todos') !== 'todos' || 
                            (document.getElementById('report-filter-loja')?.value || 'todos') !== 'todos' ||
@@ -6318,6 +6432,10 @@
       totalRunsEl.textContent = totalCount;
       totalEarningsEl.textContent = 'R$ ' + totalEarnings.toFixed(2).replace('.', ',');
       summaryGrid.style.display = 'grid';
+
+      // Mostrar botão de copiar resumo
+      const resumoWrap = document.getElementById('report-copy-resumo-wrap');
+      if (resumoWrap) resumoWrap.style.display = 'block';
       
       listEl.innerHTML = '';
       runs.forEach(run => {
