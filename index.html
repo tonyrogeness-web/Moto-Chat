@@ -3589,11 +3589,13 @@
         const time = parseOrderTime(h);
         return !isNaN(time) && time >= startOfDay.getTime();
       });
-      const faturado = todayItems.filter(h => h.status !== 'cancelado').reduce((a, b) => a + Number(b.valor_total), 0);
+      const isCancel = h => h.status === 'cancelado' || h.status === 'cancelado_loja' || h.status === 'cancelado_motoboy';
+      const activeOrCompletedToday = todayItems.filter(h => !isCancel(h));
+      const faturado = activeOrCompletedToday.reduce((a, b) => a + Number(b.valor_total), 0);
       const elDate = document.getElementById('day-panel-date');
       if (elDate) elDate.textContent = hoje.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short' });
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      set('day-total', todayItems.length);
+      set('day-total', activeOrCompletedToday.length);
       set('day-faturado', 'R$ ' + faturado.toFixed(2).replace('.', ','));
       set('day-pendentes', todayItems.filter(h => h.status === 'pendente').length);
       set('day-concluidas', todayItems.filter(h => h.status === 'concluido').length);
@@ -3924,7 +3926,11 @@
         });
       }
       if (filterStatus !== 'todos') {
-        listToShow = listToShow.filter(h => h.status === filterStatus);
+        if (filterStatus === 'cancelado') {
+          listToShow = listToShow.filter(h => h.status === 'cancelado' || h.status === 'cancelado_loja' || h.status === 'cancelado_motoboy');
+        } else {
+          listToShow = listToShow.filter(h => h.status === filterStatus);
+        }
       }
       if (filterMotoboy !== 'todos') {
         listToShow = listToShow.filter(h => (h.motoboy_nome || '').trim() === filterMotoboy);
@@ -4123,7 +4129,7 @@
 
       const renderGrupo = (grupo) => {
         const pendentes = grupo.filter(h => h.status === 'pendente' || h.status === 'aceito');
-        const concluidas_lista = grupo.filter(h => h.status === 'concluido' || h.status === 'cancelado');
+        const concluidas_lista = grupo.filter(h => h.status === 'concluido' || h.status === 'cancelado' || h.status === 'cancelado_loja' || h.status === 'cancelado_motoboy');
 
         if (pendentes.length > 0) {
           if (filterStatus === 'todos' && concluidas_lista.length > 0) {
