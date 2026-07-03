@@ -6212,7 +6212,7 @@
       if (fetchedRuns.length === 0) {
         // Fallback local
         const localHistory = safeParse('mc_historico', []);
-        fetchedRuns = localHistory.filter(h => String(h.motoboy_telefone) === String(telefone) && ['aceito', 'concluido'].includes(h.status));
+        fetchedRuns = localHistory.filter(h => String(h.motoboy_telefone) === String(telefone) && ['aceito', 'concluido', 'cancelado', 'cancelado_loja', 'cancelado_motoboy'].includes(h.status));
       }
       
       currentReportRuns = fetchedRuns;
@@ -6245,7 +6245,7 @@
       
       const lojas = new Set();
       runs.forEach(r => {
-        if (r.coleta_nome) lojas.add(r.coleta_nome.trim());
+        lojas.add((r.coleta_nome || 'Estabelecimento').trim());
       });
       
       let html = '<option value="todos">Todas as Lojas</option>';
@@ -6316,8 +6316,9 @@
           }
         }
         
-        if (filterLoja !== 'todos' && (run.coleta_nome || '').trim() !== filterLoja) {
-          return false;
+        if (filterLoja !== 'todos') {
+          const runLoja = (run.coleta_nome || 'Estabelecimento').trim();
+          if (runLoja !== filterLoja) return false;
         }
         
         return true;
@@ -6368,7 +6369,10 @@
           } else if (run.status !== filterStatus) return false;
         }
         // --- Filtro de loja ---
-        if (filterLoja !== 'todos' && (run.coleta_nome || '').trim() !== filterLoja) return false;
+        if (filterLoja !== 'todos') {
+          const runLoja = (run.coleta_nome || 'Estabelecimento').trim();
+          if (runLoja !== filterLoja) return false;
+        }
         return true;
       });
 
