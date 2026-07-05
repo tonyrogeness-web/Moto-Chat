@@ -4016,19 +4016,11 @@
         const color = bairroColor(info.bairro);
         const timerBadge = getElapsedBadge(item);
         
-        const tagsArr = (item.tags || []).filter(t => !t.startsWith('loja_tel:'));
+        const tagsArr = (item.tags || []).filter(t => !t.startsWith('loja_tel:') && !t.startsWith('cliente_nome:') && !t.startsWith('cliente_tel:'));
         const tagMap = { urgente:'🚨 Urgente', fragil:'🥚 Frágil', cobrar:'💳 Cobrar', retorno:'🔄 Retorno' };
         const tagColors = { urgente:'#ef4444', fragil:'#f59e0b', cobrar:'#3b82f6', retorno:'#10b981' };
         const tagsHtml = tagsArr.length > 0
           ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">${tagsArr.map(t => {
-              if (t.startsWith('cliente_nome:')) {
-                const name = t.split(':').slice(1).join(':').trim();
-                return `<span style="font-size:10px;font-weight:700;padding:2.5px 10px;border-radius:12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.3);color:#3b82f6;">👤 Cliente: ${name}</span>`;
-              }
-              if (t.startsWith('cliente_tel:')) {
-                const tel = t.split(':').slice(1).join(':').trim();
-                return `<span style="font-size:10px;font-weight:700;padding:2.5px 10px;border-radius:12px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.3);color:#8b5cf6;">📞 Tel: ${tel}</span>`;
-              }
               const isDefaultTag = tagMap[t];
               const color = tagColors[t] || '#64748b';
               const bg = isDefaultTag ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,0,0.03)';
