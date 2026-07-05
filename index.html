@@ -929,6 +929,7 @@
       border-radius: 20px; border: 1px solid rgba(168,85,247,0.25);
     }
     .timer-badge.overdue { background: rgba(239,68,68,0.12); color: #ef4444; border-color: rgba(239,68,68,0.25); animation: livePulse 1.5s infinite; }
+    .timer-badge.completed { background: rgba(16,185,129,0.12); color: #10b981; border-color: rgba(16,185,129,0.25); }
 
     /* Quick dispatch inline panel */
     .quick-dispatch-panel {
@@ -1710,6 +1711,7 @@
 
       <!-- FILTRO DE PERIODO -->
       <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+        <button class="hist-btn" id="filter-hoje" onclick="filtrarPeriodo('hoje')">Hoje</button>
         <button class="hist-btn" id="filter-ontem" onclick="filtrarPeriodo('ontem')">Ontem</button>
         <button class="hist-btn" id="filter-semana" onclick="filtrarPeriodo('semana')" style="border-color:var(--primary); color:var(--primary); background:var(--primary-glow);">Esta Semana</button>
         <button class="hist-btn" id="filter-todos" onclick="filtrarPeriodo('todos')">Todos</button>
@@ -3554,7 +3556,7 @@
     let _periodoFilter = 'semana';
     function filtrarPeriodo(p) {
       _periodoFilter = p;
-      ['ontem','semana','todos'].forEach(id => {
+      ['hoje','ontem','semana','todos'].forEach(id => {
         const el = document.getElementById('filter-' + id);
         if (!el) return;
         const isActive = id === p;
@@ -3567,6 +3569,7 @@
     function getPeriodoRange(p) {
       const now = new Date();
       const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      if (p === 'hoje') { return [start, null]; }
       if (p === 'ontem') { const s = new Date(start); s.setDate(s.getDate()-1); const e = new Date(start); return [s, e]; }
       if (p === 'semana') { const s = new Date(start); s.setDate(s.getDate() - 6); return [s, null]; }
       return [null, null];
@@ -3602,11 +3605,21 @@
     }
 
     function getElapsedBadge(item) {
-      if (!item.accepted_at && item.status !== 'aceito') return '';
+      if (!item.accepted_at && item.status !== 'aceito' && item.status !== 'concluido') return '';
       const ref = item.accepted_at || item.created_at;
       if (!ref) return '';
-      const mins = Math.floor((Date.now() - new Date(ref).getTime()) / 60000);
+      
+      let endTime = Date.now();
+      if (item.status === 'concluido' && item.completed_at) {
+        endTime = new Date(item.completed_at).getTime();
+      }
+      
+      const mins = Math.floor((endTime - new Date(ref).getTime()) / 60000);
       const isOverdue = mins > 60;
+      
+      if (item.status === 'concluido') {
+        return `<span class="timer-badge completed">⏱️ ${mins}min</span>`;
+      }
       return `<span class="timer-badge ${isOverdue ? 'overdue' : ''}">⏱️ ${mins}min</span>`;
     }
 
@@ -3910,9 +3923,21 @@
       atualizarSugestoesRua();
       verificarPendentesAlerta();
 
-      const periodoLabels = { ontem: 'Ontem', semana: 'Esta Semana', todos: 'Todos' };
+      const periodoLabels = { hoje: 'Hoje', ontem: 'Ontem', semana: 'Esta Semana', todos: 'Todos' };
       const elPeriodoLabel = document.getElementById('periodo-label');
       if (elPeriodoLabel) elPeriodoLabel.textContent = periodoLabels[_periodoFilter] || 'Esta Semana';
+
+      const btnCopiar = document.querySelector("button[onclick='copiarResumoDia()']");
+      if (btnCopiar) {
+        const labelsCopy = {
+          hoje: 'Hoje',
+          ontem: 'Ontem',
+          semana: 'Esta Semana',
+          todos: 'Período Completo'
+        };
+        const labelPeriodo = labelsCopy[_periodoFilter] || 'Hoje';
+        btnCopiar.innerHTML = `📊 Copiar Resumo Financeiro (${labelPeriodo})`;
+      }
 
       const elFiltrosBadge = document.getElementById('filtros-ativos-badge');
       if (elFiltrosBadge) elFiltrosBadge.style.display = (query || filterStatus !== 'todos' || filterMotoboy !== 'todos') ? 'flex' : 'none';
@@ -4314,23 +4339,87 @@
     }
 
     function copiarResumoDia() {
-      const hoje = new Date().toLocaleDateString('pt-BR');
-      const itensHoje = state.historico.filter(h => h.status === 'concluido' && new Date(h.created_at).toLocaleDateString('pt-BR') === hoje);
-      if (itensHoje.length === 0) {
-        toast('⚠️ Nenhuma entrega confirmada hoje!');
+      const query = (document.getElementById('hist-search')?.value || '').toLowerCase().trim();
+      const filterMotoboy = document.getElementById('hist-filter-motoboy')?.value || 'todos';
+
+      // Determine period date range
+      const [rangeStart, rangeEnd] = getPeriodoRange(_periodoFilter);
+      
+      let itens = [...state.historico];
+      
+      // Filter by period
+      if (rangeStart) {
+        itens = itens.filter(h => {
+          const d = new Date(h.created_at || h.id);
+          return d >= rangeStart && (!rangeEnd || d < rangeEnd);
+        });
+      }
+
+      // Filter by status: we always copy 'concluido' for financial summary
+      itens = itens.filter(h => h.status === 'concluido');
+
+      // Filter by motoboy
+      if (filterMotoboy !== 'todos') {
+        itens = itens.filter(h => (h.motoboy_nome || '').trim() === filterMotoboy);
+      }
+
+      // Filter by search query (establishment, street, neighborhood, etc.)
+      if (query) {
+        const queryId = query.replace(/^#/, '');
+        itens = itens.filter(h => {
+          const info = getDestInfo(h);
+          const destText = JSON.stringify(h.destinos || []).toLowerCase();
+          return info.rua.toLowerCase().includes(query) ||
+            info.bairro.toLowerCase().includes(query) ||
+            (h.coleta_nome || '').toLowerCase().includes(query) ||
+            (h.obs || '').toLowerCase().includes(query) ||
+            destText.includes(query) ||
+            (h.motoboy_nome || '').toLowerCase().includes(query) ||
+            String(h.id).toLowerCase().includes(queryId);
+        });
+      }
+
+      if (itens.length === 0) {
+        toast('⚠️ Nenhuma entrega concluída nos filtros aplicados!');
         playSound('warning');
         return;
       }
+
+      // Format date label for title
+      let periodoLabel = '';
+      const hoje = new Date().toLocaleDateString('pt-BR');
+      if (_periodoFilter === 'hoje') {
+        periodoLabel = `Hoje - ${hoje}`;
+      } else if (_periodoFilter === 'ontem') {
+        const ontem = new Date();
+        ontem.setDate(ontem.getDate() - 1);
+        periodoLabel = `Ontem - ${ontem.toLocaleDateString('pt-BR')}`;
+      } else if (_periodoFilter === 'semana') {
+        periodoLabel = `Esta Semana`;
+      } else if (_periodoFilter === 'todos') {
+        periodoLabel = `Período Completo`;
+      } else {
+        periodoLabel = hoje;
+      }
+
       let total = 0;
-      let resumo = `📊 *MOTO-CHAT • RESUMO FINANCEIRO (${hoje})*\n`;
+      let resumo = `📊 *MOTO-CHAT • RESUMO FINANCEIRO (${periodoLabel})*\n`;
+      if (filterMotoboy !== 'todos') {
+        resumo += `🏍️ Entregador: ${filterMotoboy}\n`;
+      }
+      if (query) {
+        resumo += `🔍 Filtro: ${query}\n`;
+      }
       resumo += `----------------------------------\n`;
-      itensHoje.forEach((item) => {
-        resumo += `🛵 Corrida #${item.id}: ${item.bairro} - R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n`;
+      itens.forEach((item) => {
+        const dataCorrida = new Date(item.created_at || item.id).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        resumo += `🛵 Corrida #${item.id} (${dataCorrida}): ${item.bairro} - R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n`;
         total += Number(item.valor_total);
       });
       resumo += `----------------------------------\n`;
       resumo += `📈 *Total em Taxas:* R$ ${total.toFixed(2).replace('.', ',')}\n`;
-      resumo += `📦 *Total de Entregas:* ${itensHoje.length}\n`;
+      resumo += `📦 *Total de Entregas:* ${itens.length}\n`;
+
       navigator.clipboard.writeText(resumo).then(() => {
         toast('📊 Resumo financeiro copiado!');
         playSound('success');
