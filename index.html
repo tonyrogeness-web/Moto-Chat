@@ -4053,8 +4053,7 @@
         let motoboyInfo = '';
         if (item.motoboy_nome) {
           let waLinkHtml = '';
-          const isAtivoOuCancelado = ['aceito', 'cancelado', 'cancelado_loja', 'cancelado_motoboy'].includes(item.status);
-          if (isAtivoOuCancelado && item.motoboy_telefone) {
+          if (item.motoboy_telefone) {
             const cleanTel = String(item.motoboy_telefone).replace(/\D/g, '');
             if (cleanTel.length >= 8) {
               const waText = encodeURIComponent(`Olá ${item.motoboy_nome}, sobre a corrida #${item.id}:`);
