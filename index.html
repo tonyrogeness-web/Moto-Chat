@@ -4413,7 +4413,11 @@
       resumo += `----------------------------------\n`;
       itens.forEach((item) => {
         const dataCorrida = new Date(item.created_at || item.id).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-        resumo += `🛵 Corrida #${item.id} (${dataCorrida}): ${item.bairro} - R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n`;
+        const loja = item.coleta_nome || 'Estabelecimento';
+        const motoboy = item.motoboy_nome || 'Sem Motoboy';
+        const destInfo = getDestInfo(item);
+        const bairro = destInfo.bairro || 'Destino';
+        resumo += `🛵 Corrida #${item.id} (${dataCorrida}): [${loja}] → ${bairro} (${motoboy}) - R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n`;
         total += Number(item.valor_total);
       });
       resumo += `----------------------------------\n`;
@@ -6486,9 +6490,11 @@
       resumo += `📅 Período: ${periodoLabel}\n`;
       resumo += `----------------------------------\n`;
       concluidas.forEach(run => {
-        const dest = (run.destinos && run.destinos[0]) ? run.destinos[0].bairro : (run.coleta_nome || 'Entrega');
+        const dest = (run.destinos && run.destinos[0] && run.destinos[0].bairro) ? run.destinos[0].bairro : (run.coleta_nome || 'Entrega');
+        const loja = run.coleta_nome || 'Estabelecimento';
+        const motoboy = run.motoboy_nome || nome || 'Entregador';
         const horario = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        resumo += `🛵 #${run.id} • ${run.coleta_nome || dest} → ${dest} • ${horario} — R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n`;
+        resumo += `🛵 #${run.id} • [${loja}] → ${dest} (${motoboy}) • ${horario} — R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n`;
         total += Number(run.valor_total);
       });
       resumo += `----------------------------------\n`;
