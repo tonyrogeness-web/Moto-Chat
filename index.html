@@ -4083,7 +4083,17 @@
           }
           
           motoboyInfo = `<div style="margin-top:6px; padding:8px 10px; background:rgba(16,185,129,0.08); border-radius:8px; border:1px solid rgba(16,185,129,0.2); font-size:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px; width:100%;">
-            <div>🏁 <b>Confirmada por:</b> ${item.motoboy_nome}${ratingHtml} <span style="color:var(--text-muted)">(${item.motoboy_telefone})</span></div>
+            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+              🏁 <b>Confirmada por:</b>
+              <span style="font-size:11px; font-weight:700; padding:2px 8px; border-radius:12px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.3); color:#3b82f6; display:inline-flex; align-items:center; gap:2px;">
+                ${item.motoboy_nome}${ratingHtml}
+              </span>
+              ${item.motoboy_telefone ? `
+                <span style="font-size:11px; font-weight:700; padding:2px 8px; border-radius:12px; background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.3); color:#8b5cf6; display:inline-flex; align-items:center; gap:2px;">
+                  📞 ${item.motoboy_telefone}
+                </span>
+              ` : ''}
+            </div>
             ${waLinkHtml}
             ${pixBadgeHtml}
           </div>`;
@@ -4110,7 +4120,17 @@
               <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:2px;"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.504-5.724-1.466L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.864.002-2.637-1.019-5.117-2.877-6.979C16.6 1.895 14.12 .874 11.487.874c-5.441 0-9.866 4.423-9.87 9.868-.001 1.8.49 3.555 1.42 5.11L1.965 22.025l6.347-1.662c-1.536.837-1.637.797-1.665.791z"/></svg> WhatsApp
             </a>` : '';
             return `<div style="margin-top:6px; padding:8px 10px; background:rgba(59,130,246,0.06); border-radius:8px; border:1px solid rgba(59,130,246,0.18); font-size:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px;">
-              <div>👤 <b>Cliente:</b> ${escapeHtml(ci.nome || '—')}${ci.tel ? ` <span style="color:var(--text-muted)">(${ci.tel})</span>` : ''}</div>
+              <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+                👤 <b>Cliente:</b>
+                <span style="font-size:11px; font-weight:700; padding:2px 8px; border-radius:12px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.3); color:#3b82f6; display:inline-flex; align-items:center; gap:2px;">
+                  ${escapeHtml(ci.nome || '—')}
+                </span>
+                ${ci.tel ? `
+                  <span style="font-size:11px; font-weight:700; padding:2px 8px; border-radius:12px; background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.3); color:#8b5cf6; display:inline-flex; align-items:center; gap:2px;">
+                    📞 ${ci.tel}
+                  </span>
+                ` : ''}
+              </div>
               ${waBtn}
             </div>`;
           })()}
