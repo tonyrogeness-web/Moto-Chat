@@ -4385,6 +4385,16 @@
         return;
       }
 
+      // Check if all runs belong to the same store
+      const lojasSet = new Set(itens.map(item => (item.coleta_nome || 'Estabelecimento').trim()));
+      const todasMesmaLoja = lojasSet.size === 1;
+      const unicaLoja = todasMesmaLoja ? [...lojasSet][0] : null;
+
+      // Check if all runs belong to the same motoboy
+      const motoboysSet = new Set(itens.map(item => (item.motoboy_nome || 'Sem Motoboy').trim()));
+      const todosMesmoMotoboy = motoboysSet.size === 1;
+      const unicoMotoboy = todosMesmoMotoboy ? [...motoboysSet][0] : null;
+
       // Format date label for title
       let periodoLabel = '';
       const hoje = new Date().toLocaleDateString('pt-BR');
@@ -4404,20 +4414,37 @@
 
       let total = 0;
       let resumo = `📊 *MOTO-CHAT • RESUMO FINANCEIRO (${periodoLabel})*\n`;
-      if (filterMotoboy !== 'todos') {
+      
+      if (unicaLoja) {
+        resumo += `🏢 Estabelecimento: ${unicaLoja}\n`;
+      } else if (query) {
+        resumo += `🔍 Filtro busca: ${query}\n`;
+      }
+
+      if (unicoMotoboy) {
+        resumo += `🏍️ Entregador: ${unicoMotoboy}\n`;
+      } else if (filterMotoboy !== 'todos') {
         resumo += `🏍️ Entregador: ${filterMotoboy}\n`;
       }
-      if (query) {
-        resumo += `🔍 Filtro: ${query}\n`;
-      }
+
       resumo += `----------------------------------\n`;
       itens.forEach((item) => {
         const dataCorrida = new Date(item.created_at || item.id).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-        const loja = item.coleta_nome || 'Estabelecimento';
-        const motoboy = item.motoboy_nome || 'Sem Motoboy';
         const destInfo = getDestInfo(item);
         const bairro = destInfo.bairro || 'Destino';
-        resumo += `🛵 Corrida #${item.id} (${dataCorrida}): [${loja}] → ${bairro} (${motoboy}) - R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n`;
+        
+        let descCorrida = `🛵 Corrida #${item.id} (${dataCorrida}):`;
+        if (!unicaLoja) {
+          const loja = item.coleta_nome || 'Estabelecimento';
+          descCorrida += ` [${loja}] →`;
+        }
+        descCorrida += ` ${bairro}`;
+        if (!unicoMotoboy) {
+          const motoboy = item.motoboy_nome || 'Sem Motoboy';
+          descCorrida += ` (${motoboy})`;
+        }
+        
+        resumo += `${descCorrida} - R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n`;
         total += Number(item.valor_total);
       });
       resumo += `----------------------------------\n`;
@@ -6477,6 +6504,17 @@
       }
 
       const nome = localStorage.getItem('mc_motoboy_nome') || 'Entregador';
+      
+      // Check if all runs belong to the same store
+      const lojasSet = new Set(concluidas.map(run => (run.coleta_nome || 'Estabelecimento').trim()));
+      const todasMesmaLoja = lojasSet.size === 1;
+      const unicaLoja = todasMesmaLoja ? [...lojasSet][0] : null;
+
+      // Check if all runs belong to the same motoboy
+      const motoboysSet = new Set(concluidas.map(run => (run.motoboy_nome || nome).trim()));
+      const todosMesmoMotoboy = motoboysSet.size === 1;
+      const unicoMotoboy = todosMesmoMotoboy ? [...motoboysSet][0] : null;
+
       const periodoLabels = {
         hoje: 'Hoje (' + now.toLocaleDateString('pt-BR') + ')',
         ontem: 'Ontem',
@@ -6488,13 +6526,26 @@
       let total = 0;
       let resumo = `🏍️ *RESUMO FINANCEIRO — ${nome.toUpperCase()}*\n`;
       resumo += `📅 Período: ${periodoLabel}\n`;
+      if (unicaLoja) {
+        resumo += `🏢 Estabelecimento: ${unicaLoja}\n`;
+      }
       resumo += `----------------------------------\n`;
       concluidas.forEach(run => {
         const dest = (run.destinos && run.destinos[0] && run.destinos[0].bairro) ? run.destinos[0].bairro : (run.coleta_nome || 'Entrega');
-        const loja = run.coleta_nome || 'Estabelecimento';
-        const motoboy = run.motoboy_nome || nome || 'Entregador';
         const horario = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        resumo += `🛵 #${run.id} • [${loja}] → ${dest} (${motoboy}) • ${horario} — R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n`;
+        
+        let descCorrida = `🛵 #${run.id} •`;
+        if (!unicaLoja) {
+          const loja = run.coleta_nome || 'Estabelecimento';
+          descCorrida += ` [${loja}] →`;
+        }
+        descCorrida += ` ${dest}`;
+        if (!unicoMotoboy) {
+          const motoboy = run.motoboy_nome || nome;
+          descCorrida += ` (${motoboy})`;
+        }
+        
+        resumo += `${descCorrida} • ${horario} — R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n`;
         total += Number(run.valor_total);
       });
       resumo += `----------------------------------\n`;
