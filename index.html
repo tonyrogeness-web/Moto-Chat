@@ -6873,6 +6873,10 @@
       const periodoLabel = periodoLabels[_reportPeriodoFilter] || 'Período';
 
       let total = 0;
+      let totalPago = 0;
+      let totalApagar = 0;
+      const metodosApagar = { pix: 0, credito: 0, debito: 0, dinheiro: 0, outros: 0 };
+      
       let resumo = `🏍️ *RESUMO FINANCEIRO — ${nome.toUpperCase()}*\n`;
       resumo += `📅 Período: ${periodoLabel}\n`;
       if (unicaLoja) {
@@ -6893,7 +6897,24 @@
             descCorrida += ` . Motoboy: ${motoboy}`;
           }
           
-          resumo += `${descCorrida}\n💵 Valor R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n\n`;
+          let pStr = '';
+          if (run.pagamento_status === 'a_pagar') {
+            const methodNames = { pix: '⚡ PIX', credito: '💳 Crédito', debito: '💳 Débito', dinheiro: '💵 Dinheiro' };
+            pStr = ` . Pagamento: 🔴 A Pagar (${methodNames[run.pagamento_metodo] || 'Não especificado'}`;
+            if (run.pagamento_metodo === 'dinheiro' && run.pagamento_troco) {
+              pStr += ` - Troco p/ R$ ${Number(run.pagamento_troco).toFixed(2).replace('.', ',')}`;
+            }
+            pStr += `)`;
+            
+            totalApagar += Number(run.valor_total);
+            const metKey = ['pix', 'credito', 'debito', 'dinheiro'].includes(run.pagamento_metodo) ? run.pagamento_metodo : 'outros';
+            metodosApagar[metKey] += Number(run.valor_total);
+          } else {
+            pStr = ` . Pagamento: 🟢 Pedido Pago`;
+            totalPago += Number(run.valor_total);
+          }
+          
+          resumo += `${descCorrida}${pStr}\n💵 Valor R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n\n`;
           total += Number(run.valor_total);
         });
       } else {
@@ -6907,6 +6928,10 @@
         for (const [lojaName, groupRuns] of Object.entries(groups)) {
           resumo += `🏢 *${lojaName.toUpperCase()}*\n`;
           let subtotal = 0;
+          let subPago = 0;
+          let subApagar = 0;
+          const subMetodos = { pix: 0, credito: 0, debito: 0, dinheiro: 0, outros: 0 };
+          
           groupRuns.forEach(run => {
             const dest = (run.destinos && run.destinos[0] && run.destinos[0].bairro) ? run.destinos[0].bairro : (run.coleta_nome || 'Entrega');
             const dateObj = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now());
@@ -6920,16 +6945,60 @@
               descCorrida += ` . Motoboy: ${motoboy}`;
             }
             
-            resumo += `${descCorrida}\n  💵 Valor R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n\n`;
+            let pStr = '';
+            if (run.pagamento_status === 'a_pagar') {
+              const methodNames = { pix: '⚡ PIX', credito: '💳 Crédito', debito: '💳 Débito', dinheiro: '💵 Dinheiro' };
+              pStr = ` . Pagamento: 🔴 A Pagar (${methodNames[run.pagamento_metodo] || 'Não especificado'}`;
+              if (run.pagamento_metodo === 'dinheiro' && run.pagamento_troco) {
+                pStr += ` - Troco p/ R$ ${Number(run.pagamento_troco).toFixed(2).replace('.', ',')}`;
+              }
+              pStr += `)`;
+              
+              subApagar += Number(run.valor_total);
+              const metKey = ['pix', 'credito', 'debito', 'dinheiro'].includes(run.pagamento_metodo) ? run.pagamento_metodo : 'outros';
+              subMetodos[metKey] += Number(run.valor_total);
+              
+              totalApagar += Number(run.valor_total);
+              metodosApagar[metKey] += Number(run.valor_total);
+            } else {
+              pStr = ` . Pagamento: 🟢 Pedido Pago`;
+              subPago += Number(run.valor_total);
+              totalPago += Number(run.valor_total);
+            }
+            
+            resumo += `${descCorrida}${pStr}\n  💵 Valor R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n\n`;
             subtotal += Number(run.valor_total);
             total += Number(run.valor_total);
           });
-          resumo += `  Subtotal: R$ ${subtotal.toFixed(2).replace('.', ',')} (${groupRuns.length} corr.)\n\n`;
+          resumo += `  Subtotal Taxas: R$ ${subtotal.toFixed(2).replace('.', ',')} (${groupRuns.length} corr.)\n`;
+          resumo += `  └─ 🟢 Pago antecipado: R$ ${subPago.toFixed(2).replace('.', ',')}\n`;
+          resumo += `  └─ 🔴 A Cobrar na entrega: R$ ${subApagar.toFixed(2).replace('.', ',')}\n`;
+          if (subApagar > 0) {
+            const listM = [];
+            if (subMetodos.pix > 0) listM.push(`PIX: R$ ${subMetodos.pix.toFixed(2).replace('.', ',')}`);
+            if (subMetodos.dinheiro > 0) listM.push(`Dinheiro: R$ ${subMetodos.dinheiro.toFixed(2).replace('.', ',')}`);
+            if (subMetodos.credito > 0) listM.push(`Crédito: R$ ${subMetodos.credito.toFixed(2).replace('.', ',')}`);
+            if (subMetodos.debito > 0) listM.push(`Débito: R$ ${subMetodos.debito.toFixed(2).replace('.', ',')}`);
+            if (subMetodos.outros > 0) listM.push(`Outros: R$ ${subMetodos.outros.toFixed(2).replace('.', ',')}`);
+            resumo += `     (Método: ${listM.join(' | ')})\n`;
+          }
+          resumo += `\n`;
         }
         resumo = resumo.trimEnd() + '\n';
       }
       resumo += `----------------------------------\n`;
-      resumo += `💰 *Total Ganho:* R$ ${total.toFixed(2).replace('.', ',')}\n`;
+      resumo += `📈 *Total Geral em Taxas:* R$ ${total.toFixed(2).replace('.', ',')}\n`;
+      resumo += `🟢 Total Pago Antecipado: R$ ${totalPago.toFixed(2).replace('.', ',')}\n`;
+      resumo += `🔴 Total a Cobrar na Entrega: R$ ${totalApagar.toFixed(2).replace('.', ',')}\n`;
+      if (totalApagar > 0) {
+        const listG = [];
+        if (metodosApagar.pix > 0) listG.push(`⚡ PIX: R$ ${metodosApagar.pix.toFixed(2).replace('.', ',')}`);
+        if (metodosApagar.dinheiro > 0) listG.push(`💵 Dinheiro: R$ ${metodosApagar.dinheiro.toFixed(2).replace('.', ',')}`);
+        if (metodosApagar.credito > 0) listG.push(`💳 Crédito: R$ ${metodosApagar.credito.toFixed(2).replace('.', ',')}`);
+        if (metodosApagar.debito > 0) listG.push(`💳 Débito: R$ ${metodosApagar.debito.toFixed(2).replace('.', ',')}`);
+        if (metodosApagar.outros > 0) listG.push(`Outros: R$ ${metodosApagar.outros.toFixed(2).replace('.', ',')}`);
+        resumo += `   (Sendo: ${listG.join(' | ')})\n`;
+      }
       resumo += `📦 *Corridas Concluídas:* ${concluidas.length}`;
 
       navigator.clipboard.writeText(resumo).then(() => {
