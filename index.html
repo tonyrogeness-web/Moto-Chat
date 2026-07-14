@@ -2575,6 +2575,10 @@
             makeBeep(1100, 1400, t + 0.24, 0.22, 0.80, 'sine',     550);
           }
 
+        } else if (type === 'soft') {
+          // Bip discreto — apenas feedback de UI sem chamar atenção
+          makeBeep(880, 1050, now, 0.10, 0.08, 'sine');
+
         } else if (type === 'click') {
           // Snap mais intenso e definido
           makeBeep(600, 120, now, 0.07, 0.6, 'triangle', 300);
@@ -6608,7 +6612,7 @@
       atualizarCardPerfilCompacto();
 
       toast('✅ Dados salvos com sucesso!');
-      playSound('success');
+      playSound('soft');
 
       consultarRelatorioMotoboy();
     }
@@ -6632,7 +6636,7 @@
         
         if (res.ok) {
           toast('✅ Seu histórico foi limpo com sucesso!');
-          playSound('success');
+          playSound('soft');
           
           // Clear locally
           const localHistory = safeParse('mc_historico', []);
@@ -6652,7 +6656,7 @@
         localStorage.setItem('mc_historico', JSON.stringify(cleanHistory));
         
         toast('✅ Seu histórico local foi limpo!');
-        playSound('success');
+        playSound('soft');
         
         currentReportRuns = [];
         filtrarERenderizarRelatorio();
@@ -6748,7 +6752,7 @@
       if (fetchedRuns.length > 0) {
         atualizarFiltrosEstabelecimento(fetchedRuns);
         if (filtersCard) filtersCard.style.display = 'block';
-        playSound('success');
+        playSound('soft');
       } else {
         if (filtersCard) filtersCard.style.display = 'none';
       }
@@ -7049,7 +7053,7 @@
 
       navigator.clipboard.writeText(resumo).then(() => {
         toast('📊 Resumo copiado — ' + periodoLabel + '!');
-        playSound('success');
+        playSound('soft');
       }).catch(() => {
         toast('⚠️ Falha ao copiar resumo');
         playSound('warning');
