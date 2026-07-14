@@ -1686,8 +1686,13 @@
       <!-- DAY PANEL -->
       <div class="day-panel">
         <div class="day-panel-title">
-          <span>📅 Painel do Dia</span>
-          <span id="day-panel-date" style="font-weight:600; font-size:12px; color:var(--text-muted);"></span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span>📅 Painel do Dia</span>
+            <span id="day-panel-date" style="font-weight:600; font-size:12px; color:var(--text-muted);"></span>
+          </div>
+          <button class="btn btn-outline btn-small" onclick="copiarResumoHoje()" style="font-size: 11px; padding: 4px 10px; height: auto; border-style: dashed; display: flex; align-items: center; gap: 4px; margin: 0; background: var(--bg-card); cursor: pointer; border-color: var(--primary); color: var(--primary);">
+            📊 Copiar Resumo Hoje
+          </button>
         </div>
         <div class="day-stats">
           <div class="day-stat">
@@ -1711,7 +1716,6 @@
 
       <!-- FILTRO DE PERIODO -->
       <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
-        <button class="hist-btn" id="filter-hoje" onclick="filtrarPeriodo('hoje')">Hoje</button>
         <button class="hist-btn" id="filter-ontem" onclick="filtrarPeriodo('ontem')">Ontem</button>
         <button class="hist-btn" id="filter-semana" onclick="filtrarPeriodo('semana')" style="border-color:var(--primary); color:var(--primary); background:var(--primary-glow);">Esta Semana</button>
         <button class="hist-btn" id="filter-todos" onclick="filtrarPeriodo('todos')">Todos</button>
@@ -4349,6 +4353,16 @@
       toast('📋 Pedido carregado no formulário!');
     }
 
+    function copiarResumoHoje() {
+      const originalPeriod = _periodoFilter;
+      _periodoFilter = 'hoje';
+      try {
+        copiarResumoDia();
+      } finally {
+        _periodoFilter = originalPeriod;
+      }
+    }
+
     function copiarResumoDia() {
       const query = (document.getElementById('hist-search')?.value || '').toLowerCase().trim();
       const filterMotoboy = document.getElementById('hist-filter-motoboy')?.value || 'todos';
@@ -4441,18 +4455,21 @@
       resumo += `----------------------------------\n`;
       if (unicoMotoboy) {
         itens.forEach((item) => {
-          const dataCorrida = new Date(item.created_at || item.id).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+          const dateObj = new Date(item.created_at || item.id);
+          const hora = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          const data = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+          const horarioStr = _periodoFilter === 'hoje' ? hora : `${data} às ${hora}`;
+          
           const destInfo = getDestInfo(item);
           const bairro = destInfo.bairro || 'Destino';
           
-          let descCorrida = `🛵 Corrida #${item.id} (${dataCorrida}):`;
+          let descCorrida = `🎫 Ticket: #${item.id} . Bairro: ${bairro} . Horário: ${horarioStr}`;
           if (!unicaLoja) {
             const loja = item.coleta_nome || 'Estabelecimento';
-            descCorrida += ` [${loja}] →`;
+            descCorrida += ` . Loja: ${loja}`;
           }
-          descCorrida += ` ${bairro}`;
           
-          resumo += `${descCorrida} - R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n`;
+          resumo += `${descCorrida}\n💵 R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n\n`;
           total += Number(item.valor_total);
         });
       } else {
@@ -4467,18 +4484,21 @@
           resumo += `🏍️ *${motoboyName.toUpperCase()}*\n`;
           let subtotal = 0;
           groupItens.forEach(item => {
-            const dataCorrida = new Date(item.created_at || item.id).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            const dateObj = new Date(item.created_at || item.id);
+            const hora = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const data = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            const horarioStr = _periodoFilter === 'hoje' ? hora : `${data} às ${hora}`;
+            
             const destInfo = getDestInfo(item);
             const bairro = destInfo.bairro || 'Destino';
             
-            let descCorrida = `  🛵 Corrida #${item.id} (${dataCorrida}):`;
+            let descCorrida = `  🎫 Ticket: #${item.id} . Bairro: ${bairro} . Horário: ${horarioStr}`;
             if (!unicaLoja) {
               const loja = item.coleta_nome || 'Estabelecimento';
-              descCorrida += ` [${loja}] →`;
+              descCorrida += ` . Loja: ${loja}`;
             }
-            descCorrida += ` ${bairro}`;
             
-            resumo += `${descCorrida} - R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n`;
+            resumo += `${descCorrida}\n  💵 R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n\n`;
             subtotal += Number(item.valor_total);
             total += Number(item.valor_total);
           });
@@ -6572,15 +6592,18 @@
       if (unicaLoja) {
         concluidas.forEach(run => {
           const dest = (run.destinos && run.destinos[0] && run.destinos[0].bairro) ? run.destinos[0].bairro : (run.coleta_nome || 'Entrega');
-          const horario = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          const dateObj = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now());
+          const hora = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          const data = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+          const horario = _reportPeriodoFilter === 'hoje' ? hora : `${data} às ${hora}`;
           
-          let descCorrida = `🛵 #${run.id} • ${dest}`;
+          let descCorrida = `🎫 Ticket: #${run.id} . Bairro: ${dest} . Horário: ${horario}`;
           if (!unicoMotoboy) {
             const motoboy = run.motoboy_nome || nome;
-            descCorrida += ` (${motoboy})`;
+            descCorrida += ` . Motoboy: ${motoboy}`;
           }
           
-          resumo += `${descCorrida} • ${horario} — R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n`;
+          resumo += `${descCorrida}\n💵 R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n\n`;
           total += Number(run.valor_total);
         });
       } else {
@@ -6596,15 +6619,18 @@
           let subtotal = 0;
           groupRuns.forEach(run => {
             const dest = (run.destinos && run.destinos[0] && run.destinos[0].bairro) ? run.destinos[0].bairro : (run.coleta_nome || 'Entrega');
-            const horario = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const dateObj = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now());
+            const hora = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const data = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            const horario = _reportPeriodoFilter === 'hoje' ? hora : `${data} às ${hora}`;
             
-            let descCorrida = `  🛵 #${run.id} • ${dest}`;
+            let descCorrida = `  🎫 Ticket: #${run.id} . Bairro: ${dest} . Horário: ${horario}`;
             if (!unicoMotoboy) {
               const motoboy = run.motoboy_nome || nome;
-              descCorrida += ` (${motoboy})`;
+              descCorrida += ` . Motoboy: ${motoboy}`;
             }
             
-            resumo += `${descCorrida} • ${horario} — R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n`;
+            resumo += `${descCorrida}\n  💵 R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n\n`;
             subtotal += Number(run.valor_total);
             total += Number(run.valor_total);
           });
@@ -6951,6 +6977,45 @@
     }
 
     // ─── FILA DESPACHO & CHAT PARSER LOGIC ────────────────────────────────────────
+    function cleanSenderName(sender) {
+      const systemTerms = /^(obs|observac|taxa|valor|atenc|aviso|horari|data|nota|status|enderec|coleta|destino|link|grupo|admin|sistema|importante|mensagem|telefone|chat|info|total|dia|pedido|entrega)/i;
+      
+      let name = sender.trim();
+      
+      if (name.startsWith('~')) {
+        name = name.substring(1).trim();
+      }
+      
+      if (systemTerms.test(name)) {
+        return null;
+      }
+      
+      name = name.replace(/\([^)]*\)/g, '').trim();
+      name = name.replace(/\[[^\]]*\]/g, '').trim();
+      
+      const phoneRegex = /\+?\d{1,4}[ -]?\d{2,5}[ -]?\d{3,5}[ -]?\d{3,5}/g;
+      if (phoneRegex.test(name)) {
+        const cleanedOfPhone = name.replace(phoneRegex, '').trim();
+        if (/[a-zA-Zá-úÁ-ÚíÍóÓúÚãõÃÕâêôÂÊÔçÇ]/.test(cleanedOfPhone)) {
+          name = cleanedOfPhone;
+        }
+      }
+      
+      name = name.replace(/^[-–—•\s]+|[-–—•\s]+$/g, '').trim();
+      name = name.replace(/[\u1F600-\u1F64F\u1F300-\u1F5FF\u1F680-\u1F6FF\u2600-\u26FF\u2700-\u27BF\u1F900-\u1F9FF\u1F1E0-\u1F1FF]/g, '').trim();
+      
+      const suffixRegex = /\b(motoboy|entregador|moto|delivery|entregas|oficial)\b/i;
+      name = name.replace(suffixRegex, '').trim();
+      
+      name = name.replace(/^[^a-zA-Z0-9á-úÁ-ÚíÍóÓúÚãõÃÕâêôÂÊÔçÇ\+]+|[^a-zA-Z0-9á-úÁ-ÚíÍóÓúÚãõÃÕâêôÂÊÔçÇ\+]+$/g, '').trim();
+      
+      if (name.length < 2) {
+        return null;
+      }
+      
+      return name;
+    }
+
     function parseWhatsAppChat(text) {
       const lines = text.split('\n');
       const results = [];
@@ -6968,15 +7033,18 @@
         const colonIdx = cleanLine.indexOf(':');
         if (colonIdx === -1) continue;
         
-        const sender = cleanLine.substring(0, colonIdx).replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+        const rawSender = cleanLine.substring(0, colonIdx).replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
         const msg = cleanLine.substring(colonIdx + 1).trim();
         
         if (acceptRegex.test(msg)) {
-          if (!results.some(r => r.name.toLowerCase() === sender.toLowerCase())) {
-            results.push({
-              name: sender,
-              message: msg
-            });
+          const sender = cleanSenderName(rawSender);
+          if (sender) {
+            if (!results.some(r => r.name.toLowerCase() === sender.toLowerCase())) {
+              results.push({
+                name: sender,
+                message: msg
+              });
+            }
           }
         }
       }
