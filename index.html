@@ -1618,6 +1618,34 @@
           </div>
         </div>
 
+        <!-- METODO DE PAGAMENTO SELECTION (EXPANDS IF "A PAGAR") -->
+        <div id="payment-method-container" style="display: none; margin-bottom: 16px; padding: 12px; background: rgba(239, 68, 68, 0.02); border: 1.5px dashed rgba(239, 68, 68, 0.2); border-radius: 10px;">
+          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px;">💳 Método de Pagamento na Entrega</div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
+            <label style="display: flex; align-items: center; justify-content: center; gap: 4px; padding: 8px; border: 1.5px solid var(--border-color); border-radius: 6px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: var(--bg-card); color: var(--text-main); transition: all 0.2s; user-select: none;" id="pay-method-pix-label">
+              <input type="radio" name="payment-method" id="pay-method-pix" value="pix" onchange="updatePaymentMethodSelection()" style="display: none;">
+              ⚡ PIX
+            </label>
+            <label style="display: flex; align-items: center; justify-content: center; gap: 4px; padding: 8px; border: 1.5px solid var(--border-color); border-radius: 6px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: var(--bg-card); color: var(--text-main); transition: all 0.2s; user-select: none;" id="pay-method-credito-label">
+              <input type="radio" name="payment-method" id="pay-method-credito" value="credito" onchange="updatePaymentMethodSelection()" style="display: none;">
+              💳 Crédito
+            </label>
+            <label style="display: flex; align-items: center; justify-content: center; gap: 4px; padding: 8px; border: 1.5px solid var(--border-color); border-radius: 6px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: var(--bg-card); color: var(--text-main); transition: all 0.2s; user-select: none;" id="pay-method-debito-label">
+              <input type="radio" name="payment-method" id="pay-method-debito" value="debito" onchange="updatePaymentMethodSelection()" style="display: none;">
+              💳 Débito
+            </label>
+            <label style="display: flex; align-items: center; justify-content: center; gap: 4px; padding: 8px; border: 1.5px solid var(--border-color); border-radius: 6px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: var(--bg-card); color: var(--text-main); transition: all 0.2s; user-select: none;" id="pay-method-dinheiro-label">
+              <input type="radio" name="payment-method" id="pay-method-dinheiro" value="dinheiro" onchange="updatePaymentMethodSelection()" style="display: none;">
+              💵 Dinheiro
+            </label>
+          </div>
+          
+          <div id="troco-field-container" style="display: none; margin-top: 10px;">
+            <label for="pay-troco" style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">💵 Troco para quanto?</label>
+            <input type="number" id="pay-troco" placeholder="Ex: R$ 50" min="0" step="1" style="width: 100%; padding: 8px; border-radius: 6px; border: 1.5px solid var(--border-color); font-size: 13px; font-weight: 600; background: var(--bg-card); color: var(--text-main); outline: none;" oninput="resetCurrentOrderState(); gerarPreview(); agendarAutoSave();">
+          </div>
+        </div>
+
         <!-- TAGS -->
         <div style="margin-bottom:14px;">
           <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin-bottom:8px;">🏷️ Tags da Corrida</div>
@@ -2998,6 +3026,7 @@
       const isPago = document.getElementById('pay-status-pago').checked;
       const pagoLabel = document.getElementById('pay-status-pago-label');
       const apagarLabel = document.getElementById('pay-status-apagar-label');
+      const methodContainer = document.getElementById('payment-method-container');
       
       if (isPago) {
         pagoLabel.style.borderColor = 'var(--primary)';
@@ -3007,6 +3036,18 @@
         apagarLabel.style.borderColor = 'var(--border-color)';
         apagarLabel.style.background = 'var(--bg-card)';
         apagarLabel.style.color = 'var(--text-main)';
+        
+        if (methodContainer) methodContainer.style.display = 'none';
+        
+        // Uncheck all methods
+        ['pix', 'credito', 'debito', 'dinheiro'].forEach(m => {
+          const r = document.getElementById('pay-method-' + m);
+          if (r) r.checked = false;
+        });
+        const trocoInput = document.getElementById('pay-troco');
+        if (trocoInput) trocoInput.value = '';
+        const trocoContainer = document.getElementById('troco-field-container');
+        if (trocoContainer) trocoContainer.style.display = 'none';
       } else {
         apagarLabel.style.borderColor = 'var(--accent)';
         apagarLabel.style.background = 'var(--accent-glow)';
@@ -3015,7 +3056,50 @@
         pagoLabel.style.borderColor = 'var(--border-color)';
         pagoLabel.style.background = 'var(--bg-card)';
         pagoLabel.style.color = 'var(--text-main)';
+        
+        if (methodContainer) methodContainer.style.display = 'block';
+        
+        // Default to pix if nothing is selected
+        const anyChecked = ['pix', 'credito', 'debito', 'dinheiro'].some(m => document.getElementById('pay-method-' + m)?.checked);
+        if (!anyChecked) {
+          const rPix = document.getElementById('pay-method-pix');
+          if (rPix) rPix.checked = true;
+        }
+        updatePaymentMethodSelection();
       }
+      resetCurrentOrderState();
+      gerarPreview();
+      agendarAutoSave();
+    }
+
+    function updatePaymentMethodSelection() {
+      const methods = ['pix', 'credito', 'debito', 'dinheiro'];
+      let selectedVal = '';
+      methods.forEach(m => {
+        const radio = document.getElementById('pay-method-' + m);
+        const label = document.getElementById('pay-method-' + m + '-label');
+        if (!label) return;
+        if (radio && radio.checked) {
+          selectedVal = m;
+          label.style.borderColor = 'var(--accent)';
+          label.style.background = 'var(--accent-glow)';
+          label.style.color = 'var(--accent)';
+        } else {
+          label.style.borderColor = 'var(--border-color)';
+          label.style.background = 'var(--bg-card)';
+          label.style.color = 'var(--text-main)';
+        }
+      });
+      
+      const trocoContainer = document.getElementById('troco-field-container');
+      if (selectedVal === 'dinheiro') {
+        if (trocoContainer) trocoContainer.style.display = 'block';
+      } else {
+        if (trocoContainer) trocoContainer.style.display = 'none';
+        const trocoInput = document.getElementById('pay-troco');
+        if (trocoInput) trocoInput.value = '';
+      }
+      
       resetCurrentOrderState();
       gerarPreview();
       agendarAutoSave();
@@ -3102,7 +3186,22 @@
       }
       msg += '🔄 *Tem retorno?* ' + (retorno ? 'Sim' : 'Não');
       
-      const payStatus = document.getElementById('pay-status-apagar').checked ? '🔴 A Pagar' : '🟢 Pedido Pago';
+      const isApagar = document.getElementById('pay-status-apagar').checked;
+      let payStatus = '';
+      if (isApagar) {
+        const selectedMethodRadio = ['pix', 'credito', 'debito', 'dinheiro'].find(m => document.getElementById('pay-method-' + m)?.checked);
+        const methodNames = { pix: '⚡ PIX', credito: '💳 Cartão (Crédito)', debito: '💳 Cartão (Débito)', dinheiro: '💵 Dinheiro' };
+        const methodName = methodNames[selectedMethodRadio] || 'Não especificado';
+        payStatus = '🔴 A Pagar - ' + methodName;
+        if (selectedMethodRadio === 'dinheiro') {
+          const trocoVal = document.getElementById('pay-troco').value.trim();
+          if (trocoVal) {
+            payStatus += ` (Troco para R$ ${Number(trocoVal).toFixed(2).replace('.', ',')})`;
+          }
+        }
+      } else {
+        payStatus = '🟢 Pedido Pago';
+      }
       msg += '\n💳 *Pagamento:* ' + payStatus;
       
       if (obs) msg += '\n💬 *Obs:* ' + obs;
@@ -3201,7 +3300,18 @@
           if (cTel)  t.push('cliente_tel:' + cTel);
           return t;
         })(),
-        pagamento_status: document.getElementById('pay-status-apagar').checked ? 'a_pagar' : 'pago'
+        pagamento_status: document.getElementById('pay-status-apagar').checked ? 'a_pagar' : 'pago',
+        pagamento_metodo: (() => {
+          if (!document.getElementById('pay-status-apagar').checked) return null;
+          return ['pix', 'credito', 'debito', 'dinheiro'].find(m => document.getElementById('pay-method-' + m)?.checked) || null;
+        })(),
+        pagamento_troco: (() => {
+          if (!document.getElementById('pay-status-apagar').checked) return null;
+          const isDinheiro = document.getElementById('pay-method-dinheiro')?.checked;
+          if (!isDinheiro) return null;
+          const v = parseFloat(document.getElementById('pay-troco')?.value);
+          return isNaN(v) ? null : v;
+        })()
       };
     }
 
@@ -3572,7 +3682,15 @@
         msg += `\n💰 *Total das corridas:* R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n`;
       }
       msg += `🔄 *Tem retorno?* ${item.retorno ? 'Sim' : 'Não'}`;
-      const payLabel = item.pagamento_status === 'a_pagar' ? '🔴 A Pagar' : '🟢 Pedido Pago';
+      let payLabel = '🟢 Pedido Pago';
+      if (item.pagamento_status === 'a_pagar') {
+        const methodNames = { pix: '⚡ PIX', credito: '💳 Cartão (Crédito)', debito: '💳 Cartão (Débito)', dinheiro: '💵 Dinheiro' };
+        const metName = methodNames[item.pagamento_metodo] || 'Não especificado';
+        payLabel = '🔴 A Pagar - ' + metName;
+        if (item.pagamento_metodo === 'dinheiro' && item.pagamento_troco) {
+          payLabel += ` (Troco para R$ ${Number(item.pagamento_troco).toFixed(2).replace('.', ',')})`;
+        }
+      }
       msg += `\n💳 *Pagamento:* ${payLabel}`;
       if (item.obs) msg += `\n💬 *Obs:* ${escapeHtml(item.obs)}`;
       return msg.trimEnd();
@@ -4197,7 +4315,15 @@
             <span>🕐 ${formatData}</span>
             <span>•</span>
             <span>Retorno: ${item.retorno ? 'Sim' : 'Não'}</span>
-            <span style="font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:12px; ${item.pagamento_status === 'a_pagar' ? 'background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444;' : 'background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981;'}">${item.pagamento_status === 'a_pagar' ? '🔴 A Pagar' : '🟢 Pedido Pago'}</span>
+            <span style="font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:12px; ${item.pagamento_status === 'a_pagar' ? 'background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444;' : 'background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981;'}">${(() => {
+              if (item.pagamento_status !== 'a_pagar') return '🟢 Pedido Pago';
+              const methodNames = { pix: '⚡ PIX', credito: '💳 Crédito', debito: '💳 Débito', dinheiro: '💵 Dinheiro' };
+              let label = '🔴 A Pagar - ' + (methodNames[item.pagamento_metodo] || 'Não especificado');
+              if (item.pagamento_metodo === 'dinheiro' && item.pagamento_troco) {
+                label += ` (Troco: R$ ${Number(item.pagamento_troco).toFixed(2).replace('.', ',')})`;
+              }
+              return label;
+            })()}</span>
           </div>
           ${item.obs ? `<div class="hist-obs">💬 ${escapeHtml(item.obs)}</div>` : ''}
           <div style="margin-top:8px;"><span class="badge ${badges[item.status] || 'badge-pendente'}">${labels[item.status] || item.status}</span></div>
@@ -4372,6 +4498,15 @@
       
       if (item.pagamento_status === 'a_pagar') {
         document.getElementById('pay-status-apagar').checked = true;
+        const met = item.pagamento_metodo;
+        if (met) {
+          const r = document.getElementById('pay-method-' + met);
+          if (r) r.checked = true;
+        }
+        const trocoInput = document.getElementById('pay-troco');
+        if (trocoInput) {
+          trocoInput.value = (item.pagamento_troco !== null && item.pagamento_troco !== undefined) ? item.pagamento_troco : '';
+        }
       } else {
         document.getElementById('pay-status-pago').checked = true;
       }
@@ -5710,7 +5845,15 @@
             });
           }
           const pixSalvo = localStorage.getItem('mc_motoboy_pix') || '';
-          const payLabel = order.pagamento_status === 'a_pagar' ? '🔴 A Pagar (Cobrar na Entrega)' : '🟢 Pedido Pago';
+          let payLabel = '🟢 Pedido Pago';
+          if (order.pagamento_status === 'a_pagar') {
+            const methodNames = { pix: '⚡ PIX', credito: '💳 Cartão (Crédito)', debito: '💳 Cartão (Débito)', dinheiro: '💵 Dinheiro' };
+            const metName = methodNames[order.pagamento_metodo] || 'Não especificado';
+            payLabel = '🔴 A Pagar - ' + metName;
+            if (order.pagamento_metodo === 'dinheiro' && order.pagamento_troco) {
+              payLabel += ` (Troco para R$ ${Number(order.pagamento_troco).toFixed(2).replace('.', ',')})`;
+            }
+          }
           const msg = `✅ *CORRIDA CONFIRMADA!*\n🎫 *Ticket Nº ${order.id}*\n\n🏍️ *Entregador:* ${order.motoboy_nome}\n📞 *WhatsApp:* ${order.motoboy_telefone}${pixSalvo ? '\n💳 *Pix:* ' + pixSalvo : ''}\n🏢 *Coleta:* ${o.coleta_nome || ''}${msgDestinos}\n💰 *Total:* R$ ${Number(o.valor_total||0).toFixed(2).replace('.', ',')}\n🔄 *Retorno:* ${o.retorno ? 'Sim' : 'Não'}\n💳 *Pagamento:* ${payLabel}${o.obs ? '\n💬 *Obs:* ' + o.obs : ''}`;
           
           const numLogista = getLojaTelefone(order);
@@ -5950,7 +6093,15 @@
         
         <div style="margin-top: 10px; font-size: 13px; color: var(--text-muted); display:flex; flex-direction:column; gap:6px;">
           <div>🔄 <b>Retorno?</b> ${order.retorno ? 'Sim' : 'Não'}</div>
-          <div>💵 <b>Pagamento:</b> <span style="${order.pagamento_status === 'a_pagar' ? 'color: #ef4444; font-weight: 800; background: rgba(239,68,68,0.05); padding: 4px 8px; border-radius: 6px; display: inline-block;' : 'color: #10b981; font-weight: 800; background: rgba(16,185,129,0.05); padding: 4px 8px; border-radius: 6px; display: inline-block;'}">${order.pagamento_status === 'a_pagar' ? '🔴 A Pagar (Cobrar na Entrega)' : '🟢 Pedido Pago'}</span></div>
+          <div>💵 <b>Pagamento:</b> <span style="${order.pagamento_status === 'a_pagar' ? 'color: #ef4444; font-weight: 800; background: rgba(239,68,68,0.05); padding: 4px 8px; border-radius: 6px; display: inline-block;' : 'color: #10b981; font-weight: 800; background: rgba(16,185,129,0.05); padding: 4px 8px; border-radius: 6px; display: inline-block;'}">${(() => {
+              if (order.pagamento_status !== 'a_pagar') return '🟢 Pedido Pago';
+              const methodNames = { pix: '⚡ PIX', credito: '💳 Cartão (Crédito)', debito: '💳 Cartão (Débito)', dinheiro: '💵 Dinheiro' };
+              let label = '🔴 A Pagar - ' + (methodNames[order.pagamento_metodo] || 'Não especificado');
+              if (order.pagamento_metodo === 'dinheiro' && order.pagamento_troco) {
+                label += ` (Troco para R$ ${Number(order.pagamento_troco).toFixed(2).replace('.', ',')})`;
+              }
+              return label;
+            })()}</span></div>
         </div>
         ${order.obs ? `<div class="hist-obs" style="margin-top: 10px;">💬 <b>Obs:</b> ${escapeHtml(order.obs)}</div>` : ''}
       `;
@@ -7342,7 +7493,15 @@
       
       msg += `\n💵 *Valor total:* R$ ${Number(order.valor_total).toFixed(2).replace('.', ',')}\n`;
       msg += `🔄 *Tem retorno?* ${order.retorno ? 'Sim' : 'Não'}`;
-      const payLabel = order.pagamento_status === 'a_pagar' ? '🔴 A Pagar' : '🟢 Pedido Pago';
+      let payLabel = '🟢 Pedido Pago';
+      if (order.pagamento_status === 'a_pagar') {
+        const methodNames = { pix: '⚡ PIX', credito: '💳 Cartão (Crédito)', debito: '💳 Cartão (Débito)', dinheiro: '💵 Dinheiro' };
+        const metName = methodNames[order.pagamento_metodo] || 'Não especificado';
+        payLabel = '🔴 A Pagar - ' + metName;
+        if (order.pagamento_metodo === 'dinheiro' && order.pagamento_troco) {
+          payLabel += ` (Troco para R$ ${Number(order.pagamento_troco).toFixed(2).replace('.', ',')})`;
+        }
+      }
       msg += `\n💳 *Pagamento:* ${payLabel}`;
       if (order.obs) msg += `\n💬 *Obs:* ${escapeHtml(order.obs)}`;
       
@@ -7399,7 +7558,17 @@
         valorCustom: document.getElementById('valor-custom')?.value || '',
         retorno: document.getElementById('retorno-toggle')?.checked || false,
         destinos: state.destinos || [],
-        pagamento_status: document.getElementById('pay-status-apagar').checked ? 'a_pagar' : 'pago'
+        pagamento_status: document.getElementById('pay-status-apagar').checked ? 'a_pagar' : 'pago',
+        pagamento_metodo: (() => {
+          if (!document.getElementById('pay-status-apagar').checked) return null;
+          return ['pix', 'credito', 'debito', 'dinheiro'].find(m => document.getElementById('pay-method-' + m)?.checked) || null;
+        })(),
+        pagamento_troco: (() => {
+          if (!document.getElementById('pay-status-apagar').checked) return null;
+          const isDinheiro = document.getElementById('pay-method-dinheiro')?.checked;
+          if (!isDinheiro) return null;
+          return document.getElementById('pay-troco')?.value || '';
+        })()
       };
       localStorage.setItem('mc_form_draft', JSON.stringify(draft));
     }
@@ -7420,6 +7589,14 @@
         if (draft.pagamento_status !== undefined) {
           if (draft.pagamento_status === 'a_pagar') {
             document.getElementById('pay-status-apagar').checked = true;
+            if (draft.pagamento_metodo) {
+              const r = document.getElementById('pay-method-' + draft.pagamento_metodo);
+              if (r) r.checked = true;
+            }
+            if (draft.pagamento_troco !== undefined && draft.pagamento_troco !== null) {
+              const trocoInput = document.getElementById('pay-troco');
+              if (trocoInput) trocoInput.value = draft.pagamento_troco;
+            }
           } else {
             document.getElementById('pay-status-pago').checked = true;
           }

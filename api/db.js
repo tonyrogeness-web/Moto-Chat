@@ -19,6 +19,8 @@ const CREATE_SQL = `
     tags JSONB DEFAULT '[]',
     status VARCHAR(50) DEFAULT 'pendente',
     pagamento_status VARCHAR(50) DEFAULT 'pago',
+    pagamento_metodo VARCHAR(50),
+    pagamento_troco NUMERIC(10,2),
     motoboy_nome VARCHAR(255),
     motoboy_telefone VARCHAR(50),
     motoboy_pix VARCHAR(255),
@@ -29,6 +31,8 @@ const CREATE_SQL = `
   );
   ALTER TABLE entregas ADD COLUMN IF NOT EXISTS tags JSONB DEFAULT '[]';
   ALTER TABLE entregas ADD COLUMN IF NOT EXISTS pagamento_status VARCHAR(50) DEFAULT 'pago';
+  ALTER TABLE entregas ADD COLUMN IF NOT EXISTS pagamento_metodo VARCHAR(50);
+  ALTER TABLE entregas ADD COLUMN IF NOT EXISTS pagamento_troco NUMERIC(10,2);
   ALTER TABLE entregas ADD COLUMN IF NOT EXISTS motoboy_pix VARCHAR(255);
   ALTER TABLE entregas ADD COLUMN IF NOT EXISTS motoboy_ocultado BOOLEAN DEFAULT FALSE;
   ALTER TABLE entregas ADD COLUMN IF NOT EXISTS loja_ocultado BOOLEAN DEFAULT FALSE;
