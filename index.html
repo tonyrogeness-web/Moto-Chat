@@ -2328,6 +2328,13 @@
 
   <!-- ─── JAVASCRIPT STATE & LOGIC ────────────────────────────────────────── -->
   <script>
+    const PAYMENT_METHOD_LABELS = {
+      pix: '⚡ PIX',
+      credito: '💳 Cartão (Crédito)',
+      debito: '💳 Cartão (Débito)',
+      dinheiro: '💵 Dinheiro'
+    };
+
     // ─── STATE & MIGRATION ────────────────────────────────────────────────────────
     function safeParse(key, defaultValue) {
       try {
@@ -3190,8 +3197,7 @@
       let payStatus = '';
       if (isApagar) {
         const selectedMethodRadio = ['pix', 'credito', 'debito', 'dinheiro'].find(m => document.getElementById('pay-method-' + m)?.checked);
-        const methodNames = { pix: '⚡ PIX', credito: '💳 Cartão (Crédito)', debito: '💳 Cartão (Débito)', dinheiro: '💵 Dinheiro' };
-        const methodName = methodNames[selectedMethodRadio] || 'Não especificado';
+        const methodName = PAYMENT_METHOD_LABELS[selectedMethodRadio] || 'Não especificado';
         payStatus = '🔴 A Pagar - ' + methodName;
         if (selectedMethodRadio === 'dinheiro') {
           const trocoVal = document.getElementById('pay-troco').value.trim();
@@ -3684,8 +3690,7 @@
       msg += `🔄 *Tem retorno?* ${item.retorno ? 'Sim' : 'Não'}`;
       let payLabel = '🟢 Pedido Pago';
       if (item.pagamento_status === 'a_pagar') {
-        const methodNames = { pix: '⚡ PIX', credito: '💳 Cartão (Crédito)', debito: '💳 Cartão (Débito)', dinheiro: '💵 Dinheiro' };
-        const metName = methodNames[item.pagamento_metodo] || 'Não especificado';
+        const metName = PAYMENT_METHOD_LABELS[item.pagamento_metodo] || 'Não especificado';
         payLabel = '🔴 A Pagar - ' + metName;
         if (item.pagamento_metodo === 'dinheiro' && item.pagamento_troco) {
           payLabel += ` (Troco para R$ ${Number(item.pagamento_troco).toFixed(2).replace('.', ',')})`;
@@ -4317,8 +4322,7 @@
             <span>Retorno: ${item.retorno ? 'Sim' : 'Não'}</span>
             <span style="font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:12px; ${item.pagamento_status === 'a_pagar' ? 'background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444;' : 'background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981;'}">${(() => {
               if (item.pagamento_status !== 'a_pagar') return '🟢 Pedido Pago';
-              const methodNames = { pix: '⚡ PIX', credito: '💳 Crédito', debito: '💳 Débito', dinheiro: '💵 Dinheiro' };
-              let label = '🔴 A Pagar - ' + (methodNames[item.pagamento_metodo] || 'Não especificado');
+              let label = '🔴 A Pagar - ' + (PAYMENT_METHOD_LABELS[item.pagamento_metodo] || 'Não especificado');
               if (item.pagamento_metodo === 'dinheiro' && item.pagamento_troco) {
                 label += ` (Troco: R$ ${Number(item.pagamento_troco).toFixed(2).replace('.', ',')})`;
               }
@@ -4678,8 +4682,7 @@
           
           let pStr = '';
           if (item.pagamento_status === 'a_pagar') {
-            const methodNames = { pix: '⚡ PIX', credito: '💳 Crédito', debito: '💳 Débito', dinheiro: '💵 Dinheiro' };
-            pStr = ` . Pagamento: 🔴 A Pagar (${methodNames[item.pagamento_metodo] || 'Não especificado'}`;
+            pStr = ` . Pagamento: 🔴 A Pagar (${PAYMENT_METHOD_LABELS[item.pagamento_metodo] || 'Não especificado'}`;
             if (item.pagamento_metodo === 'dinheiro' && item.pagamento_troco) {
               pStr += ` - Troco p/ R$ ${Number(item.pagamento_troco).toFixed(2).replace('.', ',')}`;
             }
@@ -4728,8 +4731,7 @@
             
             let pStr = '';
             if (item.pagamento_status === 'a_pagar') {
-              const methodNames = { pix: '⚡ PIX', credito: '💳 Crédito', debito: '💳 Débito', dinheiro: '💵 Dinheiro' };
-              pStr = ` . Pagamento: 🔴 A Pagar (${methodNames[item.pagamento_metodo] || 'Não especificado'}`;
+              pStr = ` . Pagamento: 🔴 A Pagar (${PAYMENT_METHOD_LABELS[item.pagamento_metodo] || 'Não especificado'}`;
               if (item.pagamento_metodo === 'dinheiro' && item.pagamento_troco) {
                 pStr += ` - Troco p/ R$ ${Number(item.pagamento_troco).toFixed(2).replace('.', ',')}`;
               }
@@ -5916,8 +5918,7 @@
           const pixSalvo = localStorage.getItem('mc_motoboy_pix') || '';
           let payLabel = '🟢 Pedido Pago';
           if (order.pagamento_status === 'a_pagar') {
-            const methodNames = { pix: '⚡ PIX', credito: '💳 Cartão (Crédito)', debito: '💳 Cartão (Débito)', dinheiro: '💵 Dinheiro' };
-            const metName = methodNames[order.pagamento_metodo] || 'Não especificado';
+            const metName = PAYMENT_METHOD_LABELS[order.pagamento_metodo] || 'Não especificado';
             payLabel = '🔴 A Pagar - ' + metName;
             if (order.pagamento_metodo === 'dinheiro' && order.pagamento_troco) {
               payLabel += ` (Troco para R$ ${Number(order.pagamento_troco).toFixed(2).replace('.', ',')})`;
@@ -6164,8 +6165,7 @@
           <div>🔄 <b>Retorno?</b> ${order.retorno ? 'Sim' : 'Não'}</div>
           <div>💵 <b>Pagamento:</b> <span style="${order.pagamento_status === 'a_pagar' ? 'color: #ef4444; font-weight: 800; background: rgba(239,68,68,0.05); padding: 4px 8px; border-radius: 6px; display: inline-block;' : 'color: #10b981; font-weight: 800; background: rgba(16,185,129,0.05); padding: 4px 8px; border-radius: 6px; display: inline-block;'}">${(() => {
               if (order.pagamento_status !== 'a_pagar') return '🟢 Pedido Pago';
-              const methodNames = { pix: '⚡ PIX', credito: '💳 Cartão (Crédito)', debito: '💳 Cartão (Débito)', dinheiro: '💵 Dinheiro' };
-              let label = '🔴 A Pagar - ' + (methodNames[order.pagamento_metodo] || 'Não especificado');
+              let label = '🔴 A Pagar - ' + (PAYMENT_METHOD_LABELS[order.pagamento_metodo] || 'Não especificado');
               if (order.pagamento_metodo === 'dinheiro' && order.pagamento_troco) {
                 label += ` (Troco para R$ ${Number(order.pagamento_troco).toFixed(2).replace('.', ',')})`;
               }
@@ -6899,8 +6899,7 @@
           
           let pStr = '';
           if (run.pagamento_status === 'a_pagar') {
-            const methodNames = { pix: '⚡ PIX', credito: '💳 Crédito', debito: '💳 Débito', dinheiro: '💵 Dinheiro' };
-            pStr = ` . Pagamento: 🔴 A Pagar (${methodNames[run.pagamento_metodo] || 'Não especificado'}`;
+            pStr = ` . Pagamento: 🔴 A Pagar (${PAYMENT_METHOD_LABELS[run.pagamento_metodo] || 'Não especificado'}`;
             if (run.pagamento_metodo === 'dinheiro' && run.pagamento_troco) {
               pStr += ` - Troco p/ R$ ${Number(run.pagamento_troco).toFixed(2).replace('.', ',')}`;
             }
@@ -6947,8 +6946,7 @@
             
             let pStr = '';
             if (run.pagamento_status === 'a_pagar') {
-              const methodNames = { pix: '⚡ PIX', credito: '💳 Crédito', debito: '💳 Débito', dinheiro: '💵 Dinheiro' };
-              pStr = ` . Pagamento: 🔴 A Pagar (${methodNames[run.pagamento_metodo] || 'Não especificado'}`;
+              pStr = ` . Pagamento: 🔴 A Pagar (${PAYMENT_METHOD_LABELS[run.pagamento_metodo] || 'Não especificado'}`;
               if (run.pagamento_metodo === 'dinheiro' && run.pagamento_troco) {
                 pStr += ` - Troco p/ R$ ${Number(run.pagamento_troco).toFixed(2).replace('.', ',')}`;
               }
@@ -6987,7 +6985,7 @@
         resumo = resumo.trimEnd() + '\n';
       }
       resumo += `----------------------------------\n`;
-      resumo += `📈 *Total Geral em Taxas:* R$ ${total.toFixed(2).replace('.', ',')}\n`;
+      resumo += `💰 *Total Geral Ganho:* R$ ${total.toFixed(2).replace('.', ',')}\n`;
       resumo += `🟢 Total Pago Antecipado: R$ ${totalPago.toFixed(2).replace('.', ',')}\n`;
       resumo += `🔴 Total a Cobrar na Entrega: R$ ${totalApagar.toFixed(2).replace('.', ',')}\n`;
       if (totalApagar > 0) {
@@ -7633,8 +7631,7 @@
       msg += `🔄 *Tem retorno?* ${order.retorno ? 'Sim' : 'Não'}`;
       let payLabel = '🟢 Pedido Pago';
       if (order.pagamento_status === 'a_pagar') {
-        const methodNames = { pix: '⚡ PIX', credito: '💳 Cartão (Crédito)', debito: '💳 Cartão (Débito)', dinheiro: '💵 Dinheiro' };
-        const metName = methodNames[order.pagamento_metodo] || 'Não especificado';
+        const metName = PAYMENT_METHOD_LABELS[order.pagamento_metodo] || 'Não especificado';
         payLabel = '🔴 A Pagar - ' + metName;
         if (order.pagamento_metodo === 'dinheiro' && order.pagamento_troco) {
           payLabel += ` (Troco para R$ ${Number(order.pagamento_troco).toFixed(2).replace('.', ',')})`;
