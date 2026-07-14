@@ -5,3 +5,4 @@ mock-db.json
 node_modules/
 .vercel/
 *.log
+ngrok.yml
