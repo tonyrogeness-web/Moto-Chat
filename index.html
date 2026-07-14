@@ -5729,6 +5729,35 @@
       ));
     }
 
+    async function autoConcluirPorTempoLimite() {
+      const agora = Date.now();
+      const limiteMillis = 90 * 60 * 1000; // 1 hora e 30 minutos em milissegundos
+      
+      const expirados = state.historico.filter(item => {
+        if (!['pendente', 'aceito'].includes(item.status)) return false;
+        const time = parseOrderTime(item);
+        if (isNaN(time)) return false;
+        return (agora - time) > limiteMillis;
+      });
+      
+      if (!expirados.length) return;
+      
+      expirados.forEach(item => {
+        item.status = 'concluido';
+        item.completed_at = item.completed_at || new Date().toISOString();
+      });
+      save('mc_historico', state.historico);
+      
+      const sincronizaveis = expirados.filter(item => !String(item.id).startsWith('local_'));
+      await Promise.all(sincronizaveis.map(item =>
+        fetch('/api/orders', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: item.id, status: 'concluido' })
+        }).catch(e => console.warn('Falha ao sincronizar auto-conclusão por tempo limite do ticket #' + item.id, e))
+      ));
+    }
+
     async function carregarHistoricoServidor() {
       try {
         const res = await fetch('/api/orders');
@@ -5741,6 +5770,7 @@
           const banner = document.getElementById('banner-db-offline');
           if (banner) banner.style.display = 'none';
           await autoConcluirPendentesAntigos();
+          await autoConcluirPorTempoLimite();
           renderHistorico();
           renderFavoritos();
           return;
@@ -5753,6 +5783,7 @@
       const bannerOffline = document.getElementById('banner-db-offline');
       if (bannerOffline) bannerOffline.style.display = 'block';
       await autoConcluirPendentesAntigos();
+      await autoConcluirPorTempoLimite();
       renderHistorico();
       renderFavoritos();
     }
@@ -5821,6 +5852,7 @@
         orders.forEach(o => { _lastKnownStatuses[o.id] = o.status; });
         state.historico = orders.filter(o => !exclusoesPendentes.has(String(o.id)));
         save('mc_historico', state.historico);
+        await autoConcluirPorTempoLimite();
         renderHistorico();
         _atualizarTituloAba();
         if (newAccepts.length > 0) mostrarNotificacaoAceite(newAccepts);
