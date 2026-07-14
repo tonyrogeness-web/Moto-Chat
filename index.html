@@ -2259,12 +2259,6 @@
             Cancelar
           </button>
         </div>
-        <div style="margin-top: 18px; border-top: 1.5px dashed var(--border-color); padding-top: 14px;">
-          <div style="font-size: 11px; font-weight: 700; color: #ef4444; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">⚠️ Zona de Perigo</div>
-          <button class="btn" onclick="limparRelatorioMotoboy()" style="width: 100%; background: rgba(239,68,68,0.06); border: 1.5px solid rgba(239,68,68,0.3); color: #ef4444; font-weight: 700; font-size: 12.5px; padding: 10px; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.12)'" onmouseout="this.style.background='rgba(239,68,68,0.06)'">
-            🗑️ Limpar Meu Extrato de Corridas
-          </button>
-        </div>
       </div>
     </div>
 
@@ -2324,6 +2318,13 @@
 
     <!-- Report List of Runs -->
     <div id="report-runs-list"></div>
+
+    <!-- Limpar Extrato Link (No-distraction footer action) -->
+    <div id="report-clear-wrap" style="display:none; margin-top: 24px; padding: 12px 16px 28px; text-align: center;">
+      <button onclick="limparRelatorioMotoboy()" style="background: none; border: none; color: #ef4444; font-size: 12.5px; font-weight: 700; cursor: pointer; text-decoration: underline; opacity: 0.6; transition: opacity 0.2s; display: inline-flex; align-items: center; gap: 4px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+        🗑️ Limpar Meu Extrato de Corridas
+      </button>
+    </div>
   </div>
 
 
@@ -6667,6 +6668,8 @@
       if (summaryGrid) summaryGrid.style.display = 'none';
       const resumoWrapInit = document.getElementById('report-copy-resumo-wrap');
       if (resumoWrapInit) resumoWrapInit.style.display = 'none';
+      const clearWrapInit = document.getElementById('report-clear-wrap');
+      if (clearWrapInit) clearWrapInit.style.display = 'none';
       listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">Consultando corridas no banco...</div>';
       
       let fetchedRuns = [];
@@ -7019,6 +7022,8 @@
         summaryGrid.style.display = 'none';
         const resumoWrap = document.getElementById('report-copy-resumo-wrap');
         if (resumoWrap) resumoWrap.style.display = 'none';
+        const clearWrap = document.getElementById('report-clear-wrap');
+        if (clearWrap) clearWrap.style.display = 'none';
         const hasFilters = (document.getElementById('report-search')?.value || '').trim() !== '' || 
                            (document.getElementById('report-filter-status')?.value || 'todos') !== 'todos' || 
                            (document.getElementById('report-filter-loja')?.value || 'todos') !== 'todos' ||
@@ -7056,6 +7061,8 @@
       // Mostrar botão de copiar resumo
       const resumoWrap = document.getElementById('report-copy-resumo-wrap');
       if (resumoWrap) resumoWrap.style.display = 'block';
+      const clearWrap = document.getElementById('report-clear-wrap');
+      if (clearWrap) clearWrap.style.display = 'block';
       
       listEl.innerHTML = '';
       runs.forEach(run => {
