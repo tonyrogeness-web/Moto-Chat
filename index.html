@@ -6612,7 +6612,7 @@
       atualizarCardPerfilCompacto();
 
       toast('✅ Dados salvos com sucesso!');
-      playSound('soft');
+      playSound('success');
 
       consultarRelatorioMotoboy();
     }
@@ -6636,7 +6636,7 @@
         
         if (res.ok) {
           toast('✅ Seu histórico foi limpo com sucesso!');
-          playSound('soft');
+          playSound('success');
           
           // Clear locally
           const localHistory = safeParse('mc_historico', []);
@@ -6656,7 +6656,7 @@
         localStorage.setItem('mc_historico', JSON.stringify(cleanHistory));
         
         toast('✅ Seu histórico local foi limpo!');
-        playSound('soft');
+        playSound('success');
         
         currentReportRuns = [];
         filtrarERenderizarRelatorio();
@@ -6752,7 +6752,7 @@
       if (fetchedRuns.length > 0) {
         atualizarFiltrosEstabelecimento(fetchedRuns);
         if (filtersCard) filtersCard.style.display = 'block';
-        playSound('soft');
+        playSound('success');
       } else {
         if (filtersCard) filtersCard.style.display = 'none';
       }
@@ -7053,7 +7053,7 @@
 
       navigator.clipboard.writeText(resumo).then(() => {
         toast('📊 Resumo copiado — ' + periodoLabel + '!');
-        playSound('soft');
+        playSound('success');
       }).catch(() => {
         toast('⚠️ Falha ao copiar resumo');
         playSound('warning');
