@@ -4469,7 +4469,7 @@
             descCorrida += ` . Loja: ${loja}`;
           }
           
-          resumo += `${descCorrida}\n💵 R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n\n`;
+          resumo += `${descCorrida}\n💵 Valor R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n\n`;
           total += Number(item.valor_total);
         });
       } else {
@@ -4498,7 +4498,7 @@
               descCorrida += ` . Loja: ${loja}`;
             }
             
-            resumo += `${descCorrida}\n  💵 R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n\n`;
+            resumo += `${descCorrida}\n  💵 Valor R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n\n`;
             subtotal += Number(item.valor_total);
             total += Number(item.valor_total);
           });
@@ -6603,7 +6603,7 @@
             descCorrida += ` . Motoboy: ${motoboy}`;
           }
           
-          resumo += `${descCorrida}\n💵 R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n\n`;
+          resumo += `${descCorrida}\n💵 Valor R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n\n`;
           total += Number(run.valor_total);
         });
       } else {
@@ -6630,7 +6630,7 @@
               descCorrida += ` . Motoboy: ${motoboy}`;
             }
             
-            resumo += `${descCorrida}\n  💵 R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n\n`;
+            resumo += `${descCorrida}\n  💵 Valor R$ ${Number(run.valor_total).toFixed(2).replace('.', ',')}\n\n`;
             subtotal += Number(run.valor_total);
             total += Number(run.valor_total);
           });
