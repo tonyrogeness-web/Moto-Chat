@@ -6728,10 +6728,20 @@
         const primeiraComNome = fetchedRuns.find(r => r.motoboy_nome && r.motoboy_nome.trim());
         if (primeiraComNome) {
           localStorage.setItem('mc_motoboy_nome', primeiraComNome.motoboy_nome.trim());
-          atualizarCardPerfilCompacto();
           toast('👤 Nome identificado: ' + primeiraComNome.motoboy_nome.trim());
         }
       }
+
+      // ── Melhoria de PIX: se não tem PIX salvo, tenta obter da primeira corrida que tenha ──
+      const pixSalvo = localStorage.getItem('mc_motoboy_pix') || '';
+      if (!pixSalvo && fetchedRuns.length > 0) {
+        const primeiraComPix = fetchedRuns.find(r => r.motoboy_pix && r.motoboy_pix.trim());
+        if (primeiraComPix) {
+          localStorage.setItem('mc_motoboy_pix', primeiraComPix.motoboy_pix.trim());
+        }
+      }
+
+      atualizarCardPerfilCompacto();
       
       if (fetchedRuns.length > 0) {
         atualizarFiltrosEstabelecimento(fetchedRuns);
