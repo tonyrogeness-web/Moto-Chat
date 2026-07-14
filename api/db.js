@@ -18,6 +18,7 @@ const CREATE_SQL = `
     obs TEXT,
     tags JSONB DEFAULT '[]',
     status VARCHAR(50) DEFAULT 'pendente',
+    pagamento_status VARCHAR(50) DEFAULT 'pago',
     motoboy_nome VARCHAR(255),
     motoboy_telefone VARCHAR(50),
     motoboy_pix VARCHAR(255),
@@ -27,12 +28,14 @@ const CREATE_SQL = `
     completed_at TIMESTAMP WITH TIME ZONE
   );
   ALTER TABLE entregas ADD COLUMN IF NOT EXISTS tags JSONB DEFAULT '[]';
+  ALTER TABLE entregas ADD COLUMN IF NOT EXISTS pagamento_status VARCHAR(50) DEFAULT 'pago';
   ALTER TABLE entregas ADD COLUMN IF NOT EXISTS motoboy_pix VARCHAR(255);
   ALTER TABLE entregas ADD COLUMN IF NOT EXISTS motoboy_ocultado BOOLEAN DEFAULT FALSE;
   ALTER TABLE entregas ADD COLUMN IF NOT EXISTS loja_ocultado BOOLEAN DEFAULT FALSE;
   CREATE INDEX IF NOT EXISTS idx_entregas_created_at ON entregas (created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_entregas_status ON entregas (status);
   CREATE INDEX IF NOT EXISTS idx_entregas_motoboy_telefone ON entregas (motoboy_telefone);
+
 `;
 
 async function ensureTable() {

@@ -1603,6 +1603,21 @@
           Detalhes Extras
         </div>
 
+        <!-- PAGAMENTO STATUS SELECTION -->
+        <div style="margin-bottom:16px;">
+          <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin-bottom:8px;">💵 Pagamento da Corrida</div>
+          <div style="display: flex; gap: 8px;">
+            <label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border: 1.5px solid var(--primary); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; background: var(--primary-glow); color: var(--primary); transition: all 0.2s; user-select: none;" id="pay-status-pago-label">
+              <input type="radio" name="payment-status" id="pay-status-pago" value="pago" checked onchange="updatePaymentStatusSelection()" style="display: none;">
+              🟢 Pedido Pago
+            </label>
+            <label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border: 1.5px solid var(--border-color); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; background: var(--bg-card); color: var(--text-main); transition: all 0.2s; user-select: none;" id="pay-status-apagar-label">
+              <input type="radio" name="payment-status" id="pay-status-apagar" value="a_pagar" onchange="updatePaymentStatusSelection()" style="display: none;">
+              🔴 A Pagar
+            </label>
+          </div>
+        </div>
+
         <!-- TAGS -->
         <div style="margin-bottom:14px;">
           <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin-bottom:8px;">🏷️ Tags da Corrida</div>
@@ -2979,6 +2994,33 @@
       toast('✕ Destino removido');
     }
 
+    function updatePaymentStatusSelection() {
+      const isPago = document.getElementById('pay-status-pago').checked;
+      const pagoLabel = document.getElementById('pay-status-pago-label');
+      const apagarLabel = document.getElementById('pay-status-apagar-label');
+      
+      if (isPago) {
+        pagoLabel.style.borderColor = 'var(--primary)';
+        pagoLabel.style.background = 'var(--primary-glow)';
+        pagoLabel.style.color = 'var(--primary)';
+        
+        apagarLabel.style.borderColor = 'var(--border-color)';
+        apagarLabel.style.background = 'var(--bg-card)';
+        apagarLabel.style.color = 'var(--text-main)';
+      } else {
+        apagarLabel.style.borderColor = 'var(--accent)';
+        apagarLabel.style.background = 'var(--accent-glow)';
+        apagarLabel.style.color = 'var(--accent)';
+        
+        pagoLabel.style.borderColor = 'var(--border-color)';
+        pagoLabel.style.background = 'var(--bg-card)';
+        pagoLabel.style.color = 'var(--text-main)';
+      }
+      resetCurrentOrderState();
+      gerarPreview();
+      agendarAutoSave();
+    }
+
     // ─── PREVIEW ─────────────────────────────────────────────────────────────────
     async function getMensagem(dbId = null) {
       const c = state.coletas.find(x => x.id === state.coletaAtivaId) || state.coletas[0];
@@ -3059,6 +3101,10 @@
         msg += '💰 *Total das corridas:* R$ ' + Number(totalVal).toFixed(2).replace('.', ',') + '\n';
       }
       msg += '🔄 *Tem retorno?* ' + (retorno ? 'Sim' : 'Não');
+      
+      const payStatus = document.getElementById('pay-status-apagar').checked ? '🔴 A Pagar' : '🟢 Pedido Pago';
+      msg += '\n💳 *Pagamento:* ' + payStatus;
+      
       if (obs) msg += '\n💬 *Obs:* ' + obs;
 
       // Acrescentar link do motoboy ao final da mensagem (somente se checkbox marcado)
@@ -3154,7 +3200,8 @@
           if (cNome) t.push('cliente_nome:' + cNome);
           if (cTel)  t.push('cliente_tel:' + cTel);
           return t;
-        })()
+        })(),
+        pagamento_status: document.getElementById('pay-status-apagar').checked ? 'a_pagar' : 'pago'
       };
     }
 
@@ -3478,6 +3525,8 @@
       state.bairroSel = ''; 
       state.areaSel = null;
       document.getElementById('retorno-toggle').checked = false;
+      document.getElementById('pay-status-pago').checked = true;
+      updatePaymentStatusSelection();
       resetTags();
       renderBairros(); 
       renderAreas(); 
@@ -3523,6 +3572,8 @@
         msg += `\n💰 *Total das corridas:* R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n`;
       }
       msg += `🔄 *Tem retorno?* ${item.retorno ? 'Sim' : 'Não'}`;
+      const payLabel = item.pagamento_status === 'a_pagar' ? '🔴 A Pagar' : '🟢 Pedido Pago';
+      msg += `\n💳 *Pagamento:* ${payLabel}`;
       if (item.obs) msg += `\n💬 *Obs:* ${escapeHtml(item.obs)}`;
       return msg.trimEnd();
     }
@@ -4142,7 +4193,12 @@
               ${waBtn}
             </div>`;
           })()}
-          <div class="hist-info" style="margin-top:8px;">🕐 ${formatData} &nbsp;•&nbsp; Retorno: ${item.retorno ? 'Sim' : 'Não'}</div>
+          <div class="hist-info" style="margin-top:8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span>🕐 ${formatData}</span>
+            <span>•</span>
+            <span>Retorno: ${item.retorno ? 'Sim' : 'Não'}</span>
+            <span style="font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:12px; ${item.pagamento_status === 'a_pagar' ? 'background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444;' : 'background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981;'}">${item.pagamento_status === 'a_pagar' ? '🔴 A Pagar' : '🟢 Pedido Pago'}</span>
+          </div>
           ${item.obs ? `<div class="hist-obs">💬 ${escapeHtml(item.obs)}</div>` : ''}
           <div style="margin-top:8px;"><span class="badge ${badges[item.status] || 'badge-pendente'}">${labels[item.status] || item.status}</span></div>
           <div class="hist-actions">
@@ -4313,6 +4369,13 @@
       
       document.getElementById('retorno-toggle').checked = item.retorno;
       document.getElementById('obs').value = item.obs || '';
+      
+      if (item.pagamento_status === 'a_pagar') {
+        document.getElementById('pay-status-apagar').checked = true;
+      } else {
+        document.getElementById('pay-status-pago').checked = true;
+      }
+      updatePaymentStatusSelection();
       
       if (item.destinos && item.destinos.length > 1) {
         state.destinos = item.destinos.map(d => ({
@@ -5647,7 +5710,8 @@
             });
           }
           const pixSalvo = localStorage.getItem('mc_motoboy_pix') || '';
-          const msg = `✅ *CORRIDA CONFIRMADA!*\n🎫 *Ticket Nº ${order.id}*\n\n🏍️ *Entregador:* ${order.motoboy_nome}\n📞 *WhatsApp:* ${order.motoboy_telefone}${pixSalvo ? '\n💳 *Pix:* ' + pixSalvo : ''}\n🏢 *Coleta:* ${o.coleta_nome || ''}${msgDestinos}\n💰 *Total:* R$ ${Number(o.valor_total||0).toFixed(2).replace('.', ',')}\n🔄 *Retorno:* ${o.retorno ? 'Sim' : 'Não'}${o.obs ? '\n💬 *Obs:* ' + o.obs : ''}`;
+          const payLabel = order.pagamento_status === 'a_pagar' ? '🔴 A Pagar (Cobrar na Entrega)' : '🟢 Pedido Pago';
+          const msg = `✅ *CORRIDA CONFIRMADA!*\n🎫 *Ticket Nº ${order.id}*\n\n🏍️ *Entregador:* ${order.motoboy_nome}\n📞 *WhatsApp:* ${order.motoboy_telefone}${pixSalvo ? '\n💳 *Pix:* ' + pixSalvo : ''}\n🏢 *Coleta:* ${o.coleta_nome || ''}${msgDestinos}\n💰 *Total:* R$ ${Number(o.valor_total||0).toFixed(2).replace('.', ',')}\n🔄 *Retorno:* ${o.retorno ? 'Sim' : 'Não'}\n💳 *Pagamento:* ${payLabel}${o.obs ? '\n💬 *Obs:* ' + o.obs : ''}`;
           
           const numLogista = getLojaTelefone(order);
           const whatsappUrl = numLogista.length >= 10
@@ -5884,8 +5948,9 @@
           <span style="color: var(--primary); font-size: 18px;">R$ ${Number(order.valor_total || 0).toFixed(2).replace('.', ',')}</span>
         </div>
         
-        <div style="margin-top: 10px; font-size: 13px; color: var(--text-muted);">
-          🔄 <b>Retorno?</b> ${order.retorno ? 'Sim' : 'Não'}
+        <div style="margin-top: 10px; font-size: 13px; color: var(--text-muted); display:flex; flex-direction:column; gap:6px;">
+          <div>🔄 <b>Retorno?</b> ${order.retorno ? 'Sim' : 'Não'}</div>
+          <div>💵 <b>Pagamento:</b> <span style="${order.pagamento_status === 'a_pagar' ? 'color: #ef4444; font-weight: 800; background: rgba(239,68,68,0.05); padding: 4px 8px; border-radius: 6px; display: inline-block;' : 'color: #10b981; font-weight: 800; background: rgba(16,185,129,0.05); padding: 4px 8px; border-radius: 6px; display: inline-block;'}">${order.pagamento_status === 'a_pagar' ? '🔴 A Pagar (Cobrar na Entrega)' : '🟢 Pedido Pago'}</span></div>
         </div>
         ${order.obs ? `<div class="hist-obs" style="margin-top: 10px;">💬 <b>Obs:</b> ${escapeHtml(order.obs)}</div>` : ''}
       `;
@@ -7277,6 +7342,8 @@
       
       msg += `\n💵 *Valor total:* R$ ${Number(order.valor_total).toFixed(2).replace('.', ',')}\n`;
       msg += `🔄 *Tem retorno?* ${order.retorno ? 'Sim' : 'Não'}`;
+      const payLabel = order.pagamento_status === 'a_pagar' ? '🔴 A Pagar' : '🟢 Pedido Pago';
+      msg += `\n💳 *Pagamento:* ${payLabel}`;
       if (order.obs) msg += `\n💬 *Obs:* ${escapeHtml(order.obs)}`;
       
       const waUrl = `https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`;
@@ -7331,7 +7398,8 @@
         obs: document.getElementById('obs')?.value || '',
         valorCustom: document.getElementById('valor-custom')?.value || '',
         retorno: document.getElementById('retorno-toggle')?.checked || false,
-        destinos: state.destinos || []
+        destinos: state.destinos || [],
+        pagamento_status: document.getElementById('pay-status-apagar').checked ? 'a_pagar' : 'pago'
       };
       localStorage.setItem('mc_form_draft', JSON.stringify(draft));
     }
@@ -7349,6 +7417,14 @@
         if (draft.valorCustom !== undefined) document.getElementById('valor-custom').value = draft.valorCustom;
         if (draft.retorno !== undefined) document.getElementById('retorno-toggle').checked = draft.retorno;
         if (draft.destinos !== undefined) state.destinos = draft.destinos;
+        if (draft.pagamento_status !== undefined) {
+          if (draft.pagamento_status === 'a_pagar') {
+            document.getElementById('pay-status-apagar').checked = true;
+          } else {
+            document.getElementById('pay-status-pago').checked = true;
+          }
+          updatePaymentStatusSelection();
+        }
         
         state.bairroSel = document.getElementById('bairro-custom').value;
         const matched = state.bairros.find(b => b.toLowerCase() === state.bairroSel.toLowerCase());

@@ -62,15 +62,15 @@ module.exports = async (req, res) => {
   } else if (method === 'POST') {
     if (!checkApiKey(req, res)) return;
     try {
-      const { coleta_nome, coleta_endereco, coleta_complemento, destinos, valor_total, retorno, obs, tags } = req.body;
+      const { coleta_nome, coleta_endereco, coleta_complemento, destinos, valor_total, retorno, obs, tags, pagamento_status } = req.body;
       if (!coleta_nome || !destinos || valor_total === undefined)
         return res.status(400).json({ error: 'Faltam dados obrigatórios' });
 
       const { rows } = await pool.query(
-        `INSERT INTO entregas (coleta_nome,coleta_endereco,coleta_complemento,destinos,valor_total,retorno,obs,tags)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        `INSERT INTO entregas (coleta_nome,coleta_endereco,coleta_complemento,destinos,valor_total,retorno,obs,tags,pagamento_status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
         [coleta_nome, coleta_endereco||'', coleta_complemento||'', JSON.stringify(destinos),
-         valor_total, retorno||false, obs||'', JSON.stringify(tags||[])]
+         valor_total, retorno||false, obs||'', JSON.stringify(tags||[]), pagamento_status||'pago']
       );
       res.status(201).json(rows[0]);
     } catch (error) { handleError(res, error, 'POST orders'); }
