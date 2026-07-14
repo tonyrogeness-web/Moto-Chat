@@ -2524,82 +2524,84 @@
         if (audioCtx.state === 'suspended') {
           audioCtx.resume();
         }
-        
+
+        // Compressor global — empurra todo o volume para cima sem distorcer
+        const compressor = audioCtx.createDynamicsCompressor();
+        compressor.threshold.setValueAtTime(-10, audioCtx.currentTime);
+        compressor.knee.setValueAtTime(6, audioCtx.currentTime);
+        compressor.ratio.setValueAtTime(12, audioCtx.currentTime);
+        compressor.attack.setValueAtTime(0, audioCtx.currentTime);
+        compressor.release.setValueAtTime(0.1, audioCtx.currentTime);
+        compressor.connect(audioCtx.destination);
+
         const now = audioCtx.currentTime;
-        
-        if (type === 'success') {
-          const gap = 0.25;
-          const dur = 0.2;
-          for (let i = 0; i < repeats; i++) {
-            const t = now + i * gap;
-            const osc = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            osc.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, t);
-            osc.frequency.setValueAtTime(1200, t + 0.08);
-            gainNode.gain.setValueAtTime(0.2, t);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, t + dur);
-            
-            osc.start(t);
-            osc.stop(t + dur);
-          }
-        } else if (type === 'click') {
+
+        function makeBeep(freq1, freq2, startT, dur, gainVal, oscType = 'sine', freq3 = null) {
+          // Oscilador principal
           const osc = audioCtx.createOscillator();
-          const gainNode = audioCtx.createGain();
-          osc.connect(gainNode);
-          gainNode.connect(audioCtx.destination);
-          
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(440, now);
-          osc.frequency.exponentialRampToValueAtTime(150, now + 0.05);
-          gainNode.gain.setValueAtTime(0.05, now);
-          gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-          
-          osc.start(now);
-          osc.stop(now + 0.06);
-        } else if (type === 'warning') {
-          const gap = 0.25;
-          const dur = 0.25;
-          for (let i = 0; i < repeats; i++) {
-            const t = now + i * gap;
-            const osc = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            osc.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(330, t);
-            osc.frequency.exponentialRampToValueAtTime(180, t + dur);
-            gainNode.gain.setValueAtTime(0.12, t);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, t + dur);
-            
-            osc.start(t);
-            osc.stop(t + dur);
-          }
-        } else if (type === 'bell') {
-          const gap = 0.45;
-          const dur = 0.4;
-          for (let i = 0; i < repeats; i++) {
-            const t = now + i * gap;
-            const osc = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            osc.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(587.33, t);
-            osc.frequency.setValueAtTime(659.25, t + 0.05);
-            osc.frequency.setValueAtTime(783.99, t + 0.1);
-            gainNode.gain.setValueAtTime(0.2, t);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, t + dur);
-            
-            osc.start(t);
-            osc.stop(t + dur);
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(compressor);
+          osc.type = oscType;
+          osc.frequency.setValueAtTime(freq1, startT);
+          if (freq2) osc.frequency.exponentialRampToValueAtTime(freq2, startT + dur * 0.6);
+          gain.gain.setValueAtTime(gainVal, startT);
+          gain.gain.exponentialRampToValueAtTime(0.001, startT + dur);
+          osc.start(startT);
+          osc.stop(startT + dur);
+
+          // Sub-harmônico para dar peso/corpo
+          if (freq3) {
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.connect(gain2);
+            gain2.connect(compressor);
+            osc2.type = 'triangle';
+            osc2.frequency.setValueAtTime(freq3, startT);
+            gain2.gain.setValueAtTime(gainVal * 0.5, startT);
+            gain2.gain.exponentialRampToValueAtTime(0.001, startT + dur);
+            osc2.start(startT);
+            osc2.stop(startT + dur);
           }
         }
+
+        if (type === 'success') {
+          // Acorde ascendente forte — 3 notas em rápida sucessão, repetível
+          const gap = 0.22;
+          for (let i = 0; i < repeats; i++) {
+            const t = now + i * (gap * 3 + 0.15);
+            makeBeep(660,  880,  t,        0.18, 0.75, 'sine',     330);
+            makeBeep(880,  1100, t + 0.12, 0.18, 0.75, 'sine',     440);
+            makeBeep(1100, 1400, t + 0.24, 0.22, 0.80, 'sine',     550);
+          }
+
+        } else if (type === 'click') {
+          // Snap mais intenso e definido
+          makeBeep(600, 120, now, 0.07, 0.6, 'triangle', 300);
+
+        } else if (type === 'warning') {
+          // Alarme duplo — oscilador principal + sub-grave, padrão urgente
+          const gap = 0.28;
+          const dur = 0.26;
+          const totalRepeats = Math.max(repeats * 3, 4); // mínimo 4 bips
+          for (let i = 0; i < totalRepeats; i++) {
+            const t = now + i * gap;
+            makeBeep(480, 260, t, dur, 0.80, 'sawtooth', 120);
+          }
+
+        } else if (type === 'bell') {
+          // Sino de notificação urgente — 5 bips ascendentes + corpo harmônico
+          const totalRepeats = Math.max(repeats * 2, 5); // mínimo 5 bips
+          const gap = 0.35;
+          const dur = 0.38;
+          const freqs = [523, 587, 659, 740, 830]; // Dó → Ré → Mi → Fá# → Sol#
+          for (let i = 0; i < totalRepeats; i++) {
+            const t = now + i * gap;
+            const baseFreq = freqs[i % freqs.length];
+            makeBeep(baseFreq, baseFreq * 1.12, t, dur, 0.90, 'sine', baseFreq * 0.5);
+          }
+        }
+
       } catch (e) {
         console.warn('Erro ao reproduzir som:', e);
       }
@@ -4496,7 +4498,7 @@
       const item = state.historico.find(h => String(h.id) === String(id));
       if (!item) return;
       
-      playSound('bell');
+      playSound('bell', 2);
       resetCurrentOrderState();
       
       document.getElementById('retorno-toggle').checked = item.retorno;
@@ -5790,7 +5792,7 @@
 
     function mostrarNotificacaoAceite(orders) {
       if (orders.length === 0) return;
-      playSound('bell', 3);
+      playSound('bell', 5);
       const names = orders.map(o => o.motoboy_nome).join(', ');
       toast(`🔔 CORRIDA CONFIRMADA por ${names}!`);
       const histTab = document.querySelector('.tab:nth-child(2)');
@@ -5805,7 +5807,7 @@
 
     function mostrarNotificacaoCancelamento(orders) {
       if (orders.length === 0) return;
-      playSound('warning', 3);
+      playSound('warning', 5);
       const ids = orders.map(o => `#${o.id}`).join(', ');
       toast(`❌ Corrida ${ids} foi cancelada!`);
       _atualizarTituloAba();
@@ -5813,7 +5815,7 @@
 
     function mostrarNotificacaoDesistencia(orders) {
       if (orders.length === 0) return;
-      playSound('warning', 3);
+      playSound('warning', 5);
       const names = orders.map(o => o.motoboy_nome).join(', ');
       toast(`⚠️ Motoboy ${names} desistiu de uma corrida!`);
       _atualizarTituloAba();
