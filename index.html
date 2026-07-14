@@ -4641,6 +4641,10 @@
       }
 
       let total = 0;
+      let totalPago = 0;
+      let totalApagar = 0;
+      const metodosApagar = { pix: 0, credito: 0, debito: 0, dinheiro: 0, outros: 0 };
+      
       let resumo = `📊 *MOTO-CHAT • RESUMO FINANCEIRO (${periodoLabel})*\n`;
       
       if (unicaLoja) {
@@ -4672,7 +4676,24 @@
             descCorrida += ` . Loja: ${loja}`;
           }
           
-          resumo += `${descCorrida}\n💵 Valor R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n\n`;
+          let pStr = '';
+          if (item.pagamento_status === 'a_pagar') {
+            const methodNames = { pix: '⚡ PIX', credito: '💳 Crédito', debito: '💳 Débito', dinheiro: '💵 Dinheiro' };
+            pStr = ` . Pagamento: 🔴 A Pagar (${methodNames[item.pagamento_metodo] || 'Não especificado'}`;
+            if (item.pagamento_metodo === 'dinheiro' && item.pagamento_troco) {
+              pStr += ` - Troco p/ R$ ${Number(item.pagamento_troco).toFixed(2).replace('.', ',')}`;
+            }
+            pStr += `)`;
+            
+            totalApagar += Number(item.valor_total);
+            const metKey = ['pix', 'credito', 'debito', 'dinheiro'].includes(item.pagamento_metodo) ? item.pagamento_metodo : 'outros';
+            metodosApagar[metKey] += Number(item.valor_total);
+          } else {
+            pStr = ` . Pagamento: 🟢 Pedido Pago`;
+            totalPago += Number(item.valor_total);
+          }
+          
+          resumo += `${descCorrida}${pStr}\n💵 Valor R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n\n`;
           total += Number(item.valor_total);
         });
       } else {
@@ -4686,6 +4707,10 @@
         for (const [motoboyName, groupItens] of Object.entries(groups)) {
           resumo += `🏍️ *${motoboyName.toUpperCase()}*\n`;
           let subtotal = 0;
+          let subPago = 0;
+          let subApagar = 0;
+          const subMetodos = { pix: 0, credito: 0, debito: 0, dinheiro: 0, outros: 0 };
+          
           groupItens.forEach(item => {
             const dateObj = new Date(item.created_at || item.id);
             const hora = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -4701,16 +4726,60 @@
               descCorrida += ` . Loja: ${loja}`;
             }
             
-            resumo += `${descCorrida}\n  💵 Valor R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n\n`;
+            let pStr = '';
+            if (item.pagamento_status === 'a_pagar') {
+              const methodNames = { pix: '⚡ PIX', credito: '💳 Crédito', debito: '💳 Débito', dinheiro: '💵 Dinheiro' };
+              pStr = ` . Pagamento: 🔴 A Pagar (${methodNames[item.pagamento_metodo] || 'Não especificado'}`;
+              if (item.pagamento_metodo === 'dinheiro' && item.pagamento_troco) {
+                pStr += ` - Troco p/ R$ ${Number(item.pagamento_troco).toFixed(2).replace('.', ',')}`;
+              }
+              pStr += `)`;
+              
+              subApagar += Number(item.valor_total);
+              const metKey = ['pix', 'credito', 'debito', 'dinheiro'].includes(item.pagamento_metodo) ? item.pagamento_metodo : 'outros';
+              subMetodos[metKey] += Number(item.valor_total);
+              
+              totalApagar += Number(item.valor_total);
+              metodosApagar[metKey] += Number(item.valor_total);
+            } else {
+              pStr = ` . Pagamento: 🟢 Pedido Pago`;
+              subPago += Number(item.valor_total);
+              totalPago += Number(item.valor_total);
+            }
+            
+            resumo += `${descCorrida}${pStr}\n  💵 Valor R$ ${Number(item.valor_total).toFixed(2).replace('.', ',')}\n\n`;
             subtotal += Number(item.valor_total);
             total += Number(item.valor_total);
           });
-          resumo += `  Subtotal: R$ ${subtotal.toFixed(2).replace('.', ',')} (${groupItens.length} entr.)\n\n`;
+          resumo += `  Subtotal Taxas: R$ ${subtotal.toFixed(2).replace('.', ',')} (${groupItens.length} entr.)\n`;
+          resumo += `  └─ 🟢 Pago antecipado: R$ ${subPago.toFixed(2).replace('.', ',')}\n`;
+          resumo += `  └─ 🔴 A Cobrar na entrega: R$ ${subApagar.toFixed(2).replace('.', ',')}\n`;
+          if (subApagar > 0) {
+            const listM = [];
+            if (subMetodos.pix > 0) listM.push(`PIX: R$ ${subMetodos.pix.toFixed(2).replace('.', ',')}`);
+            if (subMetodos.dinheiro > 0) listM.push(`Dinheiro: R$ ${subMetodos.dinheiro.toFixed(2).replace('.', ',')}`);
+            if (subMetodos.credito > 0) listM.push(`Crédito: R$ ${subMetodos.credito.toFixed(2).replace('.', ',')}`);
+            if (subMetodos.debito > 0) listM.push(`Débito: R$ ${subMetodos.debito.toFixed(2).replace('.', ',')}`);
+            if (subMetodos.outros > 0) listM.push(`Outros: R$ ${subMetodos.outros.toFixed(2).replace('.', ',')}`);
+            resumo += `     (Método: ${listM.join(' | ')})\n`;
+          }
+          resumo += `\n`;
         }
         resumo = resumo.trimEnd() + '\n';
       }
       resumo += `----------------------------------\n`;
-      resumo += `📈 *Total em Taxas:* R$ ${total.toFixed(2).replace('.', ',')}\n`;
+      resumo += `📈 *Total Geral em Taxas:* R$ ${total.toFixed(2).replace('.', ',')}\n`;
+      resumo += `🟢 Total Pago Antecipado: R$ ${totalPago.toFixed(2).replace('.', ',')}\n`;
+      resumo += `🔴 Total a Cobrar na Entrega: R$ ${totalApagar.toFixed(2).replace('.', ',')}\n`;
+      if (totalApagar > 0) {
+        const listG = [];
+        if (metodosApagar.pix > 0) listG.push(`⚡ PIX: R$ ${metodosApagar.pix.toFixed(2).replace('.', ',')}`);
+        if (metodosApagar.dinheiro > 0) listG.push(`💵 Dinheiro: R$ ${metodosApagar.dinheiro.toFixed(2).replace('.', ',')}`);
+        if (metodosApagar.credito > 0) listG.push(`💳 Crédito: R$ ${metodosApagar.credito.toFixed(2).replace('.', ',')}`);
+        if (metodosApagar.debito > 0) listG.push(`💳 Débito: R$ ${metodosApagar.debito.toFixed(2).replace('.', ',')}`);
+        if (metodosApagar.outros > 0) listG.push(`Outros: R$ ${metodosApagar.outros.toFixed(2).replace('.', ',')}`);
+        resumo += `   (Sendo: ${listG.join(' | ')})\n`;
+      }
       resumo += `📦 *Total de Entregas:* ${itens.length}\n`;
 
       navigator.clipboard.writeText(resumo).then(() => {

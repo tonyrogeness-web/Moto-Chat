@@ -71,7 +71,7 @@ module.exports = async (req, res) => {
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
         [coleta_nome, coleta_endereco||'', coleta_complemento||'', JSON.stringify(destinos),
          valor_total, retorno||false, obs||'', JSON.stringify(tags||[]), pagamento_status||'pago',
-         pagamento_metodo||null, pagamento_troco||null]
+         pagamento_metodo||null, pagamento_troco ?? null]
       );
       res.status(201).json(rows[0]);
     } catch (error) { handleError(res, error, 'POST orders'); }
