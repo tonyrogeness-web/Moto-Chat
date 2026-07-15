@@ -23,7 +23,7 @@ set USE_NGROK=0
 :: Verifica se o cloudflared.exe existe
 if not exist "%~dp0cloudflared.exe" (
     echo [INFO] Baixando Cloudflare Tunnel - trycloudflare - para evitar avisos do Ngrok...
-    powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe' -OutFile '%~dp0cloudflared.exe'" >nul 2>&1
+    curl.exe -L -o "%~dp0cloudflared.exe" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" >nul 2>&1
 )
 
 :: Se o download falhar ou nao existir, usar Ngrok
