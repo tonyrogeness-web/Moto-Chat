@@ -5,17 +5,12 @@ echo =====================================================================
 echo                  MOTO-CHAT - INICIALIZADOR LOCAL
 echo =====================================================================
 echo.
-echo [1/3] Iniciando o servidor local Moto-Chat na porta 3001...
+echo [1/2] Iniciando o servidor local Moto-Chat na porta 3001...
 cd /d "c:\Users\tony\.gemini\antigravity-ide\scratch\Moto-Chat"
 start /b "" "C:\Program Files\nodejs\npm.cmd" run dev >nul 2>&1
 
-echo [2/3] Abrindo Moto-Chat localmente no seu navegador...
-timeout /t 3 >nul
-start http://localhost:3001
-timeout /t 2 >nul
-
 echo.
-echo [3/3] Iniciando o tunel de internet seguro...
+echo [2/2] Iniciando o tunel de internet seguro...
 echo.
 
 set USE_NGROK=1
