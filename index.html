@@ -4778,9 +4778,7 @@
         resumo = resumo.trimEnd() + '\n';
       }
       resumo += `----------------------------------\n`;
-      resumo += `📈 *Total Geral em Taxas:* R$ ${total.toFixed(2).replace('.', ',')}\n`;
-      resumo += `🟢 Total Pago Antecipado: R$ ${totalPago.toFixed(2).replace('.', ',')}\n`;
-      resumo += `🔴 Total a Cobrar na Entrega: R$ ${totalApagar.toFixed(2).replace('.', ',')}\n`;
+      resumo += `📈 *Total Corridas:* R$ ${total.toFixed(2).replace('.', ',')}\n`;
       if (totalApagar > 0) {
         const listG = [];
         if (metodosApagar.pix > 0) listG.push(`⚡ PIX: R$ ${metodosApagar.pix.toFixed(2).replace('.', ',')}`);
@@ -7037,9 +7035,7 @@
         resumo = resumo.trimEnd() + '\n';
       }
       resumo += `----------------------------------\n`;
-      resumo += `💰 *Total Geral Ganho:* R$ ${total.toFixed(2).replace('.', ',')}\n`;
-      resumo += `🟢 Total Pago Antecipado: R$ ${totalPago.toFixed(2).replace('.', ',')}\n`;
-      resumo += `🔴 Total a Cobrar na Entrega: R$ ${totalApagar.toFixed(2).replace('.', ',')}\n`;
+      resumo += `💰 *Total Corridas:* R$ ${total.toFixed(2).replace('.', ',')}\n`;
       if (totalApagar > 0) {
         const listG = [];
         if (metodosApagar.pix > 0) listG.push(`⚡ PIX: R$ ${metodosApagar.pix.toFixed(2).replace('.', ',')}`);
