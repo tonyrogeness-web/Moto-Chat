@@ -22,7 +22,7 @@ set USE_NGROK=0
 
 :: Verifica se o cloudflared.exe existe
 if not exist "%~dp0cloudflared.exe" (
-    echo [INFO] Baixando Cloudflare Tunnel (trycloudflare) para evitar avisos do Ngrok...
+    echo [INFO] Baixando Cloudflare Tunnel - trycloudflare - para evitar avisos do Ngrok...
     powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe' -OutFile '%~dp0cloudflared.exe'" >nul 2>&1
 )
 
@@ -43,7 +43,7 @@ if "%USE_NGROK%"=="1" (
 ) else (
     echo =====================================================================
     echo Copie o link HTTPS terminado em ".trycloudflare.com" exibido abaixo
-    echo e abra-o no celular ou compartilhe com os motoboys (SEM TELAS DE AVISO!).
+    echo e abra-o no celular ou compartilhe com os motoboys - SEM TELAS DE AVISO!.
     echo =====================================================================
     echo.
     "%~dp0cloudflared.exe" tunnel --url http://localhost:3001
