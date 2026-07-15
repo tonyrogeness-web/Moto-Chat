@@ -18,7 +18,7 @@ echo.
 echo [3/3] Iniciando o tunel de internet seguro...
 echo.
 
-set USE_NGROK=0
+set USE_NGROK=1
 
 :: Verifica se o cloudflared.exe existe
 if not exist "%~dp0cloudflared.exe" (
