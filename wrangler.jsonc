@@ -15,7 +15,7 @@
   "vars": {
     "DATABASE_URL": "postgresql://neondb_owner:npg_orfCuKy5xb1V@ep-silent-firefly-ac8ibhrv-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require",
     "SETUP_SECRET": "To.41411566",
-    "API_SECRET_KEY": "Api.41411566",
+    "API_SECRET_KEY": "",
     "CRON_SECRET": "Cron.41411566"
   }
 }
