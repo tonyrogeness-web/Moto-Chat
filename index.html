@@ -1373,7 +1373,7 @@
   <!-- BANNER: BANCO OFFLINE -->
   <div id="banner-db-offline" style="display:none; background:#ef4444; color:#fff; text-align:center; padding:10px 16px; font-size:13px; font-weight:700; line-height:1.5; position:relative; z-index:9999;">
     ⚠️ <b>BANCO DE DADOS NÃO CONFIGURADO</b> — Os pedidos estão sendo salvos apenas neste aparelho.<br>
-    <span style="font-weight:400; font-size:12px;">Tickets enviados para motoboys <u>não vão funcionar</u> em outros aparelhos. Configure DATABASE_URL na Vercel.</span>
+    <span style="font-weight:400; font-size:12px;">Tickets enviados para motoboys <u>não vão funcionar</u> em outros aparelhos. Configure DATABASE_URL nas variáveis de ambiente da hospedagem (ex: Vercel, Cloudflare, etc.).</span>
   </div>
 
   <!-- HEADER & TABS STICKY WRAPPER -->
@@ -1607,19 +1607,19 @@
         <div style="margin-bottom:16px;">
           <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin-bottom:8px;">💵 Pagamento da Corrida</div>
           <div style="display: flex; gap: 8px;">
-            <label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border: 1.5px solid var(--primary); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; background: var(--primary-glow); color: var(--primary); transition: all 0.2s; user-select: none;" id="pay-status-pago-label">
-              <input type="radio" name="payment-status" id="pay-status-pago" value="pago" checked onchange="updatePaymentStatusSelection()" style="display: none;">
+            <label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border: 1.5px solid var(--border-color); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; background: var(--bg-card); color: var(--text-main); transition: all 0.2s; user-select: none;" id="pay-status-pago-label">
+              <input type="radio" name="payment-status" id="pay-status-pago" value="pago" onchange="updatePaymentStatusSelection()" style="display: none;">
               🟢 Pedido Pago
             </label>
-            <label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border: 1.5px solid var(--border-color); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; background: var(--bg-card); color: var(--text-main); transition: all 0.2s; user-select: none;" id="pay-status-apagar-label">
-              <input type="radio" name="payment-status" id="pay-status-apagar" value="a_pagar" onchange="updatePaymentStatusSelection()" style="display: none;">
+            <label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border: 1.5px solid var(--accent); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; background: var(--accent-glow); color: var(--accent); transition: all 0.2s; user-select: none;" id="pay-status-apagar-label">
+              <input type="radio" name="payment-status" id="pay-status-apagar" value="a_pagar" checked onchange="updatePaymentStatusSelection()" style="display: none;">
               🔴 A Pagar
             </label>
           </div>
         </div>
 
         <!-- METODO DE PAGAMENTO SELECTION (EXPANDS IF "A PAGAR") -->
-        <div id="payment-method-container" style="display: none; margin-bottom: 16px; padding: 12px; background: rgba(239, 68, 68, 0.02); border: 1.5px dashed rgba(239, 68, 68, 0.2); border-radius: 10px;">
+        <div id="payment-method-container" style="display: block; margin-bottom: 16px; padding: 12px; background: rgba(239, 68, 68, 0.02); border: 1.5px dashed rgba(239, 68, 68, 0.2); border-radius: 10px;">
           <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px;">💳 Método de Pagamento na Entrega</div>
           <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
             <label style="display: flex; align-items: center; justify-content: center; gap: 4px; padding: 8px; border: 1.5px solid var(--border-color); border-radius: 6px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: var(--bg-card); color: var(--text-main); transition: all 0.2s; user-select: none;" id="pay-method-pix-label">
@@ -2566,43 +2566,46 @@
         }
 
         if (type === 'success') {
-          // Acorde ascendente forte — 3 notas em rápida sucessão, repetível
-          const gap = 0.22;
-          for (let i = 0; i < repeats; i++) {
-            const t = now + i * (gap * 3 + 0.15);
-            makeBeep(660,  880,  t,        0.18, 0.75, 'sine',     330);
-            makeBeep(880,  1100, t + 0.12, 0.18, 0.75, 'sine',     440);
-            makeBeep(1100, 1400, t + 0.24, 0.22, 0.80, 'sine',     550);
+          // Acorde ascendente suave e cristalino (C major 7th chime arpeggio)
+          const gap = 0.08;
+          const dur = 0.30;
+          const freqs = [523.25, 659.25, 783.99, 987.77];
+          for (let r = 0; r < repeats; r++) {
+            const startOffset = now + r * 0.5;
+            for (let i = 0; i < freqs.length; i++) {
+              const t = startOffset + i * gap;
+              makeBeep(freqs[i], freqs[i], t, dur, 0.15, 'sine');
+            }
           }
 
         } else if (type === 'soft') {
-          // Bip discreto — apenas feedback de UI sem chamar atenção
-          makeBeep(880, 1050, now, 0.10, 0.08, 'sine');
+          // Feedback de bolha super discreto
+          makeBeep(1000, 1200, now, 0.08, 0.05, 'sine');
 
         } else if (type === 'click') {
-          // Snap mais intenso e definido
-          makeBeep(600, 120, now, 0.07, 0.6, 'triangle', 300);
+          // Clique tátil extremamente sutil e elegante
+          makeBeep(1600, 1300, now, 0.02, 0.10, 'sine');
 
         } else if (type === 'warning') {
-          // Alarme duplo — oscilador principal + sub-grave, padrão urgente
-          const gap = 0.28;
-          const dur = 0.26;
-          const totalRepeats = Math.max(repeats * 3, 4); // mínimo 4 bips
-          for (let i = 0; i < totalRepeats; i++) {
-            const t = now + i * gap;
-            makeBeep(480, 260, t, dur, 0.80, 'sawtooth', 120);
-          }
+          // Aviso elegante em tom menor (duplo chime suave dissonante)
+          const gap = 0.12;
+          makeBeep(349.23, 349.23, now,       0.20, 0.20, 'sine');
+          makeBeep(329.63, 329.63, now + gap, 0.25, 0.20, 'sine');
 
         } else if (type === 'bell') {
-          // Sino de notificação urgente — 5 bips ascendentes + corpo harmônico
-          const totalRepeats = Math.max(repeats * 2, 5); // mínimo 5 bips
-          const gap = 0.35;
-          const dur = 0.38;
-          const freqs = [523, 587, 659, 740, 830]; // Dó → Ré → Mi → Fá# → Sol#
-          for (let i = 0; i < totalRepeats; i++) {
-            const t = now + i * gap;
-            const baseFreq = freqs[i % freqs.length];
-            makeBeep(baseFreq, baseFreq * 1.12, t, dur, 0.90, 'sine', baseFreq * 0.5);
+          // Chime arpejo premium (estilo notificações iFood)
+          const gap = 0.08;
+          const dur = 0.45;
+          const notes = [880.00, 1109.73, 1318.51, 1760.00];
+          const cycleDuration = gap * notes.length + 0.20;
+          
+          const totalRepeats = Math.max(repeats, 1);
+          for (let r = 0; r < totalRepeats; r++) {
+            const startOffset = now + r * cycleDuration;
+            for (let i = 0; i < notes.length; i++) {
+              const t = startOffset + i * gap;
+              makeBeep(notes[i], notes[i], t, dur, 0.18, 'sine', notes[i] * 0.5);
+            }
           }
         }
 
@@ -3467,7 +3470,7 @@
 
     async function copiarLinkConfirmacaoAtual() {
       if (_apiAvailable === false) {
-        toast('❌ Banco de dados offline — o link não funcionará em outros aparelhos. Configure DATABASE_URL na Vercel.');
+        toast('❌ Banco de dados offline — o link não funcionará em outros aparelhos. Configure DATABASE_URL nas variáveis de ambiente da hospedagem.');
         playSound('warning');
         return;
       }
@@ -3479,7 +3482,7 @@
           return;
         }
         if (String(dbId).startsWith('local_')) {
-          toast('❌ Pedido não foi salvo no banco — o link só funcionará neste aparelho. Verifique DATABASE_URL na Vercel.');
+          toast('❌ Pedido não foi salvo no banco — o link só funcionará neste aparelho. Verifique DATABASE_URL nas variáveis de ambiente da hospedagem.');
           playSound('warning');
           return;
         }
@@ -3649,7 +3652,7 @@
       state.bairroSel = ''; 
       state.areaSel = null;
       document.getElementById('retorno-toggle').checked = false;
-      document.getElementById('pay-status-pago').checked = true;
+      document.getElementById('pay-status-apagar').checked = true;
       updatePaymentStatusSelection();
       resetTags();
       renderBairros(); 
@@ -5146,106 +5149,274 @@
         .replace(/[ ]{2,}/g, ' ')
         .trim();
 
-      let rua = '', bairro = '', comp = '';
       const linhas = textoNorm.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
+      let cep = '';
+      const cepMatch = texto.match(/\b\d{5}-?\d{3}\b/);
+      if (cepMatch) cep = cepMatch[0];
+
+      let valor = null;
+      const valMatch = texto.match(/(?:taxa\s+(?:de\s+)?entrega|valor\s+(?:da\s+)?entrega|taxa\s+(?:de\s+)?frete|frete|entrega)[\s:\-=\+\(\)]*(?:(r?\$\s*)?(\d+(?:\s*[.,]\s*\d{2})?))\b/i);
+      if (valMatch) {
+        const temCifrao = !!valMatch[1];
+        const valorTexto = valMatch[2];
+        const temDecimais = /[.,]/.test(valorTexto);
+        if (temDecimais || temCifrao) {
+          valor = parseFloat(valorTexto.replace(/\s/g, '').replace(',', '.'));
+        }
+      }
+
+      function detectarTelefone(texto) {
+        const textoClean = texto.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        const linhasLoc = textoClean.split('\n').map(l => l.trim());
+        for (const linha of linhasLoc) {
+          const matchRotulo = linha.match(/(?:tel|telefone|whatsapp|whats|cel|celular|fone|contato)\s*[:\-]\s*([\d\s()\-\+]+)/i);
+          if (matchRotulo) {
+            const cleanNum = matchRotulo[1].replace(/\D/g, '');
+            if (cleanNum.length >= 8 && cleanNum.length <= 15) return cleanNum;
+          }
+        }
+        const reComDdd = /(?:\+?55\s*)?\(?\d{2}\)?\s*9?\s*\d{4}[-\s]?\d{4}/g;
+        const matchesComDdd = textoClean.match(reComDdd);
+        if (matchesComDdd) {
+          for (const m of matchesComDdd) {
+            const clean = m.replace(/\D/g, '');
+            if (clean.length >= 10 && clean.length <= 13) return clean;
+          }
+        }
+        const reSemDdd = /\b9?\s*\d{4}[-\s]\d{4}\b/g;
+        const matchesSemDdd = textoClean.match(reSemDdd);
+        if (matchesSemDdd) return matchesSemDdd[0].replace(/\D/g, '');
+        const reQualquerDigitos = /\b\d{8,11}\b/g;
+        const matchesQualquer = textoClean.match(reQualquerDigitos);
+        if (matchesQualquer) {
+          for (const m of matchesQualquer) {
+            if (m.length === 8) {
+              const idx = textoClean.indexOf(m);
+              const contexto = textoClean.substring(Math.max(0, idx - 10), idx);
+              if (/cep/i.test(contexto)) continue;
+            }
+            return m;
+          }
+        }
+        return '';
+      }
+
+      function detectarNome(texto) {
+        const textoClean = texto.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        const linhasLoc = textoClean.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        for (const linha of linhasLoc) {
+          const matchRotulo = linha.match(/^(?:nome|cliente|destinatário|recebedor)\s*[:\-]\s*(.+)/i);
+          if (matchRotulo) {
+            const namePart = matchRotulo[1].trim();
+            if (namePart.length >= 2 && namePart.length <= 50) return namePart;
+          }
+        }
+        const reNomeInvalido = /\b(rua|av\.|avenida|travessa|estrada|setor|bairro|cep|\d{4,}|entrega|pedido|total|frete|taxa|valor|pago|obs|complemento|trocar|editar|pedidos|principal|coleta|proximo|próximo|perto|lado|frente|atras|atrás|esquina|casa|apto|ap|apartamento|bloco|condominio|residencial|sala|loja|fundos|terreo|térreo|altos|portão|portao|grade|muro|chaves|entregar|chamar|interfone|campainha|tocar)\b/i;
+        const reTelefone = /(?:\+?55\s*)?\(?\d{2}\)?\s*9?\s*\d{4}[-\s]?\d{4}/;
+        for (const linha of linhasLoc) {
+          const clean = linha.trim();
+          
+          if (state.bairros && state.bairros.some(b => b.toLowerCase() === clean.toLowerCase())) continue;
+
+          if (
+            clean.length >= 3 && 
+            clean.length <= 40 && 
+            !reNomeInvalido.test(clean) && 
+            !/^\d/.test(clean) && 
+            !reTelefone.test(clean) &&
+            !clean.includes(':') &&
+            !clean.includes('/')
+          ) {
+            return clean;
+          }
+        }
+        return '';
+      }
+
+      const clienteTel = detectarTelefone(textoNorm);
+      const clienteNome = detectarNome(textoNorm);
+
+      let rua = '', bairro = '', comp = '';
+
+      const linhasFiltradas = linhas.filter(l => {
+        const lLower = l.toLowerCase();
+        
+        if (clienteTel && l.replace(/\D/g, '').includes(clienteTel)) return false;
+        if (clienteNome && lLower === clienteNome.toLowerCase()) return false;
+        if (cep && lLower.replace(/\D/g, '') === cep.replace(/\D/g, '')) return false;
+        
+        const reCidadeCepTotal = /^(feira de santana|fsa|salvador|camacari|lauro de freitas|bahia|ba|brasil|cep|\d{5}-?\d{3}|,\s*)+$/i;
+        if (reCidadeCepTotal.test(l)) return false;
+        
+        return true;
+      });
+
+      const reRuaPrefix = /^(?:rua|r\.|av(?:enida)?\.?|logradouro|endere[çc]o|local|local de entrega)\s*[:\-]\s*(.+)$/i;
+      const reBairroPrefix = /^(?:bairro|bairro\/cidade|setor|distrito)\s*[:\-]\s*(.+)$/i;
+      const reCompPrefix = /^(?:complemento|comp\.?|ap(?:to)?\.?|apto\.?|bloco|ref(?:er[êe]ncia)?|referencia|ponto de ref(?:erencia|erência)?|obs(?:erva[çc]o|erva[çc]ões|erva[çc][aã]o)?)\s*[:\-]\s*(.+)$/i;
+
+      const reNomePrefix = /^(?:nome|cliente|destinatário|recebedor)\s*[:\-]\s*(.+)$/i;
+      const reTelPrefix = /^(?:tel|telefone|whatsapp|whats|cel|celular|fone|contato)\s*[:\-]\s*(.+)$/i;
+      const reValorPrefix = /^(?:taxa|valor|frete|taxa de entrega|valor da entrega|taxa de frete)\s*[:\-]\s*(.+)$/i;
+
+      const linhasSemPrefixo = [];
+
+      for (const l of linhasFiltradas) {
+        let matched = false;
+        
+        if (l.match(reNomePrefix) || l.match(reTelPrefix) || l.match(reValorPrefix)) {
+          matched = true;
+        }
+        
+        if (!matched) {
+          const mRua = l.match(reRuaPrefix);
+          if (mRua) {
+            if (!rua) rua = mRua[1].trim();
+            matched = true;
+          }
+        }
+        
+        if (!matched) {
+          const mBairro = l.match(reBairroPrefix);
+          if (mBairro) {
+            if (!bairro) bairro = mBairro[1].replace(/,.*$/, '').trim();
+            matched = true;
+          }
+        }
+
+        if (!matched) {
+          const mComp = l.match(reCompPrefix);
+          if (mComp) {
+            comp = comp ? comp + ', ' + mComp[1].trim() : mComp[1].trim();
+            matched = true;
+          }
+        }
+
+        if (!matched) {
+          const mNum = l.match(/^n[º°o]\.?\s*[:\-]?\s*(\d[\w\/\-]*)/i);
+          if (mNum && rua && !/\d/.test(rua)) {
+            rua += ', ' + mNum[1].trim();
+            matched = true;
+          }
+        }
+
+        if (!matched) {
+          linhasSemPrefixo.push(l);
+        }
+      }
+
       const reLogradouro = /\b(rua|r\.|av(?:enida)?\.?|travessa|tv\.?|alameda|al\.?|rodovia|rod\.?|estrada|est\.?|ladeira|praça|pça?\.?|via |viela|beco|setor|conjunto|cj\.?|loteamento|lot\.?|quadra|q\.?)\b/i;
-      const reCidadeCep = /\b(feira de santana|fsa|salvador|camacari|lauro de freitas|bahia|ba|brasil|cep|\d{5}-?\d{3})\b/i;
-      const reComplementoIndicadores = /\b(casa|apto|ap|apartamento|bloco|condominio|cond\.?|residencial|res\.?|sala|loja|fundos|frente|terreo|térreo|altos)\b/i;
-
-      if (linhas.length >= 2) {
-        let streetIdx = -1;
-        for (let i = 0; i < linhas.length; i++) {
-          if (reLogradouro.test(linhas[i])) { streetIdx = i; break; }
-        }
-        if (streetIdx === -1 && /\d/.test(linhas[0])) streetIdx = 0;
-
-        if (streetIdx !== -1) {
-          rua = linhas[streetIdx];
-          let cidadeIdx = -1;
-          for (let i = streetIdx + 1; i < linhas.length; i++) {
-            if (reCidadeCep.test(linhas[i])) { cidadeIdx = i; break; }
-          }
-          const linhasMeio = cidadeIdx !== -1 ? linhas.slice(streetIdx + 1, cidadeIdx) : linhas.slice(streetIdx + 1);
-          if (linhasMeio.length === 1) {
-            const l = linhasMeio[0];
-            if (reComplementoIndicadores.test(l) || (l.length <= 20 && !/\b(bairro|district)\b/i.test(l) && state.bairros && state.bairros.some(b => b.toLowerCase() === l.toLowerCase()))) {
-              comp = l;
-            } else if (reComplementoIndicadores.test(l) || l.split(' ').length <= 2) {
-              comp = l;
-            } else {
-              bairro = l;
-            }
-          } else if (linhasMeio.length >= 2) {
-            const first = linhasMeio[0];
-            const second = linhasMeio[1];
-            if (reComplementoIndicadores.test(first) || first.split(' ').length <= 2) {
-              comp = first;
-              bairro = second;
-            } else {
-              bairro = first;
-              comp = linhasMeio.slice(1).join(', ');
-            }
-            if (linhasMeio.length > 2 && !reComplementoIndicadores.test(first)) {
-              bairro = linhasMeio[linhasMeio.length - 1];
-              comp = linhasMeio.slice(0, -1).join(', ');
-            }
-          }
-        }
-      }
-
+      
+      let ruaIdx = -1;
       if (!rua) {
-        for (const linha of linhas) {
-          const mRua = linha.match(/^(?:rua|r\.|av(?:enida)?\.?|logradouro|endere[çc]o|local|local de entrega)\s*[:\-]\s*(.+)/i);
-          if (mRua && !rua) rua = mRua[1].trim();
-          const mNum = linha.match(/^n[º°o]\.?\s*[:\-]?\s*(\d[\w\/\-]*)/i);
-          if (mNum && rua && !/\d/.test(rua)) rua += ', ' + mNum[1].trim();
-          const mBairro = linha.match(/^(?:bairro|bairro\/cidade|setor)\s*[:\-]\s*(.+)/i);
-          if (mBairro && !bairro) bairro = mBairro[1].replace(/,.*$/, '').trim();
-          const mComp = linha.match(/^(?:complemento|comp\.?|ap(?:to)?\.?|apto\.?|bloco|ref(?:er[êe]ncia)?)\s*[:\-]\s*(.+)/i);
-          if (mComp && !comp) comp = mComp[1].trim();
-        }
-
-        if (!rua) {
-          const textoUmaLinha = textoNorm.replace(/\n/g, ', ').replace(/,{2,}/g, ',');
-          if (reLogradouro.test(textoUmaLinha)) {
-            let candidata = textoUmaLinha
-              .replace(/^(?:endere[çc]o|entregar em|entrega|cliente|local|destino|entregar para|endere[çc]o de entrega)\s*[:\-]?\s*/i, '')
-              .replace(/^(?:localiza[çc][aã]o|ponto de refer[êe]ncia)\s*[:\-]?\s*/i, '')
-              .trim();
-            const partes = candidata.split(/[,–\-]/).map(p => p.trim()).filter(p => p.length > 0);
-            if (partes.length > 0) {
-              rua = partes[0];
-              if (partes.length > 1) {
-                const p1 = partes[1];
-                const p1TemNumero = /^\d/.test(p1) || /^n[º°]?\s*\d/i.test(p1);
-                const ruaSemNumero = !/\d/.test(rua);
-                if (ruaSemNumero && p1TemNumero) {
-                  rua += ', ' + p1;
-                  if (partes.length > 2) {
-                    const p2 = partes[2];
-                    const cidadesIgnorar = /\b(feira|fsa|salvador|bahia|ba|sp|rj|mg|camacari|lauro)\b/i;
-                    if (!cidadesIgnorar.test(p2)) {
-                      bairro = p2;
-                      comp = partes.slice(3).filter(p => !/\b(feira|fsa|salvador|bahia|ba|sp|rj|mg|cep|[0-9]{5}-[0-9]{3})\b/i.test(p)).join(', ');
-                    }
-                  }
-                } else {
-                  const cidadesIgnorar = /\b(feira|fsa|salvador|bahia|ba|sp|rj|mg|camacari|lauro|brasil|cep)\b/i;
-                  if (!cidadesIgnorar.test(p1)) bairro = p1;
-                  comp = partes.slice(2).filter(p => !/\b(feira|fsa|salvador|bahia|ba|sp|rj|mg|cep|[0-9]{5}-[0-9]{3})\b/i.test(p)).join(', ');
-                }
-              }
-            }
+        for (let i = 0; i < linhasSemPrefixo.length; i++) {
+          if (reLogradouro.test(linhasSemPrefixo[i])) {
+            ruaIdx = i;
+            rua = linhasSemPrefixo[i];
+            break;
           }
+        }
+        if (ruaIdx === -1 && linhasSemPrefixo.length > 0 && /\d/.test(linhasSemPrefixo[0])) {
+          ruaIdx = 0;
+          rua = linhasSemPrefixo[0];
         }
       }
 
-      if (!comp && linhas.length > 1) {
-        for (const linha of linhas) {
-          const mExtraComp = linha.match(/\b(ap(?:to)?\.?\s*\w+|bloco\s+\w+|casa\s+\d+|portão|fundos|lado\s+\w+|próximo|perto|em frente)\b/i);
-          if (mExtraComp && linha.toLowerCase() !== rua.toLowerCase() && linha.toLowerCase() !== bairro.toLowerCase()) {
-            comp = (comp ? comp + ', ' : '') + linha.trim();
+      const linhasRestantes = [];
+      for (let i = 0; i < linhasSemPrefixo.length; i++) {
+        if (i === ruaIdx && ruaIdx !== -1) continue;
+        if (rua && linhasSemPrefixo[i] === rua) continue;
+        linhasRestantes.push(linhasSemPrefixo[i]);
+      }
+
+      const reRefWords = /\b(casa|apto|ap|apartamento|bloco|condominio|cond\.?|residencial|res\.?|sala|loja|fundos|frente|terreo|térreo|altos|portão|portao|grade|muro|próximo|proximo|perto|lado|atrás|atras|esquina|vizinho|ao\s+lado|em\s+frente|de\s+frente|chaves|entregar|chamar|interfone|campainha|tocar|escola|igreja|posto|mercado|comércio|comercio|padaria|farmácia|farmacia|bar|restaurante|pizzaria|colégio|colegio|hospital|posto\s+de\s+saúde|posto\s+de\s+gasolina|academia|praça|praca|rua\s+da|rua\s+do|travessa\s+da|travessa\s+do|atrás\s+da|atrás\s+do|atras\s+da|atras\s+do|perto\s+da|perto\s+do|próximo\s+ao|próximo\s+à|proximo\s+ao|proximo\s+a)\b/i;
+
+      const classificados = linhasRestantes.map(l => {
+        let bairroScore = 0;
+        let compScore = 0;
+        const lClean = l.toLowerCase();
+
+        if (state.bairros && state.bairros.length) {
+          const matched = state.bairros.find(b => {
+            const bLow = b.toLowerCase();
+            const reExact = new RegExp('\\b' + bLow.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+            return reExact.test(lClean) || lClean === bLow;
+          });
+          if (matched) {
+            bairroScore += 25;
+          }
+        }
+
+        if (reRefWords.test(lClean)) {
+          compScore += 20;
+        }
+
+        const wordCount = l.split(/\s+/).length;
+        if (wordCount <= 3 && l.length <= 25) {
+          bairroScore += 3;
+        } else {
+          compScore += 5;
+        }
+
+        if (/\d/.test(l)) {
+          compScore += 5;
+        }
+
+        if (reRefWords.test(lClean)) {
+          bairroScore -= 15;
+        }
+        if (state.bairros && state.bairros.length) {
+          const matched = state.bairros.some(b => lClean.includes(b.toLowerCase()));
+          if (matched) {
+            compScore -= 15;
+          }
+        }
+
+        return {
+          texto: l,
+          bairroScore,
+          compScore,
+          tipo: bairroScore > compScore ? 'bairro' : (compScore > bairroScore ? 'comp' : 'indefinido')
+        };
+      });
+
+      let bairrosClassificados = [];
+      let compsClassificados = [];
+
+      classificados.forEach(c => {
+        if (c.tipo === 'bairro') {
+          bairrosClassificados.push(c.texto);
+        } else if (c.tipo === 'comp') {
+          compsClassificados.push(c.texto);
+        } else {
+          if (!bairro && bairrosClassificados.length === 0 && c.texto.length <= 20) {
+            bairrosClassificados.push(c.texto);
+          } else {
+            compsClassificados.push(c.texto);
+          }
+        }
+      });
+
+      if (!bairro && bairrosClassificados.length > 0) {
+        bairro = bairrosClassificados[0];
+        if (bairrosClassificados.length > 1) {
+          compsClassificados = compsClassificados.concat(bairrosClassificados.slice(1));
+        }
+      } else if (bairro && bairrosClassificados.length > 0) {
+        compsClassificados = compsClassificados.concat(bairrosClassificados);
+      }
+
+      if (compsClassificados.length > 0) {
+        const extraComp = compsClassificados.join(', ');
+        comp = comp ? comp + ', ' + extraComp : extraComp;
+      }
+
+      if (!rua && linhasFiltradas.length > 0) {
+        const reIgnorarFallbackRua = /\b(entrega|frete|subtotal|total|pago|pedido|finalizado|troco|cupom|desconto|pix|cartao|dinheiro|whatsapp|telefone|fone|celular)\b/i;
+        for (const linha of linhasFiltradas) {
+          if (!reIgnorarFallbackRua.test(linha)) {
+            rua = linha;
             break;
           }
         }
@@ -5274,122 +5445,6 @@
         }
         return clean;
       };
-
-      let cep = '';
-      const cepMatch = texto.match(/\b\d{5}-?\d{3}\b/);
-      if (cepMatch) cep = cepMatch[0];
-
-      let valor = null;
-      // Procura taxa de entrega/frete no texto bruto
-      const valMatch = texto.match(/(?:taxa\s+(?:de\s+)?entrega|valor\s+(?:da\s+)?entrega|taxa\s+(?:de\s+)?frete|frete|entrega)[\s:\-=\+\(\)]*(?:(r?\$\s*)?(\d+(?:\s*[.,]\s*\d{2})?))\b/i);
-      if (valMatch) {
-        const temCifrao = !!valMatch[1];
-        const valorTexto = valMatch[2];
-        const temDecimais = /[.,]/.test(valorTexto);
-        if (temDecimais || temCifrao) {
-          valor = parseFloat(valorTexto.replace(/\s/g, '').replace(',', '.'));
-        }
-      }
-
-      if (!rua && linhas.length > 0) {
-        const reIgnorarFallbackRua = /\b(entrega|frete|subtotal|total|pago|pedido|finalizado|troco|cupom|desconto|pix|cartao|dinheiro|whatsapp|telefone|fone|celular)\b/i;
-        for (const linha of linhas) {
-          if (!reIgnorarFallbackRua.test(linha)) {
-            rua = linha;
-            break;
-          }
-        }
-      }
-
-      // ── Detecção Inteligente de Telefone e Nome do Cliente ───────────
-      function detectarTelefone(texto) {
-        const textoClean = texto.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-        const linhas = textoClean.split('\n').map(l => l.trim());
-
-        // 1. Procura primeiro por linhas com rótulo explícito (ex: Telefone: (75) 99189-9800)
-        for (const linha of linhas) {
-          const matchRotulo = linha.match(/(?:tel|telefone|whatsapp|whats|cel|celular|fone|contato)\s*[:\-]\s*([\d\s()\-\+]+)/i);
-          if (matchRotulo) {
-            const cleanNum = matchRotulo[1].replace(/\D/g, '');
-            if (cleanNum.length >= 8 && cleanNum.length <= 15) {
-              return cleanNum;
-            }
-          }
-        }
-
-        // 2. Busca por números de 10 ou 11 dígitos (com DDD)
-        const reComDdd = /(?:\+?55\s*)?\(?\d{2}\)?\s*9?\s*\d{4}[-\s]?\d{4}/g;
-        const matchesComDdd = textoClean.match(reComDdd);
-        if (matchesComDdd) {
-          for (const m of matchesComDdd) {
-            const clean = m.replace(/\D/g, '');
-            if (clean.length >= 10 && clean.length <= 13) {
-              return clean;
-            }
-          }
-        }
-
-        // 3. Busca por números sem DDD (8 ou 9 dígitos com hífen ou iniciando com 9)
-        const reSemDdd = /\b9?\s*\d{4}[-\s]\d{4}\b/g;
-        const matchesSemDdd = textoClean.match(reSemDdd);
-        if (matchesSemDdd) {
-          return matchesSemDdd[0].replace(/\D/g, '');
-        }
-
-        // 4. Último caso: qualquer sequência de 8 a 11 dígitos seguidos
-        const reQualquerDigitos = /\b\d{8,11}\b/g;
-        const matchesQualquer = textoClean.match(reQualquerDigitos);
-        if (matchesQualquer) {
-          for (const m of matchesQualquer) {
-            if (m.length === 8) {
-              const idx = textoClean.indexOf(m);
-              const contexto = textoClean.substring(Math.max(0, idx - 10), idx);
-              if (/cep/i.test(contexto)) continue;
-            }
-            return m;
-          }
-        }
-        return '';
-      }
-
-      function detectarNome(texto) {
-        const textoClean = texto.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-        const linhas = textoClean.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-
-        // 1. Procura primeiro por linhas com rótulo explícito (ex: Nome: Adelson, Cliente: Adelson)
-        for (const linha of linhas) {
-          const matchRotulo = linha.match(/^(?:nome|cliente|destinatário|recebedor)\s*[:\-]\s*(.+)/i);
-          if (matchRotulo) {
-            const namePart = matchRotulo[1].trim();
-            if (namePart.length >= 2 && namePart.length <= 50) {
-              return namePart;
-            }
-          }
-        }
-
-        // 2. Busca automática: primeira linha curta sem números/palavras-chave inválidas
-        const reNomeInvalido = /\b(rua|av\.|avenida|travessa|estrada|setor|bairro|cep|\d{4,}|entrega|pedido|total|frete|taxa|valor|pago|obs|complemento|trocar|editar|pedidos|principal|coleta)\b/i;
-        const reTelefone = /(?:\+?55\s*)?\(?\d{2}\)?\s*9?\s*\d{4}[-\s]?\d{4}/;
-
-        for (const linha of linhas) {
-          const clean = linha.trim();
-          if (
-            clean.length >= 3 && 
-            clean.length <= 40 && 
-            !reNomeInvalido.test(clean) && 
-            !/^\d/.test(clean) && 
-            !reTelefone.test(clean) &&
-            !clean.includes(':') &&
-            !clean.includes('/')
-          ) {
-            return clean;
-          }
-        }
-        return '';
-      }
-
-      const clienteTel = detectarTelefone(textoNorm);
-      const clienteNome = detectarNome(textoNorm);
 
       return { rua: limpar(rua), bairro: limpar(bairro), comp: limpar(comp || ''), cep, valor, clienteNome, clienteTel };
     }
@@ -7948,6 +8003,7 @@
       renderColeta();
       renderBairros();
       carregarDraft();
+      updatePaymentStatusSelection();
       renderAreas();
       gerarPreview();
       carregarHistoricoServidor();

@@ -70,10 +70,10 @@ if (process.env.DATABASE_URL) {
   });
 
 } else {
-  const isProduction = process.env.VERCEL || process.env.NODE_ENV === 'production';
+  const isProduction = process.env.VERCEL || process.env.CLOUDFLARE || process.env.NODE_ENV === 'production';
 
   if (isProduction) {
-    throw new Error('DATABASE_URL não configurada. Acesse Vercel > Settings > Environment Variables e adicione DATABASE_URL.');
+    throw new Error('DATABASE_URL não configurada. Configure a variável de ambiente DATABASE_URL nas configurações da sua plataforma de hospedagem (ex: Vercel, Cloudflare, etc.).');
   }
 
   console.warn('[DEV] DATABASE_URL ausente — usando mock local em /tmp/mock-db.json');
