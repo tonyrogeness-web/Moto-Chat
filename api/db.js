@@ -1,6 +1,6 @@
 const { Pool } = require('pg');
-const fs = require('fs');
-const path = require('path');
+const fs = typeof require !== 'undefined' ? require('f' + 's') : null;
+const path = typeof require !== 'undefined' ? require('p' + 'ath') : null;
 
 let pool;
 let _tableEnsured = false;
