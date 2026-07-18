@@ -1,4 +1,4 @@
-const { Pool } = require('pg');
+const { Pool, Client } = require('pg');
 const fs = typeof require !== 'undefined' ? require('f' + 's') : null;
 const path = typeof require !== 'undefined' ? require('p' + 'ath') : null;
 
@@ -327,17 +327,59 @@ function getRealPool() {
 
 pool = {
   async query(text, params = []) {
-    return getRealPool().query(text, params);
+    const realPool = getRealPool();
+    if (realPool.isMock) {
+      return realPool.query(text, params);
+    }
+
+    const client = new Client({
+      connectionString: process.env.DATABASE_URL
+        .replace(/[?&]channel_binding=[^&]*/g, '')
+        .replace(/\?$/, '')
+        .replace(/&$/, ''),
+      ssl: { rejectUnauthorized: false }
+    });
+
+    await client.connect();
+    try {
+      const res = await client.query(text, params);
+      return res;
+    } finally {
+      await client.end().catch(() => {});
+    }
   },
+
   async connect() {
-    return getRealPool().connect();
+    const realPool = getRealPool();
+    if (realPool.isMock) {
+      return realPool.connect();
+    }
+
+    const client = new Client({
+      connectionString: process.env.DATABASE_URL
+        .replace(/[?&]channel_binding=[^&]*/g, '')
+        .replace(/\?$/, '')
+        .replace(/&$/, ''),
+      ssl: { rejectUnauthorized: false }
+    });
+
+    await client.connect();
+
+    return {
+      async query(text, params = []) {
+        return client.query(text, params);
+      },
+      async release() {
+        await client.end().catch(() => {});
+      }
+    };
   }
 };
 
 async function ensureTable() {
   if (_tableEnsured) return;
   try {
-    await getRealPool().query(CREATE_SQL);
+    await pool.query(CREATE_SQL);
     _tableEnsured = true;
     console.log('[DB] Tabela entregas verificada/criada com sucesso.');
   } catch (e) {
