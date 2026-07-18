@@ -20,6 +20,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   if (e.request.url.includes('/api/')) return; // API sempre da rede
+  if (!e.request.url.startsWith('http://') && !e.request.url.startsWith('https://')) return; // Evita erro de esquema não suportado (ex: chrome-extension)
+  
   e.respondWith(
     fetch(e.request)
       .then(res => {
