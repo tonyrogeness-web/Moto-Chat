@@ -4520,10 +4520,12 @@
 
         diasOrdenados.forEach(dia => {
           const itensDia = grupos.get(dia);
-          const valorDia = itensDia.filter(h => h.status === 'concluido').reduce((a, b) => a + Number(b.valor_total), 0);
+          const isCancel = h => h.status === 'cancelado' || h.status === 'cancelado_loja' || h.status === 'cancelado_motoboy';
+          const ativasDia = itensDia.filter(h => !isCancel(h));
+          const valorDia = ativasDia.reduce((a, b) => a + Number(b.valor_total || 0), 0);
           const diaHdr = document.createElement('div');
           diaHdr.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin:18px 0 8px; padding:8px 12px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px;';
-          diaHdr.innerHTML = `<span style="font-size:13px; font-weight:800;">📅 ${dia}</span><span style="font-size:12px; color:var(--text-muted); font-weight:600;">${itensDia.length} entrega${itensDia.length === 1 ? '' : 's'} • R$ ${valorDia.toFixed(2).replace('.', ',')}</span>`;
+          diaHdr.innerHTML = `<span style="font-size:13px; font-weight:800;">📅 ${dia}</span><span style="font-size:12px; color:var(--text-muted); font-weight:600;">${ativasDia.length} entrega${ativasDia.length === 1 ? '' : 's'} • R$ ${valorDia.toFixed(2).replace('.', ',')}</span>`;
           lista.appendChild(diaHdr);
           renderGrupo(itensDia);
         });
@@ -4704,8 +4706,9 @@
         });
       }
 
-      // Filter by status: we always copy 'concluido' for financial summary
-      itens = itens.filter(h => h.status === 'concluido');
+      // Filter by status: we include all non-cancelled runs for financial summary
+      const isCancel = h => h.status === 'cancelado' || h.status === 'cancelado_loja' || h.status === 'cancelado_motoboy';
+      itens = itens.filter(h => !isCancel(h));
 
       // Filter by motoboy
       if (filterMotoboy !== 'todos') {
@@ -6759,7 +6762,7 @@
         return;
       }
       // Summary line
-      const total = runs.reduce((s, r) => r.status === 'concluido' ? s + Number(r.valor_total) : s, 0);
+      const total = runs.reduce((s, r) => (!['cancelado', 'cancelado_loja', 'cancelado_motoboy'].includes(r.status)) ? s + Number(r.valor_total || 0) : s, 0);
       let html = `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--primary-light);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-weight:800;">
         <span>💰 Total Ganho:</span><span style="color:var(--primary);font-size:16px;">R$ ${total.toFixed(2).replace('.',',')}</span>
       </div>`;
@@ -7323,17 +7326,18 @@
         return;
       }
       
-      const totalCount = runs.length;
-      const totalEarnings = runs.reduce((acc, curr) => curr.status === 'concluido' ? acc + Number(curr.valor_total) : acc, 0);
+      const isCancelRun = r => r.status === 'cancelado' || r.status === 'cancelado_loja' || r.status === 'cancelado_motoboy';
+      const totalCount = runs.filter(r => !isCancelRun(r)).length;
+      const totalEarnings = runs.reduce((acc, curr) => !isCancelRun(curr) ? acc + Number(curr.valor_total || 0) : acc, 0);
       
       const hoje = new Date();
       const hojeInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).getTime();
       const runsHoje = runs.filter(run => {
         const time = new Date(run.created_at || run.accepted_at || run.completed_at || Date.now()).getTime();
-        return time && time >= hojeInicio;
+        return time && time >= hojeInicio && !isCancelRun(run);
       });
       const todayCount = runsHoje.length;
-      const todayEarnings = runsHoje.reduce((acc, curr) => curr.status === 'concluido' ? acc + Number(curr.valor_total) : acc, 0);
+      const todayEarnings = runsHoje.reduce((acc, curr) => !isCancelRun(curr) ? acc + Number(curr.valor_total || 0) : acc, 0);
 
       const todayRunsEl = document.getElementById('report-today-runs');
       const todayEarningsEl = document.getElementById('report-today-earnings');
