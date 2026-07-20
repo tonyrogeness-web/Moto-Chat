@@ -1745,8 +1745,8 @@
             <div class="day-stat-lbl">📦 Hoje</div>
           </div>
           <div class="day-stat">
-            <div class="day-stat-num" id="day-faturado" style="color:#10b981;">R$ 0</div>
-            <div class="day-stat-lbl">💰 Total Taxas</div>
+            <div class="day-stat-num" id="day-faturado" style="color:#10b981;">R$ 0,00</div>
+            <div class="day-stat-lbl">💰 Total Taxas (Concluídas)</div>
           </div>
           <div class="day-stat">
             <div class="day-stat-num" id="day-pendentes" style="color:#f59e0b;">0</div>
@@ -1757,6 +1757,24 @@
             <div class="day-stat-lbl">✅ Concluídas</div>
           </div>
         </div>
+
+        <!-- DETALHAMENTO FINANCEIRO DO DIA -->
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px;">
+          <div style="background: var(--bg-card); padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-color); text-align: center;">
+            <div style="color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase;">🟢 Pago Antecipado</div>
+            <div id="day-pago" style="color: #10b981; font-size: 16px; font-weight: 800; margin-top: 2px;">R$ 0,00</div>
+          </div>
+          <div style="background: var(--bg-card); padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-color); text-align: center;">
+            <div style="color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase;">🔴 A Cobrar na Entrega</div>
+            <div id="day-apagar" style="color: #ef4444; font-size: 16px; font-weight: 800; margin-top: 2px;">R$ 0,00</div>
+          </div>
+        </div>
+
+        <!-- DETALHAMENTO DE VIAGENS POR ENTREGADOR DO DIA (RELATÓRIO INDEPENDENTE DO DIA) -->
+        <div id="day-motoboys-breakdown" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 12px; font-size: 12px;">
+          <div style="color:var(--text-muted); text-align:center; padding:4px 0;">Carregando resumo de viagens do dia...</div>
+        </div>
+
         <button class="btn btn-outline btn-small" onclick="copiarResumoHoje()" style="width: 100%; height: auto; padding: 10px; border-style: dashed; border-color: var(--primary); color: var(--primary); background: var(--bg-card); display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700;">
           📊 Copiar Resumo Financeiro (Hoje)
         </button>
@@ -3782,20 +3800,72 @@
     function atualizarDayPanel() {
       const hoje = new Date();
       const startOfDay = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+      const endOfDay = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1);
+
+      const isCancel = h => h.status === 'cancelado' || h.status === 'cancelado_loja' || h.status === 'cancelado_motoboy';
+
       const todayItems = state.historico.filter(h => {
         const time = parseOrderTime(h);
-        return !isNaN(time) && time >= startOfDay.getTime();
+        return !isNaN(time) && time >= startOfDay.getTime() && time < endOfDay.getTime();
       });
-      const isCancel = h => h.status === 'cancelado' || h.status === 'cancelado_loja' || h.status === 'cancelado_motoboy';
-      const activeOrCompletedToday = todayItems.filter(h => !isCancel(h));
-      const faturado = activeOrCompletedToday.reduce((a, b) => a + Number(b.valor_total), 0);
+
+      const activeToday = todayItems.filter(h => !isCancel(h));
+      const concluidasToday = todayItems.filter(h => h.status === 'concluido');
+      const pendentesToday = todayItems.filter(h => h.status === 'pendente' || h.status === 'aceito');
+
+      // Total Taxas CONCLUÍDAS (calcula estritamente entregas concluídas do dia de hoje)
+      const totalTaxasConcluidas = concluidasToday.reduce((a, b) => a + Number(b.valor_total || 0), 0);
+
+      // Total Pago Antecipado vs A Cobrar (das entregas concluídas do dia)
+      let totalPago = 0;
+      let totalApagar = 0;
+      concluidasToday.forEach(h => {
+        if (h.pagamento_status === 'a_pagar') {
+          totalApagar += Number(h.valor_total || 0);
+        } else {
+          totalPago += Number(h.valor_total || 0);
+        }
+      });
+
       const elDate = document.getElementById('day-panel-date');
       if (elDate) elDate.textContent = hoje.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short' });
+
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      set('day-total', activeOrCompletedToday.length);
-      set('day-faturado', 'R$ ' + faturado.toFixed(2).replace('.', ','));
-      set('day-pendentes', todayItems.filter(h => h.status === 'pendente').length);
-      set('day-concluidas', todayItems.filter(h => h.status === 'concluido').length);
+      set('day-total', activeToday.length);
+      set('day-faturado', 'R$ ' + totalTaxasConcluidas.toFixed(2).replace('.', ','));
+      set('day-pendentes', pendentesToday.length);
+      set('day-concluidas', concluidasToday.length);
+      set('day-pago', 'R$ ' + totalPago.toFixed(2).replace('.', ','));
+      set('day-apagar', 'R$ ' + totalApagar.toFixed(2).replace('.', ','));
+
+      // Detalhamento de Viagens do Dia por Entregador (Relatório independente do dia)
+      const breakdownEl = document.getElementById('day-motoboys-breakdown');
+      if (breakdownEl) {
+        if (concluidasToday.length === 0) {
+          breakdownEl.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:6px 0;">Nenhuma viagem concluída hoje até o momento.</div>';
+        } else {
+          const mbMap = {};
+          concluidasToday.forEach(h => {
+            const mb = (h.motoboy_nome || 'Sem Motoboy').trim();
+            if (!mbMap[mb]) mbMap[mb] = { count: 0, total: 0 };
+            mbMap[mb].count += 1;
+            mbMap[mb].total += Number(h.valor_total || 0);
+          });
+
+          let html = '<div style="font-weight:700; color:var(--text-main); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><span>🏍️ Viagens do Dia por Entregador</span><span style="font-size:11px; font-weight:600; color:var(--primary);">' + concluidasToday.length + ' corrida(s)</span></div>';
+          html += '<div style="display:flex; flex-direction:column; gap:6px;">';
+          for (const [mb, info] of Object.entries(mbMap)) {
+            html += `
+              <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-input); padding:8px 10px; border-radius:8px; font-size:12px;">
+                <div><strong>${mb}</strong> <span style="color:var(--text-muted); font-size:11px;">(${info.count} corrida${info.count > 1 ? 's' : ''})</span></div>
+                <strong style="color:var(--primary);">R$ ${info.total.toFixed(2).replace('.', ',')}</strong>
+              </div>
+            `;
+          }
+          html += '</div>';
+          breakdownEl.innerHTML = html;
+        }
+      }
     }
 
     function getElapsedBadge(item) {
@@ -5583,52 +5653,19 @@
           _ocrSetStatus('Otimizando...');
           let processedImage = await preprocessImageForOcr(file).catch(() => file);
           const result = await worker.recognize(processedImage);
-          const text = result && result.data ? (result.data.text || '') : '';
+          const rawText = result && result.data ? (result.data.text || '') : '';
           await worker.terminate();
-          if (!text.trim()) {
+          if (!rawText.trim()) {
             if (statusEl) { statusEl.textContent = 'Nenhum texto detectado.'; statusEl.style.color = 'var(--accent)'; }
             if (spinnerEl) spinnerEl.style.display = 'none';
             toast('⚠️ Nenhum texto detectado.');
             return;
           }
-          const parsed = extrairEnderecoDoTexto(text);
-          if (parsed.rua || parsed.bairro || parsed.valor !== null) {
-            if (parsed.rua) document.getElementById('end-rua').value = parsed.rua;
-            if (parsed.bairro) {
-              document.getElementById('bairro-custom').value = parsed.bairro;
-              state.bairroSel = parsed.bairro;
-            }
-            if (parsed.comp) document.getElementById('end-comp').value = parsed.comp;
-            
-            // Popula valor se detectado
-            if (parsed.valor !== null) {
-              document.getElementById('valor-custom').value = parsed.valor;
-              state.areaSel = null;
-              const select = document.getElementById('areas-select');
-              if (select) select.value = '';
-            } else if (parsed.bairro) {
-              const matched = state.bairros.find(b => b.toLowerCase() === parsed.bairro.toLowerCase());
-              if (matched) detectarPrecoPorBairro(matched);
-            }
-            
-            // Preenche dados do cliente se detectados
-            const clienteNomeEl = document.getElementById('cliente-nome');
-            const clienteTelEl = document.getElementById('cliente-tel');
-            if (parsed.clienteNome && clienteNomeEl && !clienteNomeEl.value) clienteNomeEl.value = parsed.clienteNome;
-            if (parsed.clienteTel && clienteTelEl && !clienteTelEl.value) clienteTelEl.value = parsed.clienteTel;
-            
-            resetCurrentOrderState();
-            gerarPreview();
-            if (statusEl) { statusEl.textContent = 'Preenchido com sucesso!'; statusEl.style.color = 'var(--primary)'; }
-            if (checkEl) checkEl.style.display = 'block';
-            
-            let msg = '✅ Endereço detectado!';
-            if (parsed.clienteNome) msg += ' | 👤 ' + parsed.clienteNome;
-            if (parsed.clienteTel) msg += ' | 📞 ' + parsed.clienteTel;
-            if (parsed.cep) msg += ' | CEP: ' + parsed.cep;
-            if (parsed.valor !== null) msg += ' | Taxa: R$ ' + parsed.valor.toFixed(2).replace('.', ',');
-            toast(msg);
-          }
+
+          _ocrSetStatus('🔍 Confirmando endereço e bairro...');
+          const initialParsed = extrairEnderecoDoTexto(rawText);
+          const enrichedParsed = await enriquecerEnderecoInteligente(initialParsed, rawText);
+          aplicarResultadoEndereco(enrichedParsed, statusEl, checkEl);
         } catch (err) {
           console.error(err);
           if (worker) await worker.terminate();
@@ -5637,57 +5674,171 @@
       });
     }
 
-    function processarOcrInlineTexto(text) {
+    async function enriquecerEnderecoInteligente(parsed, rawText) {
+      let rua = parsed.rua || '';
+      let bairro = parsed.bairro || '';
+      let comp = parsed.comp || '';
+      let cep = parsed.cep || '';
+      let valor = parsed.valor;
+      let clienteNome = parsed.clienteNome || '';
+      let clienteTel = parsed.clienteTel || '';
+
+      // 1. Busca CEP via ViaCEP (API gratuita e rápida)
+      let cleanCep = (cep || (rawText.match(/\b\d{5}-?\d{3}\b/) || [])[0] || '').replace(/\D/g, '');
+      if (cleanCep && cleanCep.length === 8) {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 3000);
+          const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`, { signal: controller.signal });
+          clearTimeout(timer);
+          if (res.ok) {
+            const data = await res.json();
+            if (!data.erro) {
+              if (data.bairro) bairro = data.bairro;
+              if (data.logradouro) {
+                const numMatch = (rua || rawText).match(/(?:n[º°o]?|nº|n°|n\.|\b)\s*(\d+[\w\/\-]*)/i);
+                if (numMatch && numMatch[1] && !data.logradouro.toLowerCase().includes(numMatch[1])) {
+                  rua = `${data.logradouro}, ${numMatch[1]}`;
+                } else if (!rua || rua.length < 5) {
+                  rua = data.logradouro;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[Enriquecimento] Falha ViaCEP:', e.message);
+        }
+      }
+
+      // 2. Busca bairro nos bairros cadastrados pelo usuário (state.bairros)
+      if (state.bairros && state.bairros.length) {
+        const rawLower = rawText.toLowerCase();
+        const matchedBairro = state.bairros.find(b => {
+          const bLow = b.toLowerCase().trim();
+          if (!bLow) return false;
+          const re = new RegExp('\\b' + bLow.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+          return re.test(rawLower);
+        });
+        if (matchedBairro) {
+          bairro = matchedBairro;
+        }
+      }
+
+      // 3. Separação Inteligente de Ponto de Referência (Complemento)
+      const refRegex = /(?:ponto\s+de\s+ref(?:erência|erencia)?|referencia|referência|ref|próximo|proximo|perto|ao\s+lado|em\s+frente|frente\s+ao|atrás|atras|esquina|obs|observação|apto|ap|apartamento|bloco|condomínio|condominio|casa|fundos|interfone|portão|portao)\s*[:\-]?\s*([^,\n]+)/i;
+      
+      if (rua) {
+        const refMatch = rua.match(refRegex);
+        if (refMatch) {
+          const extracted = refMatch[0].trim();
+          rua = rua.replace(extracted, '').replace(/[,\s\-]+$/, '').trim();
+          if (!comp.toLowerCase().includes(extracted.toLowerCase())) {
+            comp = comp ? `${comp}, ${extracted}` : extracted;
+          }
+        }
+      }
+
+      // 4. Pesquisa de Geolocalização Web via OpenStreetMap Nominatim se bairro/rua estiver incompleto
+      if ((!bairro || !rua) && (rua || rawText)) {
+        try {
+          const cleanSearch = (rua ? rua : rawText.split('\n')[0]).replace(/[^\w\sÀ-ÿ]/g, ' ').trim();
+          if (cleanSearch.length >= 3) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 3500);
+            const geoUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanSearch + ' Feira de Santana Bahia')}&format=json&addressdetails=1&limit=1`;
+            const geoRes = await fetch(geoUrl, {
+              headers: { 'Accept-Language': 'pt-BR,pt;q=0.9' },
+              signal: controller.signal
+            });
+            clearTimeout(timer);
+            if (geoRes.ok) {
+              const geoData = await geoRes.json();
+              if (geoData && geoData.length > 0 && geoData[0].address) {
+                const addr = geoData[0].address;
+                const sub = addr.suburb || addr.neighbourhood || addr.city_district || addr.quarter;
+                if (sub && !bairro) bairro = sub;
+                if (addr.road && (!rua || rua.length < 5)) rua = addr.road;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[Enriquecimento] Nominatim:', e.message);
+        }
+      }
+
+      const cleanStr = (s) => (s || '').replace(/^[,\s\-]+|[,\s\-]+$/g, '').trim();
+
+      return {
+        rua: cleanStr(rua),
+        bairro: cleanStr(bairro),
+        comp: cleanStr(comp),
+        cep,
+        valor,
+        clienteNome: cleanStr(clienteNome),
+        clienteTel: cleanStr(clienteTel)
+      };
+    }
+
+    function aplicarResultadoEndereco(parsed, statusEl, checkEl) {
+      if (parsed.rua) document.getElementById('end-rua').value = parsed.rua;
+      if (parsed.bairro) {
+        document.getElementById('bairro-custom').value = parsed.bairro;
+        state.bairroSel = parsed.bairro;
+      }
+      if (parsed.comp) document.getElementById('end-comp').value = parsed.comp;
+      
+      if (parsed.valor !== null && parsed.valor !== undefined) {
+        document.getElementById('valor-custom').value = parsed.valor;
+        state.areaSel = null;
+        const select = document.getElementById('areas-select');
+        if (select) select.value = '';
+      } else if (parsed.bairro) {
+        const matched = state.bairros.find(b => b.toLowerCase() === parsed.bairro.toLowerCase());
+        if (matched) detectarPrecoPorBairro(matched);
+      }
+      
+      const clienteNomeEl = document.getElementById('cliente-nome');
+      const clienteTelEl = document.getElementById('cliente-tel');
+      if (parsed.clienteNome && clienteNomeEl && !clienteNomeEl.value) clienteNomeEl.value = parsed.clienteNome;
+      if (parsed.clienteTel && clienteTelEl && !clienteTelEl.value) clienteTelEl.value = parsed.clienteTel;
+      
+      resetCurrentOrderState();
+      gerarPreview();
+
+      if (statusEl) { statusEl.textContent = 'Preenchido!'; statusEl.style.color = 'var(--primary)'; }
+      if (checkEl) checkEl.style.display = 'block';
+      
+      let msg = '✅ Endereço identificado!';
+      if (parsed.bairro) msg += ' | 📍 Bairro: ' + parsed.bairro;
+      if (parsed.rua) msg += ' | 🏠 Rua: ' + parsed.rua;
+      if (parsed.comp) msg += ' | 📌 Ref: ' + parsed.comp;
+      if (parsed.valor !== null && parsed.valor !== undefined) msg += ' | Taxa: R$ ' + parsed.valor.toFixed(2).replace('.', ',');
+      toast(msg);
+    }
+
+    async function processarOcrInlineTexto(text) {
       const statusEl = document.getElementById('ocr-inline-status');
       const spinnerEl = document.getElementById('ocr-inline-spinner');
       const checkEl = document.getElementById('ocr-inline-check');
-      if (statusEl) { statusEl.textContent = 'Processando texto...'; statusEl.style.color = 'var(--text-muted)'; }
+      if (statusEl) { statusEl.textContent = '🔍 Identificando endereço e bairro...'; statusEl.style.color = 'var(--text-muted)'; }
       if (spinnerEl) spinnerEl.style.display = 'block';
       if (checkEl) checkEl.style.display = 'none';
-      setTimeout(() => {
-        const parsed = extrairEnderecoDoTexto(text);
-        if (parsed.rua || parsed.bairro || parsed.valor !== null) {
-          if (parsed.rua) document.getElementById('end-rua').value = parsed.rua;
-          if (parsed.bairro) {
-            document.getElementById('bairro-custom').value = parsed.bairro;
-            state.bairroSel = parsed.bairro;
-          }
-          if (parsed.comp) document.getElementById('end-comp').value = parsed.comp;
-          
-          // Popula valor se detectado
-          if (parsed.valor !== null) {
-            document.getElementById('valor-custom').value = parsed.valor;
-            state.areaSel = null;
-            const select = document.getElementById('areas-select');
-            if (select) select.value = '';
-          } else if (parsed.bairro) {
-            const matched = state.bairros.find(b => b.toLowerCase() === parsed.bairro.toLowerCase());
-            if (matched) detectarPrecoPorBairro(matched);
-          }
-          
-          resetCurrentOrderState();
-          gerarPreview();
-          if (statusEl) { statusEl.textContent = 'Preenchido!'; statusEl.style.color = 'var(--primary)'; }
-          if (checkEl) checkEl.style.display = 'block';
-          
-          // Preenche dados do cliente se detectados
-          const clienteNomeEl = document.getElementById('cliente-nome');
-          const clienteTelEl = document.getElementById('cliente-tel');
-          if (parsed.clienteNome && clienteNomeEl && !clienteNomeEl.value) clienteNomeEl.value = parsed.clienteNome;
-          if (parsed.clienteTel && clienteTelEl && !clienteTelEl.value) clienteTelEl.value = parsed.clienteTel;
 
-          let msg = '✅ Endereço detectado no texto!';
-          if (parsed.clienteNome) msg += ' | 👤 ' + parsed.clienteNome;
-          if (parsed.clienteTel) msg += ' | 📞 ' + parsed.clienteTel;
-          if (parsed.cep) msg += ' | CEP: ' + parsed.cep;
-          if (parsed.valor !== null) msg += ' | Taxa: R$ ' + parsed.valor.toFixed(2).replace('.', ',');
-          toast(msg);
+      try {
+        const initialParsed = extrairEnderecoDoTexto(text);
+        const enrichedParsed = await enriquecerEnderecoInteligente(initialParsed, text);
+        if (enrichedParsed.rua || enrichedParsed.bairro || enrichedParsed.valor !== null) {
+          aplicarResultadoEndereco(enrichedParsed, statusEl, checkEl);
         } else {
           if (statusEl) { statusEl.textContent = 'Nenhum endereço.'; statusEl.style.color = 'var(--accent)'; }
           toast('⚠️ Endereço não identificado.');
         }
+      } catch (e) {
+        console.error(e);
+        if (statusEl) { statusEl.textContent = 'Erro ao processar.'; statusEl.style.color = 'var(--accent)'; }
+      } finally {
         if (spinnerEl) spinnerEl.style.display = 'none';
-      }, 300);
+      }
     }
 
     function handleOcrInlinePaste(ev) {
