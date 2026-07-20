@@ -1782,14 +1782,15 @@
 
       <!-- FILTRO DE PERIODO -->
       <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+        <button class="hist-btn" id="filter-hoje" onclick="filtrarPeriodo('hoje')" style="border-color:var(--primary); color:var(--primary); background:var(--primary-glow);">Hoje</button>
         <button class="hist-btn" id="filter-ontem" onclick="filtrarPeriodo('ontem')">Ontem</button>
-        <button class="hist-btn" id="filter-semana" onclick="filtrarPeriodo('semana')" style="border-color:var(--primary); color:var(--primary); background:var(--primary-glow);">Esta Semana</button>
+        <button class="hist-btn" id="filter-semana" onclick="filtrarPeriodo('semana')">Esta Semana</button>
         <button class="hist-btn" id="filter-todos" onclick="filtrarPeriodo('todos')">Todos</button>
       </div>
 
       <div class="day-panel-title" style="margin-bottom:8px;">
         <span>📊 Resumo do Filtro</span>
-        <span id="periodo-label" style="font-weight:600; font-size:12px; color:var(--text-muted);">Esta Semana</span>
+        <span id="periodo-label" style="font-weight:600; font-size:12px; color:var(--text-muted);">Hoje</span>
       </div>
       <div class="resumo-grid">
         <div class="resumo-card">
@@ -4189,7 +4190,7 @@
 
       const periodoLabels = { hoje: 'Hoje', ontem: 'Ontem', semana: 'Esta Semana', todos: 'Todos' };
       const elPeriodoLabel = document.getElementById('periodo-label');
-      if (elPeriodoLabel) elPeriodoLabel.textContent = periodoLabels[_periodoFilter] || 'Esta Semana';
+      if (elPeriodoLabel) elPeriodoLabel.textContent = periodoLabels[_periodoFilter] || 'Hoje';
 
       const btnCopiar = document.querySelector("button[onclick='copiarResumoDia()']");
       if (btnCopiar) {
