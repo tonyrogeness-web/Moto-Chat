@@ -1748,7 +1748,7 @@
           </div>
           <div class="resumo-card">
             <div class="resumo-valor" id="day-faturado">R$ 0,00</div>
-            <div class="resumo-label">Total Taxas (Concluídas)</div>
+            <div class="resumo-label">Total Taxas</div>
           </div>
           <div class="resumo-card">
             <div class="resumo-num" id="day-pendentes" style="color: #f59e0b">0</div>
@@ -1801,7 +1801,7 @@
         </div>
         <div class="resumo-card">
           <div class="resumo-valor" id="res-valor">R$ 0,00</div>
-          <div class="resumo-label">Total Taxas (Concluídas)</div>
+          <div class="resumo-label">Total Taxas</div>
         </div>
         <div class="resumo-card">
           <div class="resumo-num" id="res-pendentes" style="color: #f59e0b">0</div>
@@ -3816,13 +3816,13 @@
       const concluidasToday = todayItems.filter(h => h.status === 'concluido');
       const pendentesToday = todayItems.filter(h => h.status === 'pendente' || h.status === 'aceito');
 
-      // Total Taxas CONCLUÍDAS (calcula estritamente entregas concluídas do dia de hoje)
-      const totalTaxasConcluidas = concluidasToday.reduce((a, b) => a + Number(b.valor_total || 0), 0);
+      // Total Taxas (calcula o valor total de todas as entregas ativas do dia de hoje)
+      const totalTaxasToday = activeToday.reduce((a, b) => a + Number(b.valor_total || 0), 0);
 
-      // Total Pago Antecipado vs A Cobrar (das entregas concluídas do dia)
+      // Total Pago Antecipado vs A Cobrar (de todas as entregas do dia)
       let totalPago = 0;
       let totalApagar = 0;
-      concluidasToday.forEach(h => {
+      activeToday.forEach(h => {
         if (h.pagamento_status === 'a_pagar') {
           totalApagar += Number(h.valor_total || 0);
         } else {
@@ -3835,7 +3835,7 @@
 
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
       set('day-total', activeToday.length);
-      set('day-faturado', 'R$ ' + totalTaxasConcluidas.toFixed(2).replace('.', ','));
+      set('day-faturado', 'R$ ' + totalTaxasToday.toFixed(2).replace('.', ','));
       set('day-pendentes', pendentesToday.length);
       set('day-concluidas', concluidasToday.length);
       set('day-pago', 'R$ ' + totalPago.toFixed(2).replace('.', ','));
@@ -4276,12 +4276,14 @@
         });
       }
 
+      const isCancel = h => h.status === 'cancelado' || h.status === 'cancelado_loja' || h.status === 'cancelado_motoboy';
+      const ativasFiltradas = listToShow.filter(h => !isCancel(h));
       const concluidasFiltradas = listToShow.filter(h => h.status === 'concluido');
-      const totalValFiltrado = concluidasFiltradas.reduce((a, b) => a + Number(b.valor_total), 0);
+      const totalValFiltrado = ativasFiltradas.reduce((a, b) => a + Number(b.valor_total || 0), 0);
 
-      document.getElementById('res-total').textContent = listToShow.length;
+      document.getElementById('res-total').textContent = ativasFiltradas.length;
       document.getElementById('res-valor').textContent = 'R$ ' + totalValFiltrado.toFixed(2).replace('.', ',');
-      document.getElementById('res-pendentes').textContent = listToShow.filter(h => h.status === 'pendente').length;
+      document.getElementById('res-pendentes').textContent = listToShow.filter(h => h.status === 'pendente' || h.status === 'aceito').length;
       document.getElementById('res-concluidas').textContent = concluidasFiltradas.length;
 
       if (!listToShow.length) {
