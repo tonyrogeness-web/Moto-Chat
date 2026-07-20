@@ -3839,30 +3839,64 @@
       set('day-pago', 'R$ ' + totalPago.toFixed(2).replace('.', ','));
       set('day-apagar', 'R$ ' + totalApagar.toFixed(2).replace('.', ','));
 
-      // Detalhamento de Viagens do Dia por Entregador (Relatório independente do dia)
+      // Detalhamento de Viagens do Dia por Entregador (Relatório rico de hoje)
       const breakdownEl = document.getElementById('day-motoboys-breakdown');
       if (breakdownEl) {
-        if (concluidasToday.length === 0) {
-          breakdownEl.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:6px 0;">Nenhuma viagem concluída hoje até o momento.</div>';
+        const comMotoboyHoje = todayItems.filter(h => h.motoboy_nome && ['aceito','concluido'].includes(h.status));
+        if (comMotoboyHoje.length === 0) {
+          breakdownEl.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:10px 0; font-size:12px;">Nenhuma viagem atribuída a motoboy hoje até o momento.</div>';
         } else {
-          const mbMap = {};
-          concluidasToday.forEach(h => {
-            const mb = (h.motoboy_nome || 'Sem Motoboy').trim();
-            if (!mbMap[mb]) mbMap[mb] = { count: 0, total: 0 };
-            mbMap[mb].count += 1;
-            mbMap[mb].total += Number(h.valor_total || 0);
+          const map = new Map();
+          comMotoboyHoje.forEach(h => {
+            const k = h.motoboy_nome.trim();
+            if (!map.has(k)) map.set(k, { nome: k, telefone: h.motoboy_telefone || '', corridas: 0, total: 0 });
+            const e = map.get(k);
+            e.corridas++;
+            e.total += Number(h.valor_total || 0);
+            if (h.motoboy_telefone && !e.telefone) e.telefone = h.motoboy_telefone;
           });
 
-          let html = '<div style="font-weight:700; color:var(--text-main); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><span>🏍️ Viagens do Dia por Entregador</span><span style="font-size:11px; font-weight:600; color:var(--primary);">' + concluidasToday.length + ' corrida(s)</span></div>';
-          html += '<div style="display:flex; flex-direction:column; gap:6px;">';
-          for (const [mb, info] of Object.entries(mbMap)) {
+          const listaHoje = [...map.values()].sort((a, b) => b.corridas - a.corridas);
+
+          let html = `
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+              <span>🏍️ MOTOBOYS — HOJE</span>
+              <span style="font-size:11px; font-weight:700; color:var(--primary);">${comMotoboyHoje.length} corrida(s)</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+          `;
+
+          listaHoje.forEach((m, i) => {
+            let waLinkHtml = '';
+            if (m.telefone) {
+              const cleanTel = String(m.telefone).replace(/\D/g, '');
+              if (cleanTel.length >= 8) {
+                const waText = encodeURIComponent(`Olá ${m.nome}, gostaria de falar com você sobre as entregas de hoje.`);
+                waLinkHtml = `
+                  <a href="https://wa.me/${cleanTel}?text=${waText}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; background:#25d366; color:#000; padding:5px 10px; border-radius:8px; text-decoration:none; font-weight:700; font-size:12px;" title="Conversar no WhatsApp" onclick="event.stopPropagation();">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.504-5.724-1.466L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.864.002-2.637-1.019-5.117-2.877-6.979C16.6 1.895 14.12 .874 11.487.874c-5.441 0-9.866 4.423-9.87 9.868-.001 1.8.49 3.555 1.42 5.11L1.965 22.025l6.347-1.662c-1.536.837-1.637.797-1.665.791z"/></svg> Conversar
+                  </a>
+                `;
+              }
+            }
+
+            const rankIcon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
             html += `
-              <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-input); padding:8px 10px; border-radius:8px; font-size:12px;">
-                <div><strong>${mb}</strong> <span style="color:var(--text-muted); font-size:11px;">(${info.count} corrida${info.count > 1 ? 's' : ''})</span></div>
-                <strong style="color:var(--primary);">R$ ${info.total.toFixed(2).replace('.', ',')}</strong>
+              <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; padding:10px 14px; box-shadow:var(--shadow-sm);">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span style="font-size:14px; font-weight:800; color:var(--primary);">${rankIcon}</span>
+                  <div>
+                    <div style="font-size:13px; font-weight:700; color:var(--text-main);">${escapeHtml(m.nome)}</div>
+                    <div style="font-size:11px; color:var(--text-muted); font-weight:500;">${m.corridas} corrida${m.corridas > 1 ? 's' : ''}</div>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  ${waLinkHtml}
+                  <div style="font-size:14px; font-weight:800; color:#10b981; min-width:70px; text-align:right;">R$ ${m.total.toFixed(2).replace('.', ',')}</div>
+                </div>
               </div>
             `;
-          }
+          });
           html += '</div>';
           breakdownEl.innerHTML = html;
         }
