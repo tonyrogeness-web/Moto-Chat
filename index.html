@@ -1733,28 +1733,30 @@
         <span>ℹ️ <b>Histórico:</b> As corridas são mantidas no banco de dados por até 7 dias. Exclusões manuais podem ser desfeitas temporariamente.</span>
       </div>
 
-      <!-- DAY PANEL -->
+      <!-- DAY PANEL (PAINEL DO DIA / PAINEL DO SOLICITANTE) -->
       <div class="day-panel">
         <div class="day-panel-title">
-          <span>📅 Painel do Dia</span>
+          <span>📅 Painel do Dia (Hoje)</span>
           <span id="day-panel-date" style="font-weight:600; font-size:12px; color:var(--text-muted);"></span>
         </div>
-        <div class="day-stats" style="margin-bottom:12px;">
-          <div class="day-stat">
-            <div class="day-stat-num" id="day-total" style="color:var(--primary);">0</div>
-            <div class="day-stat-lbl">📦 Hoje</div>
+        
+        <!-- CARDS DE RESUMO DO DIA (IDÊNTICOS AO RESUMO DO FILTRO, POREM FIXOS EM HOJE) -->
+        <div class="resumo-grid" style="margin-bottom:12px;">
+          <div class="resumo-card">
+            <div class="resumo-num" id="day-total">0</div>
+            <div class="resumo-label">Total de Entregas (Hoje)</div>
           </div>
-          <div class="day-stat">
-            <div class="day-stat-num" id="day-faturado" style="color:#10b981;">R$ 0,00</div>
-            <div class="day-stat-lbl">💰 Total Taxas (Concluídas)</div>
+          <div class="resumo-card">
+            <div class="resumo-valor" id="day-faturado">R$ 0,00</div>
+            <div class="resumo-label">Total Taxas (Concluídas)</div>
           </div>
-          <div class="day-stat">
-            <div class="day-stat-num" id="day-pendentes" style="color:#f59e0b;">0</div>
-            <div class="day-stat-lbl">⏳ Pendentes</div>
+          <div class="resumo-card">
+            <div class="resumo-num" id="day-pendentes" style="color: #f59e0b">0</div>
+            <div class="resumo-label">Pendentes</div>
           </div>
-          <div class="day-stat">
-            <div class="day-stat-num" id="day-concluidas" style="color:#3b82f6;">0</div>
-            <div class="day-stat-lbl">✅ Concluídas</div>
+          <div class="resumo-card">
+            <div class="resumo-num" id="day-concluidas" style="color: #3b82f6">0</div>
+            <div class="resumo-label">Concluídas</div>
           </div>
         </div>
 
