@@ -5252,20 +5252,21 @@
     }
 
     function extrairEnderecoDoTexto(texto) {
+      if (!texto) return { rua: '', bairro: '', comp: '', cep: '', valor: null, clienteNome: '', clienteTel: '' };
+
       const textoNorm = texto
         .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
         .replace(/\t/g, ' ')
         .replace(/[ ]{2,}/g, ' ')
         .trim();
 
-      const linhas = textoNorm.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-
       let cep = '';
-      const cepMatch = texto.match(/\b\d{5}-?\d{3}\b/);
+      const cepMatch = textoNorm.match(/\b\d{5}-?\d{3}\b/);
       if (cepMatch) cep = cepMatch[0];
 
       let valor = null;
-      const valMatch = texto.match(/(?:taxa\s+(?:de\s+)?entrega|valor\s+(?:da\s+)?entrega|taxa\s+(?:de\s+)?frete|frete|entrega)[\s:\-=\+\(\)]*(?:(r?\$\s*)?(\d+(?:\s*[.,]\s*\d{2})?))\b/i);
+      const valMatch = textoNorm.match(/(?:taxa\s+(?:de\s+)?entrega|valor\s+(?:da\s+)?entrega|taxa\s+(?:de\s+)?frete|frete|entrega)[\s:\-=\+\(\)]*(?:(r?\$\s*)?(\d+(?:\s*[.,]\s*\d{2})?))\b/i);
       if (valMatch) {
         const temCifrao = !!valMatch[1];
         const valorTexto = valMatch[2];
@@ -5311,17 +5312,21 @@
         return '';
       }
 
+      const reNomeInvalido = /\b(endere[çc]o|principal|residencial|comercial|local|entrega|rua|r\.|av\.|avenida|travessa|tv\.|estrada|rodovia|setor|bairro|cep|\d{4,}|entrega|pedido|total|frete|taxa|valor|pago|obs|complemento|trocar|editar|pedidos|coleta|proximo|próximo|perto|lado|frente|atras|atrás|esquina|casa|apto|ap|apartamento|bloco|condominio|condomínio|residencial|sala|loja|fundos|terreo|térreo|altos|portão|portao|grade|muro|chaves|entregar|chamar|interfone|campainha|tocar)\b/i;
+
       function detectarNome(texto) {
         const textoClean = texto.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
         const linhasLoc = textoClean.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
         for (const linha of linhasLoc) {
           const matchRotulo = linha.match(/^(?:nome|cliente|destinatário|recebedor)\s*[:\-]\s*(.+)/i);
           if (matchRotulo) {
             const namePart = matchRotulo[1].trim();
-            if (namePart.length >= 2 && namePart.length <= 50) return namePart;
+            if (namePart.length >= 2 && namePart.length <= 50 && !reNomeInvalido.test(namePart)) {
+              return namePart;
+            }
           }
         }
-        const reNomeInvalido = /\b(rua|av\.|avenida|travessa|estrada|setor|bairro|cep|\d{4,}|entrega|pedido|total|frete|taxa|valor|pago|obs|complemento|trocar|editar|pedidos|principal|coleta|proximo|próximo|perto|lado|frente|atras|atrás|esquina|casa|apto|ap|apartamento|bloco|condominio|residencial|sala|loja|fundos|terreo|térreo|altos|portão|portao|grade|muro|chaves|entregar|chamar|interfone|campainha|tocar)\b/i;
         const reTelefone = /(?:\+?55\s*)?\(?\d{2}\)?\s*9?\s*\d{4}[-\s]?\d{4}/;
         for (const linha of linhasLoc) {
           const clean = linha.trim();
@@ -5348,7 +5353,18 @@
 
       let rua = '', bairro = '', comp = '';
 
-      const linhasFiltradas = linhas.filter(l => {
+      const reHeaderLabelOnly = /^(?:endere[çc]o\s*(?:principal|residencial|comercial|de\s*entrega)?|local\s*(?:de\s*entrega)?|dados\s*(?:do\s*cliente|de\s*entrega)?|destinat[áa]rio|recebedor|informa[çc][õo]es\s*de\s*entrega|ponto\s*de\s*entrega)\s*[:\-]?$/i;
+      const reHeaderPrefix = /^(?:endere[çc]o\s*(?:principal|residencial|comercial|de\s*entrega)?|local\s*(?:de\s*entrega)?|dados\s*(?:do\s*cliente|de\s*entrega)?|informa[çc][õo]es\s*de\s*entrega|ponto\s*de\s*entrega)\s*[:\-]\s*/i;
+
+      const rawLinhas = textoNorm.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const linhasTratadas = [];
+      for (let l of rawLinhas) {
+        if (reHeaderLabelOnly.test(l)) continue;
+        l = l.replace(reHeaderPrefix, '').trim();
+        if (l) linhasTratadas.push(l);
+      }
+
+      const linhasFiltradas = linhasTratadas.filter(l => {
         const lLower = l.toLowerCase();
         
         if (clienteTel && l.replace(/\D/g, '').includes(clienteTel)) return false;
@@ -5415,11 +5431,6 @@
         }
       }
 
-      const reLogradouro = /\b(rua|r\.|av(?:enida)?\.?|travessa|tv\.?|alameda|al\.?|rodovia|rod\.?|estrada|est\.?|ladeira|praça|pça?\.?|via |viela|beco|setor|conjunto|cj\.?|loteamento|lot\.?|quadra|q\.?)\b/i;
-      
-      let ruaIdx = -1;
-      if (!rua) {
-        for (let i = 0; i < linhasSemPrefixo.length; i++) {
           if (reLogradouro.test(linhasSemPrefixo[i])) {
             ruaIdx = i;
             rua = linhasSemPrefixo[i];
@@ -5924,6 +5935,19 @@
             ev.preventDefault();
           }
         }
+      }
+    });
+
+    ['end-rua', 'cliente-nome', 'bairro-custom', 'end-comp'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('paste', (ev) => {
+          const textData = ev.clipboardData ? ev.clipboardData.getData('text/plain') : '';
+          if (textData && (textData.includes('\n') || textData.length > 25 || /bairro|ref|apto|bloco|casa|nº|n°|endere[çc]o|cliente/i.test(textData))) {
+            ev.preventDefault();
+            processarOcrInlineTexto(textData);
+          }
+        });
       }
     });
 
