@@ -5312,7 +5312,27 @@
         return '';
       }
 
-      const reNomeInvalido = /\b(endere[çc]o|principal|residencial|comercial|local|entrega|rua|r\.|av\.|avenida|travessa|tv\.|estrada|rodovia|setor|bairro|cep|\d{4,}|entrega|pedido|total|frete|taxa|valor|pago|obs|complemento|trocar|editar|pedidos|coleta|proximo|próximo|perto|lado|frente|atras|atrás|esquina|casa|apto|ap|apartamento|bloco|condominio|condomínio|residencial|sala|loja|fundos|terreo|térreo|altos|portão|portao|grade|muro|chaves|entregar|chamar|interfone|campainha|tocar)\b/i;
+      function limparNomeCliente(nome) {
+        if (!nome) return '';
+        let clean = nome
+          .replace(/\s*[\(\[\-–—\s]*(?:OOCP|0OCP|COOP\.?|COOPERATIVA|MOTOBOY|ENTREGADOR|IFOOD|UBER|RAPPI|LOGGI|PEDIDO\s*#?\d*|TICKET\s*#?\d*|ENDERE[ÇC]O\s*PRINCIPAL|PRINCIPAL)[\)\]\s]*/gi, ' ')
+          .replace(/\s{2,}/g, ' ')
+          .trim();
+        clean = clean.replace(/^[^a-zA-Z0-9À-ÿ]+|[^a-zA-Z0-9À-ÿ)]+$/g, '').trim();
+        return clean;
+      }
+
+      function limparComplemento(c) {
+        if (!c) return '';
+        let clean = c
+          .replace(/\b(?:entregador\s*no\s*endere[çc]o\s*principal|entregador\s*no\s*local|instru[çc][õo]es\s*(?:ao\s*|para\s*o\s*)?entregador|endere[çc]o\s*principal|endere[çc]o\s*residencial|coop|oocp|0ocp|cooperativa)\b/gi, '')
+          .replace(/^[,\s\-]+|[,\s\-]+$/g, '')
+          .replace(/\s{2,}/g, ' ')
+          .trim();
+        return clean;
+      }
+
+      const reNomeInvalido = /\b(endere[çc]o|principal|residencial|comercial|local|entrega|rua|r\.|av\.|avenida|travessa|tv\.|estrada|rodovia|setor|bairro|cep|\d{4,}|entrega|pedido|total|frete|taxa|valor|pago|obs|complemento|trocar|editar|pedidos|coleta|proximo|próximo|perto|lado|frente|atras|atrás|esquina|casa|apto|ap|apartamento|bloco|condominio|condomínio|residencial|sala|loja|fundos|terreo|térreo|altos|portão|portao|grade|muro|chaves|entregar|chamar|interfone|campainha|tocar|coop|oocp|0ocp|cooperativa|motoboy|entregador|ifood|uber|rappi|loggi|instruções|instrucoes)\b/i;
 
       function detectarNome(texto) {
         const textoClean = texto.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -5321,7 +5341,7 @@
         for (const linha of linhasLoc) {
           const matchRotulo = linha.match(/^(?:nome|cliente|destinatário|recebedor)\s*[:\-]\s*(.+)/i);
           if (matchRotulo) {
-            const namePart = matchRotulo[1].trim();
+            const namePart = limparNomeCliente(matchRotulo[1].trim());
             if (namePart.length >= 2 && namePart.length <= 50 && !reNomeInvalido.test(namePart)) {
               return namePart;
             }
@@ -5329,8 +5349,8 @@
         }
         const reTelefone = /(?:\+?55\s*)?\(?\d{2}\)?\s*9?\s*\d{4}[-\s]?\d{4}/;
         for (const linha of linhasLoc) {
-          const clean = linha.trim();
-          
+          const clean = limparNomeCliente(linha.trim());
+
           if (state.bairros && state.bairros.some(b => b.toLowerCase() === clean.toLowerCase())) continue;
 
           if (
@@ -5353,7 +5373,7 @@
 
       let rua = '', bairro = '', comp = '';
 
-      const reHeaderLabelOnly = /^(?:endere[çc]o\s*(?:principal|residencial|comercial|de\s*entrega)?|local\s*(?:de\s*entrega)?|dados\s*(?:do\s*cliente|de\s*entrega)?|destinat[áa]rio|recebedor|informa[çc][õo]es\s*de\s*entrega|ponto\s*de\s*entrega)\s*[:\-]?$/i;
+      const reHeaderLabelOnly = /^(?:endere[çc]o\s*(?:principal|residencial|comercial|de\s*entrega)?|local\s*(?:de\s*entrega)?|dados\s*(?:do\s*cliente|de\s*entrega)?|destinat[áa]rio|recebedor|informa[çc][õo]es\s*de\s*entrega|ponto\s*de\s*entrega|entregador\s*no\s*endere[çc]o\s*principal|entregador\s*no\s*local|instru[çc][õo]es\s*(?:para\s*o\s*|ao\s*)?entregador|coop|oocp|0ocp|cooperativa)\s*[:\-]?$/i;
       const reHeaderPrefix = /^(?:endere[çc]o\s*(?:principal|residencial|comercial|de\s*entrega)?|local\s*(?:de\s*entrega)?|dados\s*(?:do\s*cliente|de\s*entrega)?|informa[çc][õo]es\s*de\s*entrega|ponto\s*de\s*entrega)\s*[:\-]\s*/i;
 
       const rawLinhas = textoNorm.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -5367,8 +5387,9 @@
       const linhasFiltradas = linhasTratadas.filter(l => {
         const lLower = l.toLowerCase();
         
+        if (/^(entregador\s*no\s*endere[çc]o\s*principal|entregador\s*no\s*local|coop|oocp|0ocp|cooperativa)$/i.test(lLower)) return false;
         if (clienteTel && l.replace(/\D/g, '').includes(clienteTel)) return false;
-        if (clienteNome && lLower === clienteNome.toLowerCase()) return false;
+        if (clienteNome && lLower.includes(clienteNome.toLowerCase())) return false;
         if (cep && lLower.replace(/\D/g, '') === cep.replace(/\D/g, '')) return false;
         
         const reCidadeCepTotal = /^(feira de santana|fsa|salvador|camacari|lauro de freitas|bahia|ba|brasil|cep|\d{5}-?\d{3}|,\s*)+$/i;
@@ -5379,7 +5400,7 @@
 
       const reRuaPrefix = /^(?:rua|r\.|av(?:enida)?\.?|logradouro|endere[çc]o|local|local de entrega)\s*[:\-]\s*(.+)$/i;
       const reBairroPrefix = /^(?:bairro|bairro\/cidade|setor|distrito)\s*[:\-]\s*(.+)$/i;
-      const reCompPrefix = /^(?:complemento|comp\.?|ap(?:to)?\.?|apto\.?|bloco|ref(?:er[êe]ncia)?|referencia|ponto de ref(?:erencia|erência)?|obs(?:erva[çc]o|erva[çc]ões|erva[çc][aã]o)?)\s*[:\-]\s*(.+)$/i;
+      const reCompPrefix = /^(?:complemento|comp\.?|ap(?:to)?\.?|apto\.?|bloco|ref(?:er[êe]ncia)?|referencia|ponto de ref(?:erencia|erência)?|obs(?:erva[çc]o|erva[çc]ões|erva[çc][aã]o)?|instru[çc][õo]es)\s*[:\-]\s*(.+)$/i;
 
       const reNomePrefix = /^(?:nome|cliente|destinatário|recebedor)\s*[:\-]\s*(.+)$/i;
       const reTelPrefix = /^(?:tel|telefone|whatsapp|whats|cel|celular|fone|contato)\s*[:\-]\s*(.+)$/i;
@@ -5413,7 +5434,10 @@
         if (!matched) {
           const mComp = l.match(reCompPrefix);
           if (mComp) {
-            comp = comp ? comp + ', ' + mComp[1].trim() : mComp[1].trim();
+            const compVal = limparComplemento(mComp[1].trim());
+            if (compVal) {
+              comp = comp ? comp + ', ' + compVal : compVal;
+            }
             matched = true;
           }
         }
@@ -5431,6 +5455,11 @@
         }
       }
 
+      const reLogradouro = /\b(rua|r\.|av(?:enida)?\.?|travessa|tv\.?|alameda|al\.?|rodovia|rod\.?|estrada|est\.?|ladeira|praça|pça?\.?|via |viela|beco|setor|conjunto|cj\.?|loteamento|lot\.?|quadra|q\.?)\b/i;
+
+      let ruaIdx = -1;
+      if (!rua) {
+        for (let i = 0; i < linhasSemPrefixo.length; i++) {
           if (reLogradouro.test(linhasSemPrefixo[i])) {
             ruaIdx = i;
             rua = linhasSemPrefixo[i];
@@ -5528,8 +5557,10 @@
       }
 
       if (compsClassificados.length > 0) {
-        const extraComp = compsClassificados.join(', ');
-        comp = comp ? comp + ', ' + extraComp : extraComp;
+        const extraComp = compsClassificados.map(limparComplemento).filter(Boolean).join(', ');
+        if (extraComp) {
+          comp = comp ? comp + ', ' + extraComp : extraComp;
+        }
       }
 
       if (!rua && linhasFiltradas.length > 0) {
@@ -5561,12 +5592,20 @@
           prev = clean;
           clean = clean.replace(/^[^a-zA-Z0-9À-ÿ]+/g, '').trim();
           clean = clean.replace(/[^a-zA-Z0-9À-ÿ)]+$/g, '').trim();
-          clean = clean.replace(/^[a-zA-ZÀ-ÿ]{1,3}\s+(?=[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖÙÚÛÜÝ])/g, '').trim();
+          clean = clean.replace(/^bairro\s+/i, '').trim();
         }
         return clean;
       };
 
-      return { rua: limpar(rua), bairro: limpar(bairro), comp: limpar(comp || ''), cep, valor, clienteNome, clienteTel };
+      return { 
+        rua: limpar(rua), 
+        bairro: limpar(bairro), 
+        comp: limparComplemento(limpar(comp || '')), 
+        cep, 
+        valor, 
+        clienteNome: limparNomeCliente(clienteNome), 
+        clienteTel 
+      };
     }
 
     let _ocrScriptLoaded = false;
@@ -5818,13 +5857,31 @@
 
       const cleanStr = (s) => (s || '').replace(/^[,\s\-]+|[,\s\-]+$/g, '').trim();
 
+      const limparComplemento = (c) => {
+        if (!c) return '';
+        return c
+          .replace(/\b(?:entregador\s*no\s*endere[çc]o\s*principal|entregador\s*no\s*local|instru[çc][õo]es\s*(?:ao\s*|para\s*o\s*)?entregador|endere[çc]o\s*principal|endere[çc]o\s*residencial|coop|oocp|0ocp|cooperativa)\b/gi, '')
+          .replace(/^[,\s\-]+|[,\s\-]+$/g, '')
+          .replace(/\s{2,}/g, ' ')
+          .trim();
+      };
+
+      const limparNomeCliente = (n) => {
+        if (!n) return '';
+        return n
+          .replace(/\s*[\(\[\-–—\s]*(?:OOCP|0OCP|COOP\.?|COOPERATIVA|MOTOBOY|ENTREGADOR|IFOOD|UBER|RAPPI|LOGGI|PEDIDO\s*#?\d*|TICKET\s*#?\d*|ENDERE[ÇC]O\s*PRINCIPAL|PRINCIPAL)[\)\]\s]*/gi, ' ')
+          .replace(/\s{2,}/g, ' ')
+          .replace(/^[^a-zA-Z0-9À-ÿ]+|[^a-zA-Z0-9À-ÿ)]+$/g, '')
+          .trim();
+      };
+
       return {
         rua: cleanStr(rua),
         bairro: cleanStr(bairro),
-        comp: cleanStr(comp),
+        comp: limparComplemento(cleanStr(comp)),
         cep,
         valor,
-        clienteNome: cleanStr(clienteNome),
+        clienteNome: limparNomeCliente(cleanStr(clienteNome)),
         clienteTel: cleanStr(clienteTel)
       };
     }
