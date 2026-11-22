@@ -1552,27 +1552,15 @@
           📌 Print com várias colunas (ex: sistema de pedidos)? Recorte só a parte do endereço antes de colar — fica mais preciso.
         </div>
 
-        <!-- RUA - primeiro -->
-        <div class="field">
-          <label for="end-rua">Rua / Avenida e Número</label>
-          <input type="text" id="end-rua" placeholder="Ex: Rua Calamar, 1498" autocomplete="street-address" list="ruas-sugestoes">
-          <datalist id="ruas-sugestoes"></datalist>
-        </div>
-
-        <!-- BAIRRO - logo abaixo da rua -->
-        <div class="field">
-          <label for="bairro-custom" style="display:flex; align-items:center; gap:6px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary)"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
-            Bairro de Entrega
-          </label>
-          <input type="text" id="bairro-custom" placeholder="Ex: SIM, Centro, Brasília..." list="bairros-sugestoes" autocomplete="off">
-          <datalist id="bairros-sugestoes"></datalist>
-        </div>
-
-        <!-- COMPLEMENTO - por último -->
+        <!-- ENDEREÇO COMPLETO UNIFICADO -->
         <div class="field" style="margin-bottom:0">
-          <label for="end-comp">Complemento / Referência (opcional)</label>
-          <input type="text" id="end-comp" placeholder="Ex: Casa 35, Bloco B, Portão Azul..." autocomplete="address-line2">
+          <label for="end-rua" style="display:flex; align-items:center; gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary)"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            Endereço Completo de Entrega
+          </label>
+          <textarea id="end-rua" rows="3" placeholder="Ex: Rua Calamar, 1498, SIM, Bloco B Apto 201&#10;Cole o print ou digite todo o endereço aqui..." style="resize:vertical; min-height:85px; font-size:14px; line-height:1.45;"></textarea>
+          <input type="hidden" id="bairro-custom">
+          <input type="hidden" id="end-comp">
         </div>
       </div>
 
@@ -2975,13 +2963,16 @@
         const isFirst = idx === 0;
         const isLast = idx === state.destinos.length - 1;
         
-        const areaLabel = d.areaDesc ? ` — <b>Área:</b> ${d.areaDesc}` : '';
-        const tempoLabel = d.tempo ? ` (${d.tempo})` : '';
+        const metaParts = [];
+        if (d.comp) metaParts.push(d.comp);
+        if (d.bairro && d.bairro !== d.rua) metaParts.push(`<b>Bairro:</b> ${d.bairro}`);
+        if (d.areaDesc) metaParts.push(`<b>Área:</b> ${d.areaDesc}`);
+        if (d.tempo) metaParts.push(`(${d.tempo})`);
         
         div.innerHTML = `
           <div class="roteiro-item-info">
             <div class="roteiro-item-address">📍 #${idx + 1}: ${d.rua}</div>
-            <div class="roteiro-item-meta">${d.comp ? d.comp + ' — ' : ''}<b>Bairro:</b> ${d.bairro}${areaLabel}${tempoLabel}</div>
+            ${metaParts.length ? `<div class="roteiro-item-meta">${metaParts.join(' — ')}</div>` : ''}
           </div>
           <div class="roteiro-item-value">R$ ${d.valor.toFixed(2).replace('.', ',')}</div>
           <div class="roteiro-item-actions">
@@ -2998,17 +2989,15 @@
 
     function adicionarDestinoAoRoteiro() {
       const rua = document.getElementById('end-rua').value.trim();
-      const comp = document.getElementById('end-comp').value.trim();
-      const bairro = state.bairroSel || document.getElementById('bairro-custom').value.trim();
+      const comp = document.getElementById('end-comp')?.value?.trim() || '';
+      const bairro = state.bairroSel || (document.getElementById('bairro-custom')?.value || '').trim() || rua;
       const valorCustom = document.getElementById('valor-custom').value;
       const valor = valorCustom ? parseFloat(valorCustom) : (state.areaSel ? state.areaSel.valor : null);
       
       if (!rua) { toast('⚠️ Informe o endereço de entrega'); playSound('warning'); return; }
-      if (!bairro) { toast('⚠️ Informe o bairro'); playSound('warning'); return; }
       if (valor === null || isNaN(valor)) { toast('⚠️ Defina o valor da corrida'); playSound('warning'); return; }
       
-      // Salva bairro automaticamente se for novo
-      salvarBairroSeNovo(bairro);
+      if (bairro && bairro !== rua) salvarBairroSeNovo(bairro);
       
       const item = {
         id: 'destino_' + Date.now() + Math.random().toString(36).substr(2, 5),
@@ -3203,16 +3192,12 @@
       if (items.length === 1) {
         msg += '📍 Endereço: ' + items[0].rua + '\n';
         if (items[0].comp) msg += 'ℹ️ Ref: ' + items[0].comp + '\n';
-        if (items[0].bairro && items[0].bairro !== '[Selecione o bairro]') {
-          msg += '📍 Bairro: ' + items[0].bairro + '\n';
-        }
         
         msg += '💵 Valor: R$ ' + Number(items[0].valor).toFixed(2).replace('.', ',') + '\n';
       } else {
         msg += '----------------------------------\n';
         items.forEach((item, idx) => {
-          const bStr = item.bairro && item.bairro !== '[Selecione o bairro]' ? ` — ${item.bairro}` : '';
-          msg += `📍 *${idx + 1}:* ${item.rua}${bStr}\n`;
+          msg += `📍 *${idx + 1}:* ${item.rua}\n`;
           if (item.comp) msg += `   ℹ️ Ref: ${item.comp}\n`;
           msg += `   💵 Valor: R$ ${Number(item.valor).toFixed(2).replace('.', ',')}\n`;
           msg += '----------------------------------\n';
@@ -3709,12 +3694,11 @@
         const d = destinos[0];
         msg += `📍 Endereço: ${d.rua}\n`;
         if (d.comp) msg += `ℹ️ Ref: ${d.comp}\n`;
-        msg += `📍 Bairro: ${d.bairro}\n`;
         msg += `💵 Valor: R$ ${Number(d.valor).toFixed(2).replace('.', ',')}\n`;
       } else {
         msg += '----------------------------------\n';
         destinos.forEach((d, idx) => {
-          msg += `📍 *${idx+1}:* ${d.rua} — ${d.bairro}\n`;
+          msg += `📍 *${idx+1}:* ${d.rua}\n`;
           if (d.comp) msg += `   ℹ️ Ref: ${d.comp}\n`;
           msg += `   💵 Valor: R$ ${Number(d.valor).toFixed(2).replace('.', ',')}\n`;
           msg += '----------------------------------\n';
@@ -5652,10 +5636,12 @@
     function aplicarResultadoEndereco(parsed, statusEl, checkEl) {
       if (parsed.rua) document.getElementById('end-rua').value = parsed.rua;
       if (parsed.bairro) {
-        document.getElementById('bairro-custom').value = parsed.bairro;
+        const bEl = document.getElementById('bairro-custom');
+        if (bEl) bEl.value = parsed.bairro;
         state.bairroSel = parsed.bairro;
       }
-      document.getElementById('end-comp').value = parsed.comp || '';
+      const compEl = document.getElementById('end-comp');
+      if (compEl) compEl.value = parsed.comp || '';
       
       if (parsed.valor !== null && parsed.valor !== undefined) {
         document.getElementById('valor-custom').value = parsed.valor;
@@ -5679,8 +5665,7 @@
       if (checkEl) checkEl.style.display = 'block';
       
       let msg = '✅ Endereço identificado!';
-      if (parsed.bairro) msg += ' | 📍 Bairro: ' + parsed.bairro;
-      if (parsed.rua) msg += ' | 🏠 Endereço: ' + parsed.rua;
+      if (parsed.rua) msg += ' | 📍 ' + parsed.rua;
       if (parsed.valor !== null && parsed.valor !== undefined) msg += ' | Taxa: R$ ' + parsed.valor.toFixed(2).replace('.', ',');
       toast(msg);
     }
@@ -7897,7 +7882,29 @@
       }
     }
 
-    ['end-rua', 'end-comp', 'obs'].forEach(id => {
+    document.getElementById('end-rua')?.addEventListener('input', (e) => {
+      const val = e.target.value;
+      if (state.bairros && state.bairros.length) {
+        const valLower = val.toLowerCase();
+        const matched = state.bairros.find(b => {
+          const re = new RegExp('\\b' + b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+          return re.test(valLower);
+        });
+        if (matched) {
+          state.bairroSel = matched;
+          const bEl = document.getElementById('bairro-custom');
+          if (bEl) bEl.value = matched;
+          if (!document.getElementById('valor-custom').value) {
+            detectarPrecoPorBairro(matched);
+          }
+        }
+      }
+      resetCurrentOrderState();
+      gerarPreview();
+      agendarAutoSave();
+    });
+
+    ['end-comp', 'obs'].forEach(id => {
       document.getElementById(id)?.addEventListener('input', () => {
         resetCurrentOrderState();
         gerarPreview();
