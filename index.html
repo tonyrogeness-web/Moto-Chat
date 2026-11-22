@@ -1595,19 +1595,19 @@
         <div style="margin-bottom:16px;">
           <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin-bottom:8px;">💵 Pagamento da Corrida</div>
           <div style="display: flex; gap: 8px;">
-            <label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border: 1.5px solid var(--border-color); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; background: var(--bg-card); color: var(--text-main); transition: all 0.2s; user-select: none;" id="pay-status-pago-label">
-              <input type="radio" name="payment-status" id="pay-status-pago" value="pago" onchange="updatePaymentStatusSelection()" style="display: none;">
+            <label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border: 1.5px solid var(--primary); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; background: var(--primary-glow); color: var(--primary); transition: all 0.2s; user-select: none;" id="pay-status-pago-label">
+              <input type="radio" name="payment-status" id="pay-status-pago" value="pago" checked onchange="updatePaymentStatusSelection()" style="display: none;">
               🟢 Pedido Pago
             </label>
-            <label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border: 1.5px solid var(--accent); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; background: var(--accent-glow); color: var(--accent); transition: all 0.2s; user-select: none;" id="pay-status-apagar-label">
-              <input type="radio" name="payment-status" id="pay-status-apagar" value="a_pagar" checked onchange="updatePaymentStatusSelection()" style="display: none;">
+            <label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border: 1.5px solid var(--border-color); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; background: var(--bg-card); color: var(--text-main); transition: all 0.2s; user-select: none;" id="pay-status-apagar-label">
+              <input type="radio" name="payment-status" id="pay-status-apagar" value="a_pagar" onchange="updatePaymentStatusSelection()" style="display: none;">
               🔴 A Pagar
             </label>
           </div>
         </div>
 
         <!-- METODO DE PAGAMENTO SELECTION (EXPANDS IF "A PAGAR") -->
-        <div id="payment-method-container" style="display: block; margin-bottom: 16px; padding: 12px; background: rgba(239, 68, 68, 0.02); border: 1.5px dashed rgba(239, 68, 68, 0.2); border-radius: 10px;">
+        <div id="payment-method-container" style="display: none; margin-bottom: 16px; padding: 12px; background: rgba(239, 68, 68, 0.02); border: 1.5px dashed rgba(239, 68, 68, 0.2); border-radius: 10px;">
           <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px;">💳 Método de Pagamento na Entrega</div>
           <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
             <label style="display: flex; align-items: center; justify-content: center; gap: 4px; padding: 8px; border: 1.5px solid var(--border-color); border-radius: 6px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: var(--bg-card); color: var(--text-main); transition: all 0.2s; user-select: none;" id="pay-method-pix-label">
@@ -3660,7 +3660,7 @@
       document.getElementById('retorno-toggle').checked = false;
       const incLinkEl = document.getElementById('incluir-link-motoboy');
       if (incLinkEl) incLinkEl.checked = false;
-      document.getElementById('pay-status-apagar').checked = true;
+      document.getElementById('pay-status-pago').checked = true;
       updatePaymentStatusSelection();
       resetTags();
       renderBairros(); 
@@ -5373,8 +5373,10 @@
         if (reLinhaItemProduto.test(l)) continue;
 
         if (clienteTel && l.replace(/\D/g, '').includes(clienteTel)) continue;
-        if (clienteNome && l.toLowerCase() === clienteNome.toLowerCase()) continue;
+        if (clienteNome && l.toLowerCase().includes(clienteNome.toLowerCase())) continue;
         if (/^(?:nome|cliente|destinat[áa]rio|recebedor|tel|telefone|whatsapp|whats|cel|celular|fone|contato)\s*[:\-]/i.test(l)) continue;
+        // Rejeita linhas que são apenas um número de telefone (sem prefixo de rótulo)
+        if (/^(?:\+?55\s*)?\(?\d{2}\)?\s*9?\s*\d{4}[-\s]?\d{4}$/.test(l)) continue;
 
         // Remove apenas o prefixo de rótulo como "Endereço: " mas mantém o conteúdo do endereço intacto
         l = l.replace(reHeaderPrefix, '').trim();
