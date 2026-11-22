@@ -1,4 +1,4 @@
-const CACHE = 'motochat-v1';
+const CACHE = 'motochat-v2';
 const OFFLINE_URL = '/';
 
 self.addEventListener('install', e => {
